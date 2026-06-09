@@ -251,6 +251,7 @@
     try{
       const data = await callOtpApi('/api/msgowl-verify-otp', { phone_number: phoneForOtp, code });
       if(data.status !== true) return showToast(data.message || 'Invalid code');
+      existingUser = Store.findUserByPhone(phoneFull) || existingUser;
       if(existingUser){ Store.login(existingUser); showToast('Welcome back, '+(existingUser.name||'')); setTimeout(()=>location.href=redirect, 700); }
       else { showStep('profile'); }
     }catch(error){
@@ -292,6 +293,7 @@
   function saveProfile(skip){
     const name = $('#pf_name').value.trim();
     if(!skip && !name) return showToast('Please enter your name');
+    existingUser = Store.findUserByPhone(phoneFull) || existingUser;
     const addresses = [];
     const line = $('#ad_line').value.trim();
     if(line || geo){
@@ -299,9 +301,9 @@
         country:$('#ad_country').value.trim()||'Maldives', lat:geo?.lat, lng:geo?.lng, isDefault:true,
         deliveryType:'standard', deliveryInfo:{ boatName:'', contactNumber:'', departureTime:'', note:'' } });
     }
-    const user = Store.upsert('users', { name:name||'Kanxi Customer', phone:phoneFull, gender, dob:$('#pf_dob').value, createdAt:Date.now(), addresses });
+    const user = Store.upsert('users', { id:existingUser&&existingUser.id, name:name||'Kanxi Customer', phone:phoneFull, gender, dob:$('#pf_dob').value, createdAt:(existingUser&&existingUser.createdAt)||Date.now(), addresses });
     Store.login(user);
-    showToast('Account created 🎉');
+    showToast(existingUser ? 'Account updated ✓' : 'Account created 🎉');
     setTimeout(()=>location.href=redirect, 700);
   }
 </script>

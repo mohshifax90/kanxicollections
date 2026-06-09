@@ -383,7 +383,27 @@ const Store = (() => {
     syncFromCloud,
     list(c){ return load()[c]||[]; },
     get(c,id){ return (load()[c]||[]).find(x=>x.id===id); },
-    upsert(c,item){ const db=load(); if(!db[c])db[c]=[]; if(!item.id){ item.id=uid(c[0]+'_'); db[c].push(item);} else { const i=db[c].findIndex(x=>x.id===item.id); if(i===-1)db[c].push(item); else db[c][i]={...db[c][i],...item}; } save(db); return item; },
+    upsert(c,item){
+      const db=load();
+      if(!db[c]) db[c]=[];
+      let idx = item && item.id ? db[c].findIndex(x=>x.id===item.id) : -1;
+      if(c==='users' && idx===-1 && item && item.phone){
+        const phone = String(item.phone).replace(/\D/g,'');
+        idx = db[c].findIndex(x=>String(x.phone||'').replace(/\D/g,'')===phone);
+        if(idx!==-1) item.id = db[c][idx].id;
+      }
+      if(idx===-1 && !item.id){
+        item.id=uid(c[0]+'_');
+        db[c].push(item);
+      } else if(idx===-1){
+        db[c].push(item);
+      } else {
+        db[c][idx]={...db[c][idx],...item};
+        item = db[c][idx];
+      }
+      save(db);
+      return item;
+    },
     remove(c,id){ const db=load(); db[c]=(db[c]||[]).filter(x=>x.id!==id); if(c==='products') db.batches=(db.batches||[]).filter(b=>b.productId!==id); save(db); },
 
     categoryName(id){ const c=this.get('categories',id); return c?c.name:'—'; },
