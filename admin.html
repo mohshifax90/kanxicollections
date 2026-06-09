@@ -575,7 +575,7 @@
       ${td(`<div class="font-semibold">${p.name}</div><div class="text-xs text-zinc-400">${Store.subName(p.subId)} · ${p.brand||'No brand'} · ${vt}</div>`)}
       ${td(pill(Store.categoryName(p.categoryId),'gray'))}
       ${td(Store.tagNames(p.tags).map(t=>pill(t,'gray')).join(' ')||'<span class="text-zinc-300">—</span>')}
-      ${td(MVR(price)+(p.oldPrice?`<div class="text-xs text-zinc-400 line-through">${MVR(p.oldPrice)}</div>`:''))}
+      ${td(MVR(price))}
       ${td(st===0?pill('Out of stock','red'):pill(st+' in stock',st<6?'amber':'green'))}
       ${td(p.status==='active'?pill('Active','green'):pill('Draft','gray'))}
       ${td(actBtns(`editProduct('${p.id}')`,`del('products','${p.id}',products)`))}</tr>`;
@@ -607,7 +607,7 @@
         <p class="text-[0.7rem] text-zinc-400 mt-1.5">First image is the primary. Uploads are auto-compressed.</p>`)+
       `<div class="flex gap-3"><div class="flex-1">${fg('layout-grid','Category',`<select id="p_cat" onchange="onCatChange()" class="${sel}">${cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.name}</option>`).join('')}</select>`)}</div>
         <div class="flex-1">${fg('list-tree','Sub-category',`<select id="p_sub" onchange="onProductSubChange()" class="${sel}"></select>`)}</div></div>`+
-      `<div class="flex gap-3"><div class="flex-1">${fg('coins','Base price (MVR)',F.input('p_price',p.price,'','number'))}</div><div class="flex-1">${fg('tag','Compare-at price',F.input('p_old',p.oldPrice||'','','number'))}</div>
+      `<div class="flex gap-3"><div class="flex-1">${fg('coins','Base price (MVR)',F.input('p_price',p.price,'','number'))}</div><div class="flex-1">${fg('tag','Product status',`<div class="px-3 py-2.5 border border-zinc-200 rounded-lg text-xs text-zinc-500 bg-zinc-50">Customer price comes from the active inventory batch.</div>`)}</div>
         <div class="flex-1">${fg('eye','Status',`<select id="p_status" class="${sel}"><option value="active" ${p.status==='active'?'selected':''}>Active</option><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option></select>`)}</div></div>`+
       fg('tags','Tags',`<div id="p_tags" class="flex flex-wrap gap-2">${ts.map(t=>`<span data-id="${t.id}" onclick="this.classList.toggle('on')" class="tagchip cursor-pointer border border-zinc-300 rounded-full px-3 py-1 text-xs font-semibold ${(p.tags||[]).includes(t.id)?'on':''}">${t.name}</span>`).join('')}</div>`)+
       fg('layers','Variant Type',`<select id="p_vtype" onchange="setVType(this.value)" class="${sel}">${Store.VARIANT_TYPES.map(t=>`<option value="${t.key}" ${t.key===_vtype?'selected':''}>${t.label}</option>`).join('')}</select>`)+
@@ -707,7 +707,7 @@
         brand, brandId:brand&&brandId?brandId:'',
         image:primary, images:_imgs.slice(),
         categoryId:$('#p_cat').value, subId,
-        price:+$('#p_price').value||0, oldPrice:+$('#p_old').value||null,
+        price:+$('#p_price').value||0, oldPrice:null,
         status:$('#p_status').value, tags:tg, variantType:_vtype, variants:opts
       });
     } catch(e){ alert('Could not save — storage is full. Try fewer/smaller uploaded images.'); return; }
@@ -727,20 +727,21 @@
       </div>`+
       card('Inventory — Product Batches',
       `<button onclick="editBatch()" class="${btn.primary} ${btn.sm}">${ic('plus','w-4 h-4')} Add Batch</button>`,
-      `<table class="w-full">${TH(['Product','Variant','Batch','Cost','Selling','Margin','Stock','Expiry',''])}<tbody>
+      `<table class="w-full">${TH(['Product','Variant','Batch','Cost','Selling','Active','Stock','Expiry',''])}<tbody>
       ${bs.map(brow).join('')||empty(9)}</tbody></table>`);
   }
   function brow(b){
     const p=Store.get('products',b.productId)||{name:'(deleted)',image:'',variants:[]};
     const v=(p.variants||[]).find(x=>x.id===b.variantId);
     const m=b.sellingPrice?Math.round((1-b.costPrice/b.sellingPrice)*100):0;
+    const active=Store.activeBatchOf(b.productId, b.variantId||null);
     const vlabel = v ? (v.color?`<span class="inline-block w-2.5 h-2.5 rounded-full mr-1 align-middle" style="background:${v.color}"></span>`:'')+v.value : '<span class="text-zinc-300">—</span>';
     return `<tr class="hover:bg-zinc-50">
       ${td(`<div class="flex items-center gap-2"><img src="${p.image}" class="w-8 h-8 rounded object-cover bg-zinc-100"/><b class="text-sm">${p.name}</b></div>`)}
       ${td(vlabel)}
       ${td(b.batchNo,'font-mono text-xs')}
       ${td(MVR(b.costPrice))}${td('<b>'+MVR(b.sellingPrice)+'</b>')}
-      ${td(pill(m+'%', m>=40?'green':m>=20?'amber':'red'))}
+      ${td(active&&active.id===b.id?pill('Active','green'):pill(m+'%', m>=40?'green':m>=20?'amber':'gray'))}
       ${td(pill(b.stock+' u', b.stock<6?'amber':'green'))}
       ${td(b.expiry||'<span class="text-zinc-300">—</span>','text-xs')}
       ${td(actBtns(`editBatch('${b.id}')`,`del('batches','${b.id}',inventory)`))}</tr>`;

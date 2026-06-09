@@ -343,17 +343,28 @@ const Store = (() => {
 
     /* ── inventory-derived ── */
     batchesOf(pid){ return this.list('batches').filter(b=>b.productId===pid); },
+    activeBatchOf(pid, vid){
+      const batches=this.batchesOf(pid)
+        .filter(b=>(vid==null ? true : b.variantId===vid))
+        .slice()
+        .sort((a,b)=>(+a.date||0)-(+b.date||0));
+      return batches.find(b=>(+b.stock||0)>0) || batches[0] || null;
+    },
     stockOf(p){ const id=typeof p==='string'?p:p.id; return this.batchesOf(id).reduce((s,b)=>s+(+b.stock||0),0); },
     stockOfVariant(pid,vid){ return this.batchesOf(pid).filter(b=>b.variantId===vid).reduce((s,b)=>s+(+b.stock||0),0); },
     priceOf(p){
-      const bs=this.batchesOf(p.id);
-      const live=bs.filter(b=>b.stock>0).map(b=>+b.sellingPrice).filter(n=>n>0);
-      if(live.length) return Math.min(...live);
-      const any=bs.map(b=>+b.sellingPrice).filter(n=>n>0);
-      if(any.length) return Math.min(...any);
+      const active=this.activeBatchOf(p.id, null);
+      if(active && +active.sellingPrice>0) return +active.sellingPrice;
+      const any=this.batchesOf(p.id).map(b=>+b.sellingPrice).filter(n=>n>0);
+      if(any.length) return any[0];
       return p.price||0;
     },
-    priceOfVariant(pid,vid){ const bs=this.batchesOf(pid).filter(b=>b.variantId===vid); return bs.length?Math.min(...bs.map(b=>+b.sellingPrice)):null; },
+    priceOfVariant(pid,vid){
+      const active=this.activeBatchOf(pid, vid);
+      if(active && +active.sellingPrice>0) return +active.sellingPrice;
+      const bs=this.batchesOf(pid).filter(b=>b.variantId===vid).map(b=>+b.sellingPrice).filter(n=>n>0);
+      return bs.length?bs[0]:null;
+    },
 
     /* ── storefront ── */
     categoryBySlug(slug){ return this.list('categories').find(c=>c.slug===slug); },
@@ -365,7 +376,7 @@ const Store = (() => {
       if(tn.includes('Limited')) return {text:'Limited',gold:true};
       if(tn.includes('Luxury'))  return {text:'Luxury',gold:true};
       if(tn.includes('Bestseller')) return {text:'Bestseller',gold:true};
-      if(p.oldPrice || tn.includes('Sale')) return {text:'Sale',gold:false};
+      if(tn.includes('Sale')) return {text:'Sale',gold:false};
       if(tn.includes('New')) return {text:'New',gold:false};
       return null; },
     statusOf(p){ const st=this.stockOf(p), tn=this.tagNames(p.tags||[]);
@@ -378,7 +389,7 @@ const Store = (() => {
       const cat=this.get('categories',p.categoryId)||{}; const b=this.badgeOf(p), s=this.statusOf(p);
       const vals=this.optionValues(p);
       return { id:p.id, cat:cat.slug||'', name:p.name, brand:p.brand||'Kanxi Collection',
-        price:this.priceOf(p), old:p.oldPrice||null, img:p.image, images:p.images||[p.image],
+        price:this.priceOf(p), old:null, img:p.image, images:p.images||[p.image],
         badge:b?b.text:null, bgold:b?b.gold:false, status:s.text, sclass:s.cls,
         variantType:p.variantType||'none', options:p.variants||[],
         sizes: (['size','volume'].includes(p.variantType)?vals:[]),
@@ -387,7 +398,7 @@ const Store = (() => {
     },
     storeProducts(){ return this.list('products').filter(p=>p.status==='active'); },
     cardsBySlug(slug){ const ps=this.storeProducts(); let list;
-      if(slug==='sale') list=ps.filter(p=>p.oldPrice);
+      if(slug==='sale') list=ps.filter(p=>this.tagNames(p.tags).includes('Sale'));
       else if(slug==='new') list=ps.filter(p=>this.tagNames(p.tags).includes('New'));
       else { const c=this.categoryBySlug(slug); list=c?ps.filter(p=>p.categoryId===c.id):ps; }
       return list.map(p=>this.card(p)); },
@@ -399,7 +410,7 @@ const Store = (() => {
     brandById(id){ return this.allBrands().find(b=>b.id===id); },
     productsByTag(tagId){ return this.storeProducts().filter(p=>(p.tags||[]).includes(tagId)).map(p=>this.card(p)); },
     productsByBrand(name){ const n=(name||'').toLowerCase(); return this.storeProducts().filter(p=>(p.brand||'').toLowerCase()===n).map(p=>this.card(p)); },
-    offers(limit=12){ return this.storeProducts().filter(p=>p.oldPrice).slice(0,limit).map(p=>this.card(p)); },
+    offers(limit=12){ return this.storeProducts().filter(p=>this.tagNames(p.tags).includes('Sale')).slice(0,limit).map(p=>this.card(p)); },
     productSales(){ const map={}; const ps=this.list('products');
       this.list('orders').forEach(o=>(o.items||[]).forEach(it=>{ let pid=it.productId; if(!pid){ const m=ps.find(p=>it.name && it.name.indexOf(p.name)===0); pid=m&&m.id; } if(pid) map[pid]=(map[pid]||0)+(it.qty||1); }));
       return map; },
