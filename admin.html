@@ -431,7 +431,7 @@
     const vt = p.variantType && p.variantType!=='none' ? `${Store.variantTypeLabel(p.variantType)} · ${(p.variants||[]).length}` : 'No variants';
     return `<tr class="hover:bg-zinc-50">
       ${td(`<img src="${p.image}" class="w-11 h-11 rounded-lg object-cover bg-zinc-100"/>`)}
-      ${td(`<div class="font-semibold">${p.name}</div><div class="text-xs text-zinc-400">${Store.subName(p.subId)} · ${vt}</div>`)}
+      ${td(`<div class="font-semibold">${p.name}</div><div class="text-xs text-zinc-400">${Store.subName(p.subId)} · ${p.brand||'No brand'} · ${vt}</div>`)}
       ${td(pill(Store.categoryName(p.categoryId),'gray'))}
       ${td(Store.tagNames(p.tags).map(t=>pill(t,'gray')).join(' ')||'<span class="text-zinc-300">—</span>')}
       ${td(MVR(price)+(p.oldPrice?`<div class="text-xs text-zinc-400 line-through">${MVR(p.oldPrice)}</div>`:''))}
@@ -445,7 +445,7 @@
   function editProduct(id){
     _pid = id || '';
     const firstCat=Store.list('categories')[0]||{};
-    const p=id?Store.get('products',id):{name:'',categoryId:firstCat.id,subId:'',price:'',oldPrice:'',status:'active',tags:[],image:'',images:[],variants:[],variantType:firstCat.variantType||'none'};
+    const p=id?Store.get('products',id):{name:'',brand:'',brandId:'',categoryId:firstCat.id,subId:'',price:'',oldPrice:'',status:'active',tags:[],image:'',images:[],variants:[],variantType:firstCat.variantType||'none'};
     _vars=JSON.parse(JSON.stringify(p.variants||[]));
     _imgs=(p.images&&p.images.length)?p.images.slice():(p.image?[p.image]:[]);
     _vtype=p.variantType||'none';
@@ -455,7 +455,7 @@
     const fg = (icon,text,inner)=>`<div class="mb-4">${lbl(icon,text)}${inner}</div>`;
     openModal(id?'Edit Product':'New Product',
       fg('shirt','Product name',F.input('p_name',p.name))+
-      fg('bookmark','Brand',F.input('p_brand',p.brand||'Kanxi Collection'))+
+      fg('bookmark','Brand',`<select id="p_brand" class="${sel}"></select><p id="p_brand_hint" class="text-[0.72rem] text-zinc-400 mt-1.5"></p>`)+
       fg('image','Product Images',`
         <div id="imgList" class="flex flex-wrap gap-2 mb-2"></div>
         <div class="flex gap-2 items-center">
@@ -465,7 +465,7 @@
         </div>
         <p class="text-[0.7rem] text-zinc-400 mt-1.5">First image is the primary. Uploads are auto-compressed.</p>`)+
       `<div class="flex gap-3"><div class="flex-1">${fg('layout-grid','Category',`<select id="p_cat" onchange="onCatChange()" class="${sel}">${cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.name}</option>`).join('')}</select>`)}</div>
-        <div class="flex-1">${fg('list-tree','Sub-category',`<select id="p_sub" class="${sel}"></select>`)}</div></div>`+
+        <div class="flex-1">${fg('list-tree','Sub-category',`<select id="p_sub" onchange="onProductSubChange()" class="${sel}"></select>`)}</div></div>`+
       `<div class="flex gap-3"><div class="flex-1">${fg('coins','Base price (MVR)',F.input('p_price',p.price,'','number'))}</div><div class="flex-1">${fg('tag','Compare-at price',F.input('p_old',p.oldPrice||'','','number'))}</div>
         <div class="flex-1">${fg('eye','Status',`<select id="p_status" class="${sel}"><option value="active" ${p.status==='active'?'selected':''}>Active</option><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option></select>`)}</div></div>`+
       fg('tags','Tags',`<div id="p_tags" class="flex flex-wrap gap-2">${ts.map(t=>`<span data-id="${t.id}" onclick="this.classList.toggle('on')" class="tagchip cursor-pointer border border-zinc-300 rounded-full px-3 py-1 text-xs font-semibold ${(p.tags||[]).includes(t.id)?'on':''}">${t.name}</span>`).join('')}</div>`)+
@@ -478,7 +478,7 @@
         </div>
         <p class="text-[0.72rem] text-zinc-400 mt-1.5">Each option has a unique <b>SKU</b> (scan its QR in Inventory). Stock, cost &amp; selling price are set per option in <b>Inventory → Batches</b>.</p></div>`,
       `<button onclick="closeModal()" class="${btn.light}">${ic('x','w-4 h-4')} Cancel</button><button onclick="saveProduct('${id||''}')" class="${btn.primary}">${ic('save','w-4 h-4')} Save Product</button>`);
-    reloadSubs(p.subId); renderVars(); renderImgs();
+    reloadSubs(p.subId, !id); renderProductBrands(p.brandId||'', p.brand||''); renderVars(); renderImgs();
   }
 
   /* ── IMAGE UPLOAD (multiple) ── */
@@ -504,9 +504,35 @@
     img.onerror=()=>cb(src); img.src=src;
   }
 
-  function reloadSubs(sel){ const cat=$('#p_cat').value, subs=Store.list('subcategories').filter(s=>s.categoryId===cat);
-    $('#p_sub').innerHTML=`<option value="">—</option>`+subs.map(s=>`<option value="${s.id}" ${s.id===sel?'selected':''}>${s.name}</option>`).join(''); }
-  function onCatChange(){ reloadSubs(); const c=Store.get('categories',$('#p_cat').value); _vtype=(c&&c.variantType)||'none'; const sel=$('#p_vtype'); if(sel)sel.value=_vtype; renderVars(); }
+  function reloadSubs(sel,pickFirst=false){
+    const cat=$('#p_cat').value, subs=Store.list('subcategories').filter(s=>s.categoryId===cat);
+    const selected = sel || (pickFirst && subs[0] ? subs[0].id : '');
+    $('#p_sub').innerHTML=`<option value="">Select sub-category…</option>`+subs.map(s=>`<option value="${s.id}" ${s.id===selected?'selected':''}>${s.name}</option>`).join('');
+    return selected;
+  }
+  function renderProductBrands(selectedId='', selectedName=''){
+    const el=$('#p_brand'), hint=$('#p_brand_hint'); if(!el)return;
+    const sid=$('#p_sub').value, brands=sid?Store.brandsOfSub(sid):[];
+    const currentId = selectedId || '';
+    const currentName = selectedName || '';
+    let html='';
+    if(!sid){
+      html='<option value="" data-name="">Select a sub-category first</option>';
+      if(hint) hint.textContent='Brands are mapped from the selected sub-category.';
+    }else if(brands.length){
+      html=brands.map(b=>`<option value="${esc(b.id)}" data-name="${esc(b.name)}" ${b.id===currentId||(!currentId&&b.name===currentName)?'selected':''}>${esc(b.name)}</option>`).join('');
+      if(currentName && !brands.some(b=>b.id===currentId || b.name===currentName)){
+        html=`<option value="${esc(currentId)}" data-name="${esc(currentName)}" selected>${esc(currentName)} (current)</option>`+html;
+      }
+      if(hint) hint.textContent='Brand list comes from Admin → Sub-categories.';
+    }else{
+      html=`<option value="" data-name="${esc(currentName)}">${currentName?esc(currentName):'No brands mapped'}</option>`;
+      if(hint) hint.textContent='No brands are mapped to this sub-category yet. Add brands in Sub-categories.';
+    }
+    el.innerHTML=html;
+  }
+  function onProductSubChange(){ renderProductBrands(); }
+  function onCatChange(){ reloadSubs('', true); renderProductBrands(); const c=Store.get('categories',$('#p_cat').value); _vtype=(c&&c.variantType)||'none'; const sel=$('#p_vtype'); if(sel)sel.value=_vtype; renderVars(); }
   function setVType(v){ _vtype=v; if(v!=='shade')_vars.forEach(x=>x.color=null); renderVars(); }
   function renderVars(){
     const wrap=$('#varList'), optWrap=$('#optWrap'); if(!wrap) return;
@@ -523,8 +549,12 @@
   function addVar(){ _vars.push({id:Store.uid('v_'),value:'',color:_vtype==='shade'?'#cccccc':null}); renderVars(); }
   function saveProduct(id){
     const name=$('#p_name').value.trim(); if(!name){ alert('Product name is required'); return; }
+    const subId=$('#p_sub').value; if(!subId){ alert('Select a sub-category'); return; }
     const pid = id || Store.uid('p_');
     const tg=[...document.querySelectorAll('#p_tags .tagchip.on')].map(c=>c.dataset.id);
+    const brandOpt=$('#p_brand').selectedOptions[0];
+    const brand=(brandOpt&&brandOpt.dataset.name||'').trim();
+    const brandId=($('#p_brand').value||'').trim();
     const opts = _vtype==='none' ? [] : _vars.filter(v=>(v.value||'').trim()).map(v=>{
       const val=v.value.trim();
       return { id:v.id||Store.uid('v_'), value:val, color:_vtype==='shade'?(v.color||'#cccccc'):null, sku:Store.skuFor(pid,{value:val}) };
@@ -533,9 +563,9 @@
     try {
       Store.upsert('products',{
         id:pid, name,
-        brand:$('#p_brand').value.trim()||'Kanxi Collection',
+        brand, brandId:brand&&brandId?brandId:'',
         image:primary, images:_imgs.slice(),
-        categoryId:$('#p_cat').value, subId:$('#p_sub').value,
+        categoryId:$('#p_cat').value, subId,
         price:+$('#p_price').value||0, oldPrice:+$('#p_old').value||null,
         status:$('#p_status').value, tags:tg, variantType:_vtype, variants:opts
       });
