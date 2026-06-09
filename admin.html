@@ -349,26 +349,42 @@
     const subs=Store.list('subcategories');
     content.innerHTML = card('Sub-categories', `<button onclick="editSub()" class="${btn.primary} ${btn.sm}">${ic('plus','w-4 h-4')} Add Sub-category</button>`,
       `<table class="w-full">${TH(['Name','Parent Category','Brands','Products',''])}<tbody>
-      ${subs.map(s=>`<tr class="hover:bg-zinc-50">${td('<b>'+s.name+'</b>')}${td(pill(Store.categoryName(s.categoryId),'gray'))}
+      ${subs.map(s=>`<tr class="hover:bg-zinc-50">${td(`<div class="flex items-center gap-2"><img src="${s.image||Store.imageForSub(s.id)||''}" class="w-9 h-9 rounded-lg object-cover bg-zinc-100"/><b>${s.name}</b></div>`)}${td(pill(Store.categoryName(s.categoryId),'gray'))}
         ${td((s.brands&&s.brands.length)?`<div class="flex items-center gap-1.5">${s.brands.slice(0,4).map(b=>b.logo?`<img src="${b.logo}" title="${b.name}" class="w-7 h-7 rounded-full object-contain bg-zinc-100 border border-zinc-200"/>`:`<span class="w-7 h-7 rounded-full bg-kcream text-kacc text-[0.6rem] font-bold grid place-items-center border border-zinc-200" title="${b.name}">${(b.name||'?').slice(0,2).toUpperCase()}</span>`).join('')}${s.brands.length>4?`<span class="text-xs text-zinc-400">+${s.brands.length-4}</span>`:''}</div>`:'<span class="text-zinc-300">—</span>')}
         ${td(Store.list('products').filter(p=>p.subId===s.id).length)}
         ${td(actBtns(`editSub('${s.id}')`,`del('subcategories','${s.id}',subcats)`))}</tr>`).join('')||empty(5)}
       </tbody></table>`);
   }
   var _brands=[];
+  var _subImage='';
   function editSub(id){
-    const s=id?Store.get('subcategories',id):{name:'',categoryId:Store.list('categories')[0]?.id,brands:[]};
+    const s=id?Store.get('subcategories',id):{name:'',categoryId:Store.list('categories')[0]?.id,brands:[],image:''};
     _brands=JSON.parse(JSON.stringify(s.brands||[]));
+    _subImage=s.image||'';
     const cats=Store.list('categories');
     openModal(id?'Edit Sub-category':'New Sub-category',
       F.fg('Name',F.input('s_name',s.name))+
       F.fg('Parent Category',`<select id="s_cat" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm">${cats.map(c=>`<option value="${c.id}" ${c.id===s.categoryId?'selected':''}>${c.name}</option>`).join('')}</select>`)+
+      F.fg('Sub-category image',`<div class="flex items-center gap-3">
+        <label class="w-24 h-20 rounded-xl border border-zinc-200 grid place-items-center cursor-pointer overflow-hidden bg-zinc-50 shrink-0 text-zinc-400 hover:border-kink" id="subImageBox"></label>
+        <div class="flex flex-col gap-2">
+          <label class="${btn.light} ${btn.sm} cursor-pointer">${ic('image-plus','w-4 h-4')} Upload image<input type="file" accept="image/*" class="hidden" onchange="onSubImage(this)"/></label>
+          <button type="button" onclick="clearSubImage()" class="${btn.light} ${btn.sm}">Use product image</button>
+        </div>
+      </div>`)+
       `<div class="mb-2">${F.label('Brands')}<div id="brandList"></div>
         <button type="button" onclick="addBrand()" class="${btn.light} ${btn.sm} mt-2">${ic('plus','w-3.5 h-3.5')} Add brand</button>
         <p class="text-[0.72rem] text-zinc-400 mt-1.5">Click the square to upload a brand logo (auto-compressed).</p></div>`,
       `<button onclick="closeModal()" class="${btn.light}">Cancel</button><button onclick="saveSub('${id||''}')" class="${btn.primary}">${ic('save','w-4 h-4')} Save</button>`);
+    renderSubImage();
     renderBrands();
   }
+  const SUB_ASPECT = 118/96;
+  function renderSubImage(){ const box=$('#subImageBox'); if(!box)return;
+    box.innerHTML = _subImage ? `<img src="${_subImage}" class="w-full h-full object-cover"/>` : `<div class="text-center">${ic('image-plus','w-6 h-6 mx-auto mb-1')}<div class="text-[0.62rem] font-semibold">Upload</div></div>`;
+  }
+  function onSubImage(input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>cropCover(e.target.result,500,SUB_ASPECT,0.78,d=>{ _subImage=d; renderSubImage(); }); r.readAsDataURL(f); input.value=''; }
+  function clearSubImage(){ _subImage=''; renderSubImage(); }
   function renderBrands(){
     const wrap=$('#brandList'); if(!wrap)return;
     wrap.innerHTML=_brands.map((b,i)=>`<div class="flex items-center gap-2 mb-2">
@@ -384,8 +400,8 @@
   function saveSub(id){
     const name=$('#s_name').value.trim(); if(!name)return alert('Name required');
     const brands=_brands.filter(b=>(b.name||'').trim()).map(b=>({id:b.id||Store.uid('br_'),name:b.name.trim(),logo:b.logo||''}));
-    try{ Store.upsert('subcategories',{id:id||undefined,name,categoryId:$('#s_cat').value,brands}); }
-    catch(e){ alert('Could not save — storage full. Use smaller logos.'); return; }
+    try{ Store.upsert('subcategories',{id:id||undefined,name,categoryId:$('#s_cat').value,image:_subImage,brands}); }
+    catch(e){ alert('Could not save — storage full. Use smaller images.'); return; }
     closeModal(); subcats(); toast('Sub-category saved');
   }
 

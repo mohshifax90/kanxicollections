@@ -311,7 +311,7 @@ const Store = (() => {
     /* ── storefront ── */
     categoryBySlug(slug){ return this.list('categories').find(c=>c.slug===slug); },
     subcategoriesOf(categoryId){ return this.list('subcategories').filter(s=>s.categoryId===categoryId); },
-    imageForSub(subId){ const p=this.storeProducts().find(p=>p.subId===subId); return p?p.image:''; },
+    imageForSub(subId){ const s=this.get('subcategories',subId); if(s&&s.image) return s.image; const p=this.storeProducts().find(p=>p.subId===subId); return p?p.image:''; },
     cardsBySub(subId){ return this.storeProducts().filter(p=>p.subId===subId).map(p=>this.card(p)); },
     optionValues(p){ return (p.variants||[]).map(v=>v.value); },
     badgeOf(p){ const tn=this.tagNames(p.tags||[]);
