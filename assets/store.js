@@ -117,11 +117,7 @@ const Store = (() => {
       });
     });
 
-    const users = [
-      { id:uid('u_'), name:'Aishath Ibrahim', phone:'+960 777-1234', gender:'Female', dob:'1996-04-12', createdAt:Date.now()-86400000*30,
-        addresses:[{ id:uid('a_'), label:'Home', line:'Hithigasdhoshuge, Fareedhee Magu', city:'Malé', atoll:'Kaafu', postcode:'20026', country:'Maldives', lat:4.1755, lng:73.5093, isDefault:true }] },
-      { id:uid('u_'), name:'Mohamed Naseem', phone:'+960 999-8765', gender:'Male', dob:'1990-11-03', createdAt:Date.now()-86400000*8, addresses:[] },
-    ];
+    const users = [];
     const orders = [];
     const payments = [];
 
