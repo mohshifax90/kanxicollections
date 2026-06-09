@@ -4,284 +4,366 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kanxi Collection — Checkout</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    :root { --black:#1a1814; --white:#fff; --gray-100:#f8f5f1; --gray-200:#ede8e0; --gray-400:#b0a898; --gray-600:#6e6860; --accent:#b89b7a; --cream:#f5ede0; --ink:#1a1814; --muted:#8b8b8b; --line:#efefef; --red:#e0413b; }
-    body { font-family:'Inter',sans-serif; color:var(--ink); background:#e9e9e9; -webkit-font-smoothing:antialiased; }
-    a { text-decoration:none; color:inherit; }
-    .app { max-width:480px; margin:0 auto; background:#fff; min-height:100vh; box-shadow:0 0 40px rgba(0,0,0,0.08); padding-bottom:150px; }
-
-    /* header */
-    .ch { position:sticky; top:0; z-index:50; background:#fff; display:flex; align-items:center; padding:1rem; border-bottom:1px solid var(--line); }
-    .ch .icon-btn { background:none; border:none; cursor:pointer; font-size:1.4rem; display:flex; align-items:center; }
-    .back-btn { width:44px; height:44px; margin-left:-10px; display:flex; align-items:center; justify-content:center; background:none; border:none; cursor:pointer; border-radius:50%; -webkit-tap-highlight-color:transparent; transition:background 0.15s; flex-shrink:0; }
-    .back-btn:active { background:#f0f0f0; }
-    .back-btn svg { width:25px; height:25px; color:var(--ink); }
-    .ch h1 { flex:1; text-align:center; font-size:1.1rem; font-weight:800; margin-right:1.4rem; }
-
-    .sec { padding:1.2rem 1rem; }
-    .sec + .sec { border-top:8px solid #f5f5f5; }
-    .sec-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
-    .sec-head h2 { font-size:1.05rem; font-weight:800; }
-    .sec-head .link { color:#3a7bd5; font-size:0.9rem; font-weight:600; cursor:pointer; }
-
-    /* address */
-    .addr { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; cursor:pointer; }
-    .addr-info { font-size:0.95rem; line-height:1.5; }
-    .addr-info .nm { font-weight:700; margin-bottom:0.15rem; }
-    .addr-info .ln { color:var(--gray-600); }
-    .chev { color:var(--gray-400); font-size:1.1rem; flex-shrink:0; }
-
-    /* shipping shop */
-    .ship-shop { display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; }
-    .ship-shop .av { width:26px; height:26px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid var(--gray-200); }
-    .ship-shop .av svg { height:18px; }
-    .ship-shop .nm { font-size:0.95rem; font-weight:700; display:flex; align-items:center; gap:4px; }
-    .ship-shop .verified { color:var(--accent); font-size:0.78rem; }
-    .ship-shop .note { margin-left:auto; color:#3a7bd5; font-size:0.9rem; font-weight:600; cursor:pointer; }
-
-    .line-item { display:flex; gap:0.9rem; margin-bottom:1rem; align-items:flex-start; }
-    .line-item img { width:84px; height:96px; border-radius:8px; object-fit:cover; background:var(--gray-100); flex-shrink:0; }
-    .li-info { flex:1; }
-    .li-name { font-size:0.92rem; font-weight:500; line-height:1.35; }
-    .li-variant { font-size:0.85rem; color:var(--gray-400); margin:0.25rem 0 0.6rem; }
-    .li-price { font-size:0.95rem; font-weight:700; }
-    .li-qty { font-size:0.92rem; font-weight:700; flex-shrink:0; }
-
-    .ship-method { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding-top:0.9rem; border-top:1px solid var(--line); cursor:pointer; }
-    .ship-method .sm-main { font-size:0.92rem; font-weight:600; }
-    .ship-method .sm-sub { font-size:0.85rem; color:var(--gray-600); margin-top:0.2rem; }
-
-    /* payment */
-    .pay { display:flex; align-items:center; gap:0.8rem; padding:0.7rem 0; cursor:pointer; }
-    .pay-ic { width:38px; height:26px; border-radius:5px; background:var(--gray-100); display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; border:1px solid var(--line); }
-    .pay-name { flex:1; font-size:0.95rem; font-weight:500; }
-    .radio { width:22px; height:22px; border-radius:50%; border:2px solid var(--gray-400); flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-    .pay.active .radio { border-color:var(--red); }
-    .pay.active .radio::after { content:''; width:11px; height:11px; border-radius:50%; background:var(--red); }
-
-    /* card fields */
-    .card-fields { margin-top:0.8rem; padding-top:0.8rem; border-top:1px dashed var(--line); }
-    .fg { margin-bottom:0.7rem; }
-    .fg input { width:100%; padding:0.8rem 0.9rem; border:1.5px solid var(--gray-200); border-radius:10px; font-family:'Inter',sans-serif; font-size:0.9rem; outline:none; }
-    .fg input:focus { border-color:var(--black); }
-    .frow { display:flex; gap:0.7rem; }
-    .frow .fg { flex:1; }
-
-    /* order summary */
-    .osum-row { display:flex; align-items:center; justify-content:space-between; font-size:0.95rem; padding:0.3rem 0; color:var(--gray-600); }
-    .osum-row.total { font-size:1.1rem; font-weight:800; color:var(--ink); padding-top:0.5rem; }
-    .osum-row.total .lbl span { font-weight:400; font-size:0.85rem; color:var(--gray-600); }
-
-    /* place order bar */
-    .place-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#fff; border-top:1px solid var(--line); padding:0.9rem 1rem 1.1rem; z-index:60; }
-    .place-bar button { width:100%; background:var(--black); color:#fff; border:none; border-radius:12px; padding:1.1rem; font-size:1rem; font-weight:800; letter-spacing:0.02em; cursor:pointer; font-family:'Inter',sans-serif; transition:background 0.2s; }
-    .place-bar button:hover { background:var(--accent); }
-    .protect { text-align:center; font-size:0.82rem; font-weight:600; color:var(--gray-600); margin-top:0.7rem; }
-
-    /* success */
-    .success { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:200; align-items:center; justify-content:center; padding:1.5rem; }
-    .success.show { display:flex; }
-    .sbox { background:#fff; border-radius:18px; padding:2.5rem 1.8rem; text-align:center; max-width:380px; width:100%; }
-    .sbox .ic { font-size:3rem; margin-bottom:1rem; }
-    .sbox h2 { font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:0.6rem; }
-    .sbox p { color:var(--gray-600); font-size:0.9rem; line-height:1.6; margin-bottom:0.5rem; }
-    .sbox .onum { font-size:0.85rem; margin-bottom:1.5rem; } .sbox .onum b { color:var(--black); }
-    .sbox a { display:inline-block; background:var(--black); color:#fff; padding:0.9rem 2rem; border-radius:10px; font-weight:700; font-size:0.88rem; }
-
-    @media (min-width:520px){ body{padding:1.5rem 0;} .app{border-radius:20px; min-height:auto;} .place-bar{border-radius:0 0 20px 20px;} }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f3f4f6;--panel:#fff;--soft:#f9fafb;--blue:#4f5cf0;--blue-dark:#4250ec;--green:#0f9f62}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    button,input{font:inherit}
+    .app{max-width:480px;margin:0 auto;background:var(--panel);min-height:100vh;padding-bottom:150px;box-shadow:0 0 40px rgba(17,24,39,.08)}
+    .hidden{display:none}
+    .head{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:.75rem;padding:.95rem 1rem;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+    .icon-btn{width:42px;height:42px;border:none;background:none;border-radius:999px;display:grid;place-items:center;color:var(--ink);cursor:pointer}
+    .icon-btn:active{background:#f3f4f6}
+    .head h1{flex:1;text-align:center;font-size:1.05rem;font-weight:800;margin-right:42px}
+    .section{padding:1rem;border-bottom:8px solid #f5f5f5}
+    .section:last-of-type{border-bottom:none}
+    .section-title{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.9rem}
+    .section-title h2{font-size:1rem;font-weight:800}
+    .linkish{font-size:.86rem;font-weight:600;color:#5563f7}
+    .address,.ship-card,.summary-card,.pay-card,.transfer-box{border:1px solid var(--line);border-radius:20px;background:var(--panel)}
+    .address{padding:1rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+    .address .name{font-weight:700;font-size:.95rem}
+    .address .line{font-size:.88rem;color:var(--muted);margin-top:.2rem;line-height:1.45}
+    .brand-row{display:flex;align-items:center;gap:.7rem;margin-bottom:1rem}
+    .brand-badge{width:30px;height:30px;border-radius:999px;border:1px solid var(--line);display:grid;place-items:center;background:#fff}
+    .brand-name{font-size:.92rem;font-weight:700}
+    .item-list{display:grid;gap:.9rem}
+    .line-item{display:grid;grid-template-columns:84px 1fr auto;gap:.8rem;align-items:flex-start}
+    .line-item img{width:84px;height:100px;border-radius:18px;object-fit:cover;background:var(--soft)}
+    .li-name{font-size:.92rem;font-weight:600;line-height:1.35}
+    .li-meta{font-size:.8rem;color:var(--muted);margin:.25rem 0 .5rem}
+    .li-price{font-size:.92rem;font-weight:700}
+    .li-qty{font-size:.85rem;color:var(--muted);font-weight:600}
+    .ship-card{padding:1rem}
+    .ship-card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem}
+    .ship-main{font-size:.92rem;font-weight:700}
+    .ship-sub{font-size:.84rem;color:var(--muted);margin-top:.2rem}
+    .pay-list{display:grid;gap:.7rem}
+    .pay-card{padding:.95rem 1rem;display:flex;align-items:center;gap:.85rem;cursor:pointer;transition:.18s;border-color:var(--line)}
+    .pay-card.active{border-color:rgba(79,92,240,.45);box-shadow:0 0 0 3px rgba(79,92,240,.1)}
+    .pay-icon{width:42px;height:42px;border-radius:14px;background:#f3f4f6;display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+    .pay-name{font-size:.92rem;font-weight:600}
+    .pay-sub{font-size:.78rem;color:var(--muted);margin-top:.15rem}
+    .pay-radio{margin-left:auto;width:22px;height:22px;border:2px solid #c7cdd8;border-radius:999px;display:grid;place-items:center;flex-shrink:0}
+    .pay-card.active .pay-radio{border-color:var(--blue)}
+    .pay-card.active .pay-radio::after{content:'';width:10px;height:10px;border-radius:999px;background:var(--blue)}
+    .card-fields,.transfer-wrap{display:none;margin-top:.9rem}
+    .card-fields.show,.transfer-wrap.show{display:block}
+    .field{margin-bottom:.75rem}
+    .field input{width:100%;padding:.9rem 1rem;border:1px solid var(--line);border-radius:14px;outline:none}
+    .field input:focus{border-color:var(--blue)}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+    .transfer-box{padding:1rem;background:#fbfcff}
+    .transfer-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem}
+    .transfer-label{font-size:.73rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .transfer-value{font-size:.96rem;font-weight:700;margin-top:.18rem}
+    .copy-btn,.upload-btn{display:inline-flex;align-items:center;gap:.4rem;border:none;border-radius:12px;padding:.75rem .95rem;font-weight:700;cursor:pointer}
+    .copy-btn{background:#eef2ff;color:var(--blue)}
+    .upload-btn{background:#111827;color:#fff}
+    .transfer-note{margin-top:.85rem;font-size:.82rem;color:var(--muted);line-height:1.45}
+    .slip-row{margin-top:1rem;display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}
+    .slip-preview{width:88px;height:88px;border-radius:16px;border:1px solid var(--line);background:#fff;object-fit:cover}
+    .slip-empty{width:88px;height:88px;border-radius:16px;border:1px dashed #cbd5e1;display:grid;place-items:center;color:#94a3b8;background:#fff}
+    .summary-card{padding:1rem}
+    .sum-row{display:flex;align-items:center;justify-content:space-between;font-size:.92rem;padding:.35rem 0;color:var(--muted)}
+    .sum-row.total{padding-top:.8rem;margin-top:.6rem;border-top:1px solid var(--line);font-size:1.05rem;font-weight:800;color:var(--ink)}
+    .sum-row .green{color:var(--green);font-weight:700}
+    .bar{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--line);padding:.9rem 1rem 1rem;z-index:60}
+    .total-line{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
+    .total-line .label{font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+    .total-line .amount{font-size:1.18rem;font-weight:800}
+    .place-btn{width:100%;border:none;border-radius:16px;background:var(--blue);color:#fff;padding:1rem 1.1rem;font-size:1rem;font-weight:800;cursor:pointer;transition:.18s}
+    .place-btn:hover{background:var(--blue-dark)}
+    .place-btn:disabled{background:#c7d2fe;color:#eef2ff;cursor:not-allowed}
+    .hint{margin-top:.65rem;font-size:.8rem;color:var(--muted);text-align:center}
+    .success{display:none;position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:100;align-items:center;justify-content:center;padding:1.25rem}
+    .success.show{display:flex}
+    .success-card{background:#fff;border-radius:28px;padding:2rem 1.4rem;text-align:center;width:100%;max-width:360px}
+    .success-card h2{font-size:1.45rem;font-weight:800;margin:.9rem 0 .45rem}
+    .success-card p{font-size:.9rem;color:var(--muted);line-height:1.5}
+    .success-card a{display:inline-flex;align-items:center;justify-content:center;margin-top:1.2rem;padding:.95rem 1.4rem;border-radius:16px;background:var(--blue);color:#fff;font-weight:800}
+    @media (min-width:520px){body{padding:1.4rem 0}.app{border-radius:28px;min-height:auto}.bar{border-radius:0 0 28px 28px}}
   </style>
 </head>
 <body>
 <div class="app">
-
-  <!-- header -->
-  <div class="ch">
-    <button class="back-btn" onclick="location.href='cart.html'" title="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <div class="head">
+    <button class="icon-btn" onclick="location.href='cart.html'" aria-label="Back"><i data-lucide="chevron-left"></i></button>
     <h1>Checkout</h1>
   </div>
 
-  <!-- address -->
-  <div class="sec">
-    <div class="addr" onclick="showToast('Edit address')">
-      <div class="addr-info" id="addrInfo">
-        <div class="nm">Aishath Ibrahim</div>
-        <div class="ln">Hithigasdhoshuge, Fareedhee Magu</div>
-        <div class="ln">Malé, K. 20026 · Maldives</div>
+  <div class="section">
+    <div class="address">
+      <div id="addrInfo">
+        <div class="name">Customer</div>
+        <div class="line">No saved address</div>
       </div>
-      <span class="chev">›</span>
+      <i data-lucide="chevron-right" style="width:18px;height:18px;color:#94a3b8"></i>
     </div>
   </div>
 
-  <!-- shipping method -->
-  <div class="sec">
-    <div class="sec-head"><h2>Shipping method</h2></div>
-    <div class="ship-shop">
-      <div class="av"><svg viewBox="415 270 325 375" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0,1254) scale(0.1,-0.1)" stroke="none"><path fill="#1a1814" d="M4477 9643 c-17 -16 -1 -20 91 -26 183 -11 246 -49 285 -171 l22 -71 0 -1290 c0 -1377 1 -1360 -48 -1448 -23 -42 -81 -80 -137 -93 -19 -4 -75 -10 -124 -13 -58 -4 -91 -10 -94 -18 -3 -10 109 -13 537 -13 307 0 542 4 545 9 8 13 -19 21 -73 21 -73 0 -151 27 -186 65 -17 18 -40 57 -51 86 -18 52 -19 95 -22 1334 -2 856 1 1306 8 1360 6 46 21 102 36 132 21 44 34 56 80 79 37 18 78 28 129 33 42 3 76 11 78 16 2 11 -1065 20 -1076 8z"/><g transform="translate(6350,7900) scale(0.78) translate(-6350,-7900)"><path fill="#b89b7a" d="M6540 9635 c0 -11 11 -15 38 -15 47 0 103 -28 121 -61 21 -38 7 -89 -43 -156 -59 -79 -554 -594 -1010 -1050 l-371 -373 81 0 81 0 234 -246 c129 -135 234 -249 234 -252 0 -4 -26 -59 -57 -122 -170 -343 -170 -724 -1 -1065 61 -123 121 -204 227 -310 175 -174 377 -281 656 -346 121 -29 425 -37 568 -15 264 40 518 170 666 340 55 63 106 135 106 148 0 20 -27 5 -49 -27 -33 -49 -157 -165 -227 -212 -266 -181 -601 -236 -926 -154 -385 97 -665 363 -807 765 -78 220 -90 520 -31 752 11 42 22 79 23 81 6 6 225 -220 714 -739 l73 -78 325 0 c196 0 325 4 325 9 0 6 -21 12 -47 16 -139 17 -227 50 -322 119 -60 45 -558 558 -885 913 l-49 53 29 42 c47 70 164 181 249 236 269 176 642 210 967 88 253 -95 464 -300 514 -498 9 -38 21 -68 26 -68 10 0 6 176 -8 362 l-6 77 -47 30 c-169 108 -391 183 -624 212 -123 15 -406 6 -502 -15 -251 -56 -463 -165 -644 -331 l-44 -40 -76 82 c-42 45 -146 157 -231 248 -85 91 -156 172 -158 178 -1 7 271 285 605 618 465 464 626 619 687 659 125 84 213 117 339 129 37 3 69 11 70 16 1 7 -137 11 -395 13 -350 2 -398 0 -398 -13z"/></g></g></svg></div>
-      <span class="nm">kanxi.collection</span>
-      <span class="note" onclick="showToast('Add a note')">Add note</span>
-    </div>
-
-    <div id="lineItems"></div>
-
-    <div class="ship-method" onclick="showToast('Change shipping')">
-      <div>
-        <div class="sm-main" id="shipMain">Standard shipping: Free</div>
-        <div class="sm-sub" id="shipSub">Estimated delivery: in 3–5 days</div>
+  <div class="section">
+    <div class="section-title"><h2>Delivery</h2></div>
+    <div class="ship-card">
+      <div class="brand-row">
+        <div class="brand-badge"><i data-lucide="store"></i></div>
+        <div class="brand-name">kanxi.collection</div>
       </div>
-      <span class="chev">›</span>
+      <div class="item-list" id="lineItems"></div>
+      <div class="ship-card top" style="padding:1rem 0 0;border:none;border-top:1px solid var(--line);border-radius:0;background:none;margin-top:1rem">
+        <div>
+          <div class="ship-main">Standard shipping: Free</div>
+          <div class="ship-sub" id="shipSub">Estimated delivery in 3–5 days</div>
+        </div>
+        <i data-lucide="chevron-right" style="width:18px;height:18px;color:#94a3b8"></i>
+      </div>
     </div>
   </div>
 
-  <!-- payment -->
-  <div class="sec">
-    <div class="sec-head"><h2>Payment method</h2><span class="link" onclick="showToast('All payment methods')">View all</span></div>
-    <div class="pay active" onclick="selPay(this,'card')">
-      <div class="pay-ic">💳</div>
-      <span class="pay-name">Card ending in 4242</span>
-      <span class="radio"></span>
-    </div>
-    <div class="pay" onclick="selPay(this,'paypal')">
-      <div class="pay-ic" style="color:#003087;font-weight:800;font-size:0.7rem;">PP</div>
-      <span class="pay-name">PayPal</span>
-      <span class="radio"></span>
-    </div>
-    <div class="pay" onclick="selPay(this,'transfer')">
-      <div class="pay-ic">🏦</div>
-      <span class="pay-name">Bank Transfer</span>
-      <span class="radio"></span>
-    </div>
-    <div class="pay" onclick="selPay(this,'cod')">
-      <div class="pay-ic">💵</div>
-      <span class="pay-name">Cash on Delivery</span>
-      <span class="radio"></span>
-    </div>
-
-    <div class="card-fields" id="cardFields">
-      <div class="fg"><input type="text" placeholder="Card number" maxlength="19" oninput="fmtCard(this)" value="4242 4242 4242 4242"/></div>
+  <div class="section">
+    <div class="section-title"><h2>Payment</h2></div>
+    <div class="pay-list" id="paymentList"></div>
+    <div class="card-fields show" id="cardFields">
+      <div class="field"><input type="text" placeholder="Card number" maxlength="19" oninput="fmtCard(this)" value="4242 4242 4242 4242"/></div>
       <div class="frow">
-        <div class="fg"><input type="text" placeholder="MM / YY" maxlength="7" oninput="fmtExp(this)" value="12 / 28"/></div>
-        <div class="fg"><input type="text" placeholder="CVV" maxlength="4" value="•••"/></div>
+        <div class="field"><input type="text" placeholder="MM / YY" maxlength="7" oninput="fmtExp(this)" value="12 / 28"/></div>
+        <div class="field"><input type="text" placeholder="CVV" maxlength="4" value="123"/></div>
+      </div>
+    </div>
+    <div class="transfer-wrap" id="transferWrap">
+      <div class="transfer-box">
+        <div class="transfer-top">
+          <div>
+            <div class="transfer-label">Bank transfer</div>
+            <div class="transfer-value" id="bankName">Kanxi Collection</div>
+            <div class="transfer-note" id="bankAccount">Add account number in admin to enable transfers.</div>
+          </div>
+          <button class="copy-btn" type="button" onclick="copyAccount()"><i data-lucide="copy"></i><span>Copy</span></button>
+        </div>
+        <div class="transfer-note">Upload one transfer slip to activate place order. These orders stay in pending slip verification until admin confirms payment.</div>
+        <div class="slip-row">
+          <div id="slipPreviewWrap" class="slip-empty"><i data-lucide="image"></i></div>
+          <label class="upload-btn">Upload slip<input id="slipInput" type="file" accept="image/*" class="hidden" onchange="onSlipUpload(this)"/></label>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- order summary -->
-  <div class="sec">
-    <div class="sec-head"><h2>Order summary</h2></div>
-    <div class="osum-row"><span>Subtotal</span><span id="oSub">MVR 0</span></div>
-    <div class="osum-row"><span>Shipping</span><span id="oShip" style="color:#27ae60;font-weight:700;">Free</span></div>
-    <div class="osum-row"><span>Tax (8%)</span><span id="oTax">MVR 0</span></div>
-    <div class="osum-row total"><span class="lbl">Total <span id="itemCount">(0 items)</span></span><span id="oTotal">MVR 0</span></div>
+  <div class="section">
+    <div class="section-title"><h2>Summary</h2></div>
+    <div class="summary-card">
+      <div class="sum-row"><span>Subtotal</span><span id="oSub">MVR 0</span></div>
+      <div class="sum-row"><span>Shipping</span><span class="green">Free</span></div>
+      <div class="sum-row"><span>Tax (8%)</span><span id="oTax">MVR 0</span></div>
+      <div class="sum-row total"><span id="itemCount">Total (0 items)</span><span id="oTotal">MVR 0</span></div>
+    </div>
   </div>
-
 </div>
 
-<!-- place order -->
-<div class="place-bar">
-  <button onclick="placeOrder()">Place order · <span id="placeTotal">MVR 0</span></button>
-  <p class="protect">🛡 Buyer Protection Program</p>
+<div class="bar">
+  <div class="total-line">
+    <div>
+      <div class="label">Order total</div>
+      <div class="amount" id="placeTotal">MVR 0</div>
+    </div>
+  </div>
+  <button class="place-btn" id="placeBtn" onclick="placeOrder()">Place order</button>
+  <div class="hint" id="placeHint">Ready to place your order.</div>
 </div>
 
-<!-- success -->
 <div class="success" id="success">
-  <div class="sbox">
-    <div class="ic">✅</div>
-    <h2>Order Placed!</h2>
-    <p>Shukuriyaa! Your Kanxi order is confirmed and will be dispatched shortly.</p>
-    <p class="onum">Order <b id="onum">#KNX-000000</b></p>
-    <a href="index.html">Continue Shopping</a>
+  <div class="success-card">
+    <i data-lucide="badge-check" style="width:52px;height:52px;color:#4f5cf0"></i>
+    <h2>Order placed</h2>
+    <p>Your order is in. Bank transfer orders wait for slip verification before they move forward.</p>
+    <p style="margin-top:.55rem;font-weight:700;color:#111827" id="onum">#KNX-000000</p>
+    <a href="index.html">Continue shopping</a>
   </div>
 </div>
 
+<script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/supabase-config.js?v=1"></script>
 <script src="assets/store.js?v=4"></script>
 <script src="assets/components.js"></script>
 <script>
-  /* require login */
-  if(typeof Store !== 'undefined' && !Store.currentUser()){
-    location.href = 'login.html?redirect=checkout.html';
-  }
-  /* prefill from session */
-  (function(){
-    const u = (typeof Store!=='undefined') ? Store.currentUser() : null;
-    if(u){
-      const a = (u.addresses||[]).find(x=>x.isDefault) || (u.addresses||[])[0];
-      const el = document.getElementById('addrInfo');
-      if(el){
-        el.innerHTML = `<div class="nm">${u.name||'Customer'}</div>` +
-          (a ? `<div class="ln">${a.line||''}</div><div class="ln">${[a.city,a.postcode].filter(Boolean).join(', ')} · ${a.country||''}</div>`
-             : `<div class="ln muted">${u.phone} · No saved address</div>`);
-      }
-    }
-  })();
+  if(typeof Store!=='undefined' && !Store.currentUser()) location.href='login.html?redirect=checkout.html';
 
-  function render() {
+  let selectedPay = 'card';
+  let transferSlip = '';
+  let paymentSettings = { methods:[], bankTransfer:{ bankName:'Kanxi Collection', accountNumber:'' } };
+
+  function icons(){ if(window.lucide) lucide.createIcons(); }
+  function price(n){ return 'MVR ' + (+n || 0).toLocaleString(); }
+  function activeMethods(){
+    return (paymentSettings.methods||[]).filter(m=>m.enabled!==false);
+  }
+  function payIcon(key){
+    return { card:'credit-card', paypal:'wallet', transfer:'landmark', cod:'banknote' }[key] || 'credit-card';
+  }
+  function paySubtitle(key){
+    return {
+      card:'Pay instantly',
+      paypal:'Use your PayPal balance',
+      transfer:'Upload one slip to confirm',
+      cod:'Pay after delivery'
+    }[key] || '';
+  }
+  function renderAddress(){
+    const u = Store.currentUser();
+    const a = u && ((u.addresses||[]).find(x=>x.isDefault) || (u.addresses||[])[0]);
+    const el = document.getElementById('addrInfo');
+    if(!el) return;
+    el.innerHTML = u ? `
+      <div class="name">${u.name || 'Customer'}</div>
+      ${a ? `<div class="line">${a.line || ''}</div><div class="line">${[a.city,a.postcode].filter(Boolean).join(', ')}${a.country ? ' · '+a.country : ''}</div>` : `<div class="line">${u.phone || ''}</div>`}
+    ` : `<div class="name">Guest</div><div class="line">Sign in to continue</div>`;
+  }
+  function renderPayments(){
+    paymentSettings = Store.getPaymentSettings();
+    const methods = activeMethods();
+    if(!methods.length){
+      document.getElementById('paymentList').innerHTML = '<div class="pay-card"><div><div class="pay-name">No payment methods enabled</div><div class="pay-sub">Enable at least one in admin.</div></div></div>';
+      selectedPay = '';
+      syncPaymentUI();
+      return;
+    }
+    if(!methods.some(m=>m.key===selectedPay)) selectedPay = methods[0].key;
+    document.getElementById('paymentList').innerHTML = methods.map(m=>`
+      <div class="pay-card ${m.key===selectedPay?'active':''}" onclick="selectPay('${m.key}')">
+        <div class="pay-icon"><i data-lucide="${payIcon(m.key)}"></i></div>
+        <div>
+          <div class="pay-name">${m.label}</div>
+          <div class="pay-sub">${paySubtitle(m.key)}</div>
+        </div>
+        <div class="pay-radio"></div>
+      </div>
+    `).join('');
+    document.getElementById('bankName').textContent = paymentSettings.bankTransfer && paymentSettings.bankTransfer.bankName || 'Bank transfer';
+    document.getElementById('bankAccount').textContent = paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || 'Add account number in admin to enable transfers.';
+    syncPaymentUI();
+    icons();
+  }
+  function selectPay(key){
+    selectedPay = key;
+    renderPayments();
+    updatePlaceState();
+  }
+  function syncPaymentUI(){
+    const transfer = selectedPay === 'transfer';
+    const card = selectedPay === 'card';
+    document.getElementById('cardFields').classList.toggle('show', card);
+    document.getElementById('transferWrap').classList.toggle('show', transfer);
+  }
+  function fmtCard(i){ let v=i.value.replace(/\D/g,'').slice(0,16); i.value=v.replace(/(.{4})/g,'$1 ').trim(); }
+  function fmtExp(i){ let v=i.value.replace(/\D/g,'').slice(0,4); i.value=v.length>2?`${v.slice(0,2)} / ${v.slice(2)}`:v; }
+  function setSlipPreview(src){
+    const wrap = document.getElementById('slipPreviewWrap');
+    wrap.innerHTML = src ? `<img src="${src}" class="slip-preview" alt="Transfer slip preview"/>` : `<div class="slip-empty"><i data-lucide="image"></i></div>`;
+    icons();
+  }
+  function onSlipUpload(input){
+    const file = input.files && input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e => compressSlip(e.target.result, 1200, out => {
+      transferSlip = out;
+      setSlipPreview(out);
+      updatePlaceState();
+      showToast('Transfer slip uploaded');
+    });
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+  function compressSlip(src, maxW, cb){
+    const img = new Image();
+    img.onload = () => {
+      const sc = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * sc);
+      const h = Math.round(img.height * sc);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      try { cb(c.toDataURL('image/jpeg', 0.82)); } catch (_) { cb(src); }
+    };
+    img.onerror = () => cb(src);
+    img.src = src;
+  }
+  function copyAccount(){
+    const value = paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || '';
+    if(!value){ showToast('No account number configured'); return; }
+    navigator.clipboard.writeText(value).then(()=>showToast('Account number copied')).catch(()=>showToast(value));
+  }
+  function updatePlaceState(){
+    const btn = document.getElementById('placeBtn');
+    const hint = document.getElementById('placeHint');
+    const transfer = selectedPay === 'transfer';
+    const hasAccount = !!(paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber);
+    const ready = selectedPay && (!transfer || (transferSlip && hasAccount));
+    btn.disabled = !ready;
+    if(!selectedPay) hint.textContent = 'Enable at least one payment method in admin.';
+    else if(transfer && !hasAccount) hint.textContent = 'Add bank account details in admin to accept transfers.';
+    else if(transfer && !transferSlip) hint.textContent = 'Upload one transfer slip to place this order.';
+    else hint.textContent = 'Ready to place your order.';
+  }
+  function render(){
     const cart = refreshCartPrices();
     const qty = cart.reduce((s,i)=>s+i.qty,0);
-
     document.getElementById('lineItems').innerHTML = cart.map(it=>`
       <div class="line-item">
         <img src="${it.img||''}" alt=""/>
-        <div class="li-info">
+        <div>
           <div class="li-name">${it.name}</div>
-          <div class="li-variant">${it.size||'One Size'}</div>
-          <div class="li-price">MVR ${(it.price*it.qty).toLocaleString()}</div>
+          <div class="li-meta">${it.size || 'One Size'}</div>
+          <div class="li-price">${price(it.price * it.qty)}</div>
         </div>
-        <div class="li-qty">×${it.qty}</div>
-      </div>`).join('') || '<p style="color:#999;font-size:0.9rem;">Your bag is empty.</p>';
-
+        <div class="li-qty">x${it.qty}</div>
+      </div>
+    `).join('') || '<p style="font-size:.9rem;color:#6b7280">Your bag is empty.</p>';
     const sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
-    const tax = Math.round(sub*0.08);
-    const total = sub + tax; // standard shipping free
-
-    document.getElementById('oSub').textContent = 'MVR '+sub.toLocaleString();
-    document.getElementById('oTax').textContent = 'MVR '+tax.toLocaleString();
-    document.getElementById('oTotal').textContent = 'MVR '+total.toLocaleString();
-    document.getElementById('placeTotal').textContent = 'MVR '+total.toLocaleString();
-    document.getElementById('itemCount').textContent = '('+qty+(qty===1?' item':' items')+')';
-
-    // delivery estimate dates
-    const d1 = new Date(Date.now()+3*864e5), d2 = new Date(Date.now()+5*864e5);
+    const tax = Math.round(sub * 0.08);
+    const total = sub + tax;
+    document.getElementById('oSub').textContent = price(sub);
+    document.getElementById('oTax').textContent = price(tax);
+    document.getElementById('oTotal').textContent = price(total);
+    document.getElementById('placeTotal').textContent = price(total);
+    document.getElementById('itemCount').textContent = `Total (${qty} ${qty===1?'item':'items'})`;
+    const d1 = new Date(Date.now() + 3 * 864e5);
+    const d2 = new Date(Date.now() + 5 * 864e5);
     const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    document.getElementById('shipSub').textContent = 'Estimated delivery: '+fmt(d1)+'–'+fmt(d2).split(' ')[1];
+    document.getElementById('shipSub').textContent = `Estimated delivery ${fmt(d1)}–${fmt(d2).split(' ')[1]}`;
+    renderAddress();
+    renderPayments();
+    updatePlaceState();
+    icons();
   }
-
-  function selPay(el,t){
-    document.querySelectorAll('.pay').forEach(p=>p.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('cardFields').style.display = t==='card'?'block':'none';
-  }
-  function fmtCard(i){ let v=i.value.replace(/\D/g,'').substring(0,16); i.value=v.replace(/(.{4})/g,'$1 ').trim(); }
-  function fmtExp(i){ let v=i.value.replace(/\D/g,''); if(v.length>=2)v=v.substring(0,2)+' / '+v.substring(2,4); i.value=v; }
-
   function placeOrder(){
     const cart = refreshCartPrices();
     if(!cart.length){ showToast('Your bag is empty'); return; }
     const sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
-    const tax = Math.round(sub*0.08);
-    const u = (typeof Store!=='undefined') ? Store.currentUser() : null;
-    const payEl = document.querySelector('.pay.active');
-    const payMap = { card:'Card', paypal:'PayPal', transfer:'Transfer', cod:'COD' };
-    const payKey = payEl ? (payEl.querySelector('.pay-name')?.textContent||'').toLowerCase().includes('cash')?'cod':(payEl.querySelector('.pay-name')?.textContent||'Card') : 'Card';
-    let orderId = '#KNX-'+Math.floor(100000+Math.random()*900000);
-    if (typeof Store!=='undefined' && Store.placeOrder){
-      const o = Store.placeOrder({
-        userName: u?u.name:'Guest', userPhone: u?u.phone:'',
-        items: cart.map(it=>({ productId:(it.id||'').split('_')[0], name:it.name, qty:it.qty, price:it.price, image:it.img })),
-        shipping: shipping||0, total: sub+tax+(shipping||0),
-        payMethod: /cash|cod/i.test(payKey)?'cod':payKey, address: u && (u.addresses||[])[0] ? `${(u.addresses[0].city||'')}, ${(u.addresses[0].country||'Maldives')}` : 'Maldives'
-      });
-      orderId = '#'+o.id;
-    }
-    document.getElementById('onum').textContent = orderId;
+    const tax = Math.round(sub * 0.08);
+    const total = sub + tax;
+    const u = Store.currentUser();
+    const a = u && ((u.addresses||[]).find(x=>x.isDefault) || (u.addresses||[])[0]);
+    const order = Store.placeOrder({
+      userName:u ? u.name : 'Guest',
+      userPhone:u ? u.phone : '',
+      items:cart.map(it=>({ productId:(it.id||'').split('_')[0], name:it.name, qty:it.qty, price:it.price, image:it.img })),
+      shipping:0,
+      total,
+      payMethod:selectedPay,
+      transferSlip:selectedPay==='transfer' ? transferSlip : '',
+      bankName:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.bankName || '') : '',
+      accountNumber:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || '') : '',
+      address:a ? [a.line,a.city,a.postcode,a.country].filter(Boolean).join(', ') : 'Maldives'
+    });
+    document.getElementById('onum').textContent = '#' + order.id;
     document.getElementById('success').classList.add('show');
     saveCart([]);
     updateCartCount();
   }
-
   render();
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>

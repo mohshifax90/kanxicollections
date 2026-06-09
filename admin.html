@@ -204,8 +204,8 @@
     const map={gray:'bg-zinc-100 text-zinc-600',green:'bg-green-50 text-green-700',red:'bg-red-50 text-red-600',amber:'bg-amber-50 text-amber-700',blue:'bg-blue-50 text-blue-700',purple:'bg-purple-50 text-purple-700',dark:'bg-kink text-white'};
     return `<span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${map[tone]}">${text}</span>`;
   }
-  function statusPill(s){ const m={'Pending Payment':'amber','Paid':'blue','Order Accepted':'blue','Packing':'purple','Ready to Dispatch':'purple','Out for Delivery':'blue','Delivered':'green','Returned':'red'}; return pill(s,m[s]||'gray'); }
-  function payPill(s){ const m={Paid:'green',Pending:'amber',Refunded:'red'}; return pill(s,m[s]||'gray'); }
+  function statusPill(s){ const m={'Pending Payment':'amber','Pending Slip Verification':'amber','Paid':'blue','Order Accepted':'blue','Packing':'purple','Ready to Dispatch':'purple','Out for Delivery':'blue','Delivered':'green','Returned':'red'}; return pill(s,m[s]||'gray'); }
+  function payPill(s){ const m={Paid:'green',Pending:'amber','Pending Slip Verification':'amber',Refunded:'red'}; return pill(s,m[s]||'gray'); }
   function card(title, tools, inner){
     return `<div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
       <div class="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-zinc-200 flex-wrap">
@@ -810,6 +810,7 @@
 
   function orderDetail(id){
     const o=Store.get('orders',id), idx=Store.ORDER_FLOW.indexOf(o.status);
+    const payment=Store.list('payments').find(p=>p.orderId===o.id);
     const pipe=`<div class="flex flex-wrap mb-5">${Store.ORDER_FLOW.map((st,i)=>{
       const done=i<idx,cur=i===idx;
       return `<div class="flex-1 min-w-[88px] text-center relative pt-6 text-[0.68rem] ${cur?'text-kink font-bold':done?'text-green-600 font-semibold':'text-zinc-400'}">
@@ -824,6 +825,11 @@
         <select onchange="setStatus('${o.id}',this.value)" class="px-3 py-1.5 border border-zinc-300 rounded-lg text-xs"><option>Set status…</option>${Store.ORDER_FLOW.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select>
       </div>
       ${F.label('Customer')}<div class="text-sm mb-3">${o.userName} · ${o.userPhone}<div class="text-zinc-400">${o.address}</div></div>
+      ${payment?`${F.label('Payment')}<div class="mb-4 rounded-xl border border-zinc-200 p-3 text-sm">
+        <div class="flex items-center justify-between gap-3 flex-wrap mb-2"><div><b>${payment.method}</b><div class="text-zinc-400 text-xs">${payment.id}</div></div><div class="flex gap-2">${payPill(payment.status)}${statusPill(o.status)}</div></div>
+        ${payment.bankName||payment.accountNumber?`<div class="text-zinc-500 text-xs">${[payment.bankName,payment.accountNumber].filter(Boolean).join(' · ')}</div>`:''}
+        ${payment.slipImage?`<button onclick="paymentDetail('${payment.id}')" class="${btn.light} ${btn.sm} mt-3">${ic('receipt-text','w-3.5 h-3.5')} View transfer slip</button>`:''}
+      </div>`:''}
       ${F.label('Items')}
       ${o.items.map(it=>`<div class="flex gap-3 items-center py-2 border-b border-zinc-100">
         <img src="${it.image}" class="w-11 h-11 rounded-lg object-cover bg-zinc-100"/>
@@ -836,17 +842,73 @@
   function setStatus(id,st){ if(st==='Set status…')return; Store.setOrderStatus(id,st); refreshBadge(); orderDetail(id); orders(); }
 
   /* ════════ PAYMENTS ════════ */
+  function paymentSettingsCard(){
+    const settings=Store.getPaymentSettings();
+    const methods=(settings.methods||[]).map(m=>`<label class="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 px-4 py-3">
+      <div><div class="font-semibold text-sm">${m.label}</div><div class="text-xs text-zinc-400">${m.key}</div></div>
+      <input type="checkbox" data-method="${m.key}" ${m.enabled?'checked':''} class="h-4 w-4 accent-kink"/>
+    </label>`).join('');
+    return `<div class="bg-white border border-zinc-200 rounded-2xl p-5 mb-5">
+      <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <div><h2 class="font-extrabold">Payment Methods</h2><p class="text-sm text-zinc-500 mt-1">Enable what shows on checkout and manage bank transfer details.</p></div>
+        <button onclick="savePaymentSettings()" class="${btn.primary} ${btn.sm}">${ic('save','w-4 h-4')} Save settings</button>
+      </div>
+      <div class="grid gap-3 md:grid-cols-2 mb-4">${methods}</div>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>${F.label('Bank name')}${F.input('pay_bank_name',settings.bankTransfer&&settings.bankTransfer.bankName||'','Bank name')}</div>
+        <div>${F.label('Account number')}${F.input('pay_account_number',settings.bankTransfer&&settings.bankTransfer.accountNumber||'','Account number')}</div>
+      </div>
+    </div>`;
+  }
+  function savePaymentSettings(){
+    const current=Store.getPaymentSettings();
+    Store.savePaymentSettings({
+      methods:(current.methods||[]).map(m=>({ key:m.key, label:m.label, enabled:!!document.querySelector(`[data-method="${m.key}"]`)?.checked })),
+      bankTransfer:{
+        bankName:document.getElementById('pay_bank_name')?.value.trim()||'',
+        accountNumber:document.getElementById('pay_account_number')?.value.trim()||''
+      }
+    });
+    toast('Payment settings saved');
+    payments();
+  }
+  function paymentAction(p){
+    if(p.status==='Paid') return `<button onclick="event.stopPropagation();refund('${p.id}')" class="${btn.sm} ${btn.danger}">Refund</button>`;
+    if(p.status==='Pending Slip Verification') return `<button onclick="event.stopPropagation();paymentDetail('${p.id}')" class="${btn.primary} ${btn.sm}">Verify payment</button>`;
+    if(p.status==='Pending') return `<button onclick="event.stopPropagation();markPaid('${p.id}')" class="${btn.primary} ${btn.sm}">Mark paid</button>`;
+    return '<span class="text-zinc-300">—</span>';
+  }
+  function paymentDetail(id){
+    const p=Store.get('payments',id); if(!p) return;
+    const o=Store.get('orders',p.orderId);
+    openModal('Payment '+p.id,
+      `<div class="space-y-4">
+        <div class="rounded-xl border border-zinc-200 p-4">
+          <div class="flex items-center justify-between gap-3 flex-wrap mb-2">
+            <div><div class="font-semibold">${p.method}</div><div class="text-xs text-zinc-400">Order ${p.orderId}</div></div>
+            <div class="flex gap-2">${payPill(p.status)}${o?statusPill(o.status):''}</div>
+          </div>
+          <div class="text-sm text-zinc-600">${MVR(p.amount)}</div>
+          ${p.bankName||p.accountNumber?`<div class="text-xs text-zinc-500 mt-2">${[p.bankName,p.accountNumber].filter(Boolean).join(' · ')}</div>`:''}
+          ${p.verifiedAt?`<div class="text-xs text-green-700 mt-2">Verified ${new Date(p.verifiedAt).toLocaleString()}</div>`:''}
+        </div>
+        ${p.slipImage?`<div><div class="text-xs font-bold uppercase tracking-wide text-kgray mb-2">Transfer slip</div><img src="${p.slipImage}" class="w-full rounded-2xl border border-zinc-200 bg-zinc-50 object-contain max-h-[420px]"/></div>`:'<p class="text-sm text-zinc-400">No slip uploaded for this payment.</p>'}
+      </div>`,
+      `<button onclick="closeModal()" class="${btn.light}">Close</button>${p.status==='Pending Slip Verification'?`<button onclick="verifyPayment('${p.id}')" class="${btn.primary}">${ic('badge-check','w-4 h-4')} Verify payment</button>`:''}`
+    );
+  }
   function payments(){
     const pays=Store.list('payments').slice().reverse();
-    content.innerHTML = card('Payments', `<span class="text-sm text-zinc-500">Received: <b>${MVR(pays.filter(p=>p.status==='Paid').reduce((s,p)=>s+p.amount,0))}</b></span>`,
+    content.innerHTML = paymentSettingsCard() + card('Payments', `<span class="text-sm text-zinc-500">Received: <b>${MVR(pays.filter(p=>p.status==='Paid').reduce((s,p)=>s+p.amount,0))}</b></span>`,
       `<table class="w-full">${TH(['Payment','Order','Method','Amount','Status','Date',''])}<tbody>
-      ${pays.map(p=>`<tr class="hover:bg-zinc-50">${td(p.id,'font-mono text-xs')}${td(p.orderId,'font-mono text-xs')}${td(p.method)}${td(MVR(p.amount))}
+      ${pays.map(p=>`<tr class="hover:bg-zinc-50 cursor-pointer" onclick="paymentDetail('${p.id}')">${td(p.id,'font-mono text-xs')}${td(p.orderId,'font-mono text-xs')}${td(p.method)}${td(MVR(p.amount))}
         ${td(payPill(p.status))}${td(timeAgo(p.date),'text-zinc-400')}
-        ${td(p.status==='Paid'?`<button onclick="refund('${p.id}')" class="${btn.sm} ${btn.danger}">Refund</button>`:p.status==='Pending'?`<button onclick="markPaid('${p.id}')" class="${btn.primary} ${btn.sm}">Mark paid</button>`:'<span class="text-zinc-300">—</span>')}</tr>`).join('')||empty(7)}
+        ${td(paymentAction(p))}</tr>`).join('')||empty(7)}
       </tbody></table>`);
   }
   function refund(id){ const p=Store.get('payments',id); p.status='Refunded'; Store.upsert('payments',p); payments(); }
-  function markPaid(id){ const p=Store.get('payments',id); p.status='Paid'; Store.upsert('payments',p); const o=Store.get('orders',p.orderId); if(o){o.payStatus='Paid';if(o.status==='Pending Payment')o.status='Paid';Store.upsert('orders',o);} refreshBadge(); payments(); }
+  function markPaid(id){ Store.setPaymentStatus(id,'Paid'); refreshBadge(); payments(); }
+  function verifyPayment(id){ Store.setPaymentStatus(id,'Paid'); refreshBadge(); payments(); paymentDetail(id); }
 
   /* ════════ USERS ════════ */
   function users(){

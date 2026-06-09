@@ -15,7 +15,13 @@ const Store = (() => {
   let cloudDb = null;
   let cloudLoaded = false;
 
-  const ORDER_FLOW = ['Pending Payment','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
+  const ORDER_FLOW = ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
+  const PAYMENT_METHODS = [
+    { key:'card', label:'Card', enabled:true },
+    { key:'paypal', label:'PayPal', enabled:true },
+    { key:'transfer', label:'Bank Transfer', enabled:true },
+    { key:'cod', label:'Cash on Delivery', enabled:true },
+  ];
   const VARIANT_TYPES = [
     { key:'none',   label:'No variants' },
     { key:'size',   label:'Size',   hint:'e.g. S, M, L, XL' },
@@ -129,7 +135,7 @@ const Store = (() => {
     const payments = orders.map(o => ({ id:uid('p_'), orderId:o.id, amount:o.items.reduce((s,i)=>s+i.price*i.qty,0)+o.shipping,
       method:o.payMethod, status:o.payStatus==='Paid'?'Paid':(o.payStatus==='Pending'?'Pending':'Refunded'), date:o.date }));
 
-    return { _v:VERSION, categories:cats, subcategories:subs, tags, products, batches, users, orders, payments };
+    return { _v:VERSION, categories:cats, subcategories:subs, tags, products, batches, users, orders, payments, paymentSettings:defaultPaymentSettings() };
   }
 
   function defaultHomepage(){
@@ -149,6 +155,13 @@ const Store = (() => {
       brands: { title:'Shop by Brand', brandIds:[] },
       bestsellers: { title:'Best Sellers', limit:8 },
       offers: { title:'Offers', limit:8 },
+    };
+  }
+
+  function defaultPaymentSettings(){
+    return {
+      methods: PAYMENT_METHODS.map(m=>({ ...m })),
+      bankTransfer: { bankName:'Kanxi Collection', accountNumber:'' }
     };
   }
 
@@ -198,6 +211,19 @@ const Store = (() => {
         image:c.image||''
       }));
     }
+    if(!db.paymentSettings) db.paymentSettings = defaultPaymentSettings();
+    const paymentDefaults = defaultPaymentSettings();
+    const savedMethods = Array.isArray(db.paymentSettings.methods) ? db.paymentSettings.methods : [];
+    db.paymentSettings.methods = paymentDefaults.methods.map(def=>{
+      const existing = savedMethods.find(m=>m && m.key===def.key) || {};
+      return { key:def.key, label:existing.label || def.label, enabled:existing.enabled !== false };
+    });
+    db.paymentSettings.bankTransfer = {
+      bankName: db.paymentSettings.bankTransfer && db.paymentSettings.bankTransfer.bankName || paymentDefaults.bankTransfer.bankName,
+      accountNumber: db.paymentSettings.bankTransfer && db.paymentSettings.bankTransfer.accountNumber || paymentDefaults.bankTransfer.accountNumber,
+    };
+    db.orders = (db.orders||[]).map(o=>({ transferSlip:'', bankName:'', accountNumber:'', ...o }));
+    db.payments = (db.payments||[]).map(p=>({ slipImage:'', bankName:'', accountNumber:'', verifiedAt:null, ...p }));
     return db;
   }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
@@ -310,7 +336,7 @@ const Store = (() => {
   }
 
   const api = {
-    ORDER_FLOW, VARIANT_TYPES, uid, im,
+    ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, uid, im,
     useLocalStorage: USE_LOCAL,
     all(){ return load(); },
     reset(){ const db=normalize(seed()); save(db); return db; },
@@ -406,6 +432,22 @@ const Store = (() => {
     /* ── homepage CMS ── */
     getHomepage(){ return load().homepage || defaultHomepage(); },
     saveHomepage(hp){ const db=load(); db.homepage=hp; save(db); },
+    getPaymentSettings(){ return load().paymentSettings || defaultPaymentSettings(); },
+    savePaymentSettings(settings){
+      const db=load();
+      db.paymentSettings = {
+        methods: PAYMENT_METHODS.map(def=>{
+          const existing = (settings && settings.methods || []).find(m=>m && m.key===def.key) || {};
+          return { key:def.key, label:existing.label || def.label, enabled:existing.enabled !== false };
+        }),
+        bankTransfer: {
+          bankName: settings && settings.bankTransfer && settings.bankTransfer.bankName || '',
+          accountNumber: settings && settings.bankTransfer && settings.bankTransfer.accountNumber || ''
+        }
+      };
+      save(db);
+      return db.paymentSettings;
+    },
     imageForTag(tagId){ const p=this.storeProducts().find(p=>(p.tags||[]).includes(tagId)); return p?p.image:''; },
     brandById(id){ return this.allBrands().find(b=>b.id===id); },
     productsByTag(tagId){ return this.storeProducts().filter(p=>(p.tags||[]).includes(tagId)).map(p=>this.card(p)); },
@@ -423,17 +465,51 @@ const Store = (() => {
     /* ── place a real order from storefront checkout ── */
     placeOrder(o){ const db=load();
       const id='KNX-'+Math.floor(100000+Math.random()*900000);
-      const paid = o.payMethod!=='cod';
+      const methodKey=String(o.payMethod||'card').toLowerCase();
+      const settings=db.paymentSettings || defaultPaymentSettings();
+      const method=(settings.methods||[]).find(m=>m.key===methodKey) || PAYMENT_METHODS.find(m=>m.key===methodKey) || PAYMENT_METHODS[0];
+      const transfer=methodKey==='transfer';
+      const cod=methodKey==='cod';
+      const bankTransfer=settings.bankTransfer || defaultPaymentSettings().bankTransfer;
+      const orderStatus=transfer?'Pending Slip Verification':(cod?'Order Accepted':'Paid');
+      const payStatus=transfer?'Pending Slip Verification':(cod?'Pending':'Paid');
       const order={ id, userName:o.userName||'Guest', userPhone:o.userPhone||'', date:Date.now(),
-        status: paid?'Paid':'Order Accepted', payStatus: paid?'Paid':'Pending', payMethod:o.payMethod||'Card',
+        status:orderStatus, payStatus, payMethod:method.label,
         items:(o.items||[]).map(i=>({ productId:i.productId||null, name:i.name, qty:i.qty, price:i.price, image:i.image||'' })),
-        shipping:o.shipping||0, address:o.address||'' };
+        shipping:o.shipping||0, address:o.address||'', transferSlip:o.transferSlip||'',
+        bankName:transfer?(o.bankName||bankTransfer.bankName||''):'',
+        accountNumber:transfer?(o.accountNumber||bankTransfer.accountNumber||''):''
+      };
       db.orders.push(order);
-      db.payments.push({ id:uid('p_'), orderId:id, amount:o.total||order.items.reduce((s,i)=>s+i.price*i.qty,0), method:order.payMethod, status:paid?'Paid':'Pending', date:Date.now() });
+      db.payments.push({
+        id:uid('p_'),
+        orderId:id,
+        amount:o.total||order.items.reduce((s,i)=>s+i.price*i.qty,0),
+        method:order.payMethod,
+        status:payStatus,
+        date:Date.now(),
+        slipImage:o.transferSlip||'',
+        bankName:order.bankName||'',
+        accountNumber:order.accountNumber||'',
+        verifiedAt:null
+      });
       save(db); return order; },
 
-    advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(o.status==='Paid')o.payStatus='Paid'; save(db); return o; },
-    setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st;save(db);} return o; },
+    advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'].includes(o.status))o.payStatus='Paid'; save(db); return o; },
+    setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st; if(['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'].includes(st))o.payStatus='Paid'; save(db);} return o; },
+    setPaymentStatus(id,status){
+      const db=load(), p=db.payments.find(x=>x.id===id);
+      if(!p) return null;
+      p.status=status;
+      if(status==='Paid') p.verifiedAt=Date.now();
+      const o=db.orders.find(x=>x.id===p.orderId);
+      if(o){
+        o.payStatus=status;
+        if(status==='Paid' && ['Pending Payment','Pending Slip Verification'].includes(o.status)) o.status='Paid';
+      }
+      save(db);
+      return p;
+    },
 
     currentUser(){
       if(USE_LOCAL) return JSON.parse(localStorage.getItem('kanxi_session')||'null');
