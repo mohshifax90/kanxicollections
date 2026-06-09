@@ -46,6 +46,7 @@
       <p class="px-5 pt-4 pb-1 text-[0.65rem] tracking-widest uppercase text-zinc-500 font-semibold">Sales</p>
       <button data-route="orders" class="navi"><i data-lucide="package" class="w-[18px] h-[18px]"></i> Orders <span id="ordBadge" class="ml-auto hidden bg-kacc text-white text-[0.6rem] font-bold rounded-full px-2 py-0.5"></span></button>
       <button data-route="payments" class="navi"><i data-lucide="credit-card" class="w-[18px] h-[18px]"></i> Payments</button>
+      <button data-route="paymentMethods" class="navi"><i data-lucide="wallet-cards" class="w-[18px] h-[18px]"></i> Payment Methods</button>
       <p class="px-5 pt-4 pb-1 text-[0.65rem] tracking-widest uppercase text-zinc-500 font-semibold">People</p>
       <button data-route="users" class="navi"><i data-lucide="users" class="w-[18px] h-[18px]"></i> Users</button>
       <p class="px-5 pt-4 pb-1 text-[0.65rem] tracking-widest uppercase text-zinc-500 font-semibold">System</p>
@@ -222,8 +223,8 @@
     <button type="button" aria-label="Delete" title="Delete" onclick="event.stopPropagation(); ${onDel}" class="inline-flex h-9 w-9 items-center justify-center rounded text-zinc-500 hover:bg-red-50 hover:text-red-600">${ic('trash-2','w-4 h-4')}</button></div>`;
 
   /* ── ROUTING ── */
-  const routes = { dashboard:dashboard, homepage:homepage, categories:categories, subcategories:subcats, products:products, tags:tags, inventory:inventory, orders:orders, payments:payments, users:users };
-  const titles = { dashboard:'Dashboard', homepage:'Homepage CMS', categories:'Categories', subcategories:'Sub-categories', products:'Products', tags:'Tags', inventory:'Inventory', orders:'Orders', payments:'Payments', users:'Users' };
+  const routes = { dashboard:dashboard, homepage:homepage, categories:categories, subcategories:subcats, products:products, tags:tags, inventory:inventory, orders:orders, payments:payments, paymentMethods:paymentMethods, users:users };
+  const titles = { dashboard:'Dashboard', homepage:'Homepage CMS', categories:'Categories', subcategories:'Sub-categories', products:'Products', tags:'Tags', inventory:'Inventory', orders:'Orders', payments:'Payments', paymentMethods:'Payment Methods', users:'Users' };
   function go(route){
     if(!routes[route]) route='dashboard';
     location.hash = route;
@@ -897,9 +898,12 @@
       `<button onclick="closeModal()" class="${btn.light}">Close</button>${p.status==='Pending Slip Verification'?`<button onclick="verifyPayment('${p.id}')" class="${btn.primary}">${ic('badge-check','w-4 h-4')} Verify payment</button>`:''}`
     );
   }
+  function paymentMethods(){
+    content.innerHTML = paymentSettingsCard();
+  }
   function payments(){
     const pays=Store.list('payments').slice().reverse();
-    content.innerHTML = paymentSettingsCard() + card('Payments', `<span class="text-sm text-zinc-500">Received: <b>${MVR(pays.filter(p=>p.status==='Paid').reduce((s,p)=>s+p.amount,0))}</b></span>`,
+    content.innerHTML = card('Payments', `<span class="text-sm text-zinc-500">Received: <b>${MVR(pays.filter(p=>p.status==='Paid').reduce((s,p)=>s+p.amount,0))}</b></span>`,
       `<table class="w-full">${TH(['Payment','Order','Method','Amount','Status','Date',''])}<tbody>
       ${pays.map(p=>`<tr class="hover:bg-zinc-50 cursor-pointer" onclick="paymentDetail('${p.id}')">${td(p.id,'font-mono text-xs')}${td(p.orderId,'font-mono text-xs')}${td(p.method)}${td(MVR(p.amount))}
         ${td(payPill(p.status))}${td(timeAgo(p.date),'text-zinc-400')}
