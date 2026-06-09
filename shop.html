@@ -204,17 +204,21 @@
       desc:'Fresh in this season. The latest drops across fashion, skincare, bags and watches — be the first to wear what\'s next.' },
   };
 
-  /* strip = live categories from admin Store + Sale/New */
-  const stripCats = [
-    ...Store.list('categories').filter(c=>c.active).map(c=>({ key:c.slug, label:c.name, img:(Store.cardsBySlug(c.slug)[0]||{}).img })),
-    { key:'sale', label:'Sale', img:(Store.cardsBySlug('sale')[0]||{}).img },
-    { key:'new', label:'New In', img:(Store.cardsBySlug('new')[0]||{}).img },
-  ];
+  function topCategoryStrip(){
+    return [
+      ...Store.list('categories').filter(c=>c.active).map(c=>({ key:c.slug, label:c.name, img:(Store.cardsBySlug(c.slug)[0]||{}).img, href:`shop.html?cat=${c.slug}` })),
+      { key:'sale', label:'Sale', img:(Store.cardsBySlug('sale')[0]||{}).img, href:'shop.html?cat=sale' },
+      { key:'new', label:'New In', img:(Store.cardsBySlug('new')[0]||{}).img, href:'shop.html?cat=new' },
+    ];
+  }
 
   const params = new URLSearchParams(location.search);
   const tagId = params.get('tag');
   const brandQ = params.get('brand');
   const cat = params.get('cat') || (Store.list('categories')[0]||{}).slug || 'clothing';
+  const subId = params.get('sub');
+  const currentCategory = Store.categoryBySlug(cat);
+  const currentSub = subId ? Store.get('subcategories', subId) : null;
 
   /* base items + page copy depending on mode (tag / brand / category) */
   let baseItems, meta;
@@ -225,20 +229,27 @@
   } else if (brandQ) {
     baseItems = Store.productsByBrand(brandQ);
     meta = { title:brandQ, desc:`Explore ${brandQ} — curated styles available at Kanxi Collection.` };
+  } else if (currentCategory && currentSub && currentSub.categoryId===currentCategory.id) {
+    baseItems = Store.cardsBySub(currentSub.id);
+    meta = { title:currentSub.name, desc:`Shop ${currentSub.name} from ${currentCategory.name} — curated pieces available at Kanxi Collection.` };
   } else {
     baseItems = Store.cardsBySlug(cat);
     meta = cats[cat] || { title:(Store.categoryBySlug(cat)||{}).name || 'Shop', desc:'Discover the Kanxi Collection edit — curated quality, timeless style.' };
   }
-  const activeKey = tagId||brandQ ? '' : cat;
+  const activeKey = tagId||brandQ ? '' : (subId || cat);
 
   document.title = 'Kanxi — ' + meta.title;
   document.getElementById('catTitle').textContent = meta.title;
   document.getElementById('catDesc').textContent = meta.desc.slice(0,120) + '…';
   document.getElementById('moreBtn').onclick = function(){ document.getElementById('catDesc').textContent = meta.desc; this.style.display='none'; };
 
-  /* category strip */
-  document.getElementById('catStrip').innerHTML = stripCats.map(c =>
-    `<a class="cat-card ${c.key===activeKey?'active':''}" href="shop.html?cat=${c.key}">
+  /* category / sub-category strip */
+  const subcategories = currentCategory ? Store.subcategoriesOf(currentCategory.id) : [];
+  const stripCards = (!tagId && !brandQ && subcategories.length)
+    ? subcategories.map(s=>({ key:s.id, label:s.name, img:Store.imageForSub(s.id), href:`shop.html?cat=${cat}&sub=${s.id}` }))
+    : topCategoryStrip();
+  document.getElementById('catStrip').innerHTML = stripCards.map(c =>
+    `<a class="cat-card ${c.key===activeKey?'active':''}" href="${c.href}">
       <img src="${c.img||''}" alt=""/><div class="ov"></div>
       <span class="lbl">${c.label}</span>
     </a>`).join('');
