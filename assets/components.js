@@ -1,6 +1,14 @@
 /* ── KANXI SHARED CART ── */
-function getCart() { return JSON.parse(localStorage.getItem('kanxi_cart') || '[]'); }
-function saveCart(cart) { localStorage.setItem('kanxi_cart', JSON.stringify(cart)); updateCartCount(); }
+function useLocalCart() { return !(window.Store && Store.useLocalStorage === false); }
+function getCart() {
+  if (useLocalCart()) return JSON.parse(localStorage.getItem('kanxi_cart') || '[]');
+  return window._kanxiCart || [];
+}
+function saveCart(cart) {
+  if (useLocalCart()) localStorage.setItem('kanxi_cart', JSON.stringify(cart));
+  else window._kanxiCart = cart;
+  updateCartCount();
+}
 function addToCart(product) {
   const cart = getCart();
   const existing = cart.find(i => i.id === product.id && i.size === product.size);

@@ -278,7 +278,7 @@
     }
     document.getElementById('onum').textContent = orderId;
     document.getElementById('success').classList.add('show');
-    localStorage.removeItem('kanxi_cart');
+    saveCart([]);
     updateCartCount();
   }
 

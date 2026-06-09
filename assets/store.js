@@ -1,17 +1,19 @@
 /* ════════════════════════════════════════
    KANXI COLLECTION — DATA STORE
-   Local fallback + Supabase sync for admin & storefront.
+   Supabase in production, localStorage on localhost.
 ═══════════════════════════════════════════ */
 const Store = (() => {
   const KEY = 'kanxi_db';
   const VERSION = 3;
   const CLOUD_EVENT = 'kanxi:store-changed';
   const CLOUD_STATUS_EVENT = 'kanxi:store-sync';
-  const CLOUD_RELOAD_KEY = 'kanxi_cloud_reload_hash';
+  const USE_LOCAL = location.protocol === 'file:' || ['localhost','127.0.0.1','::1'].includes(location.hostname);
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
   const im = (photo, w=600) => `https://images.unsplash.com/${photo}?w=${w}&q=80`;
   let saveTimer = null;
   let lastCloudHash = '';
+  let cloudDb = null;
+  let cloudLoaded = false;
 
   const ORDER_FLOW = ['Pending Payment','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
   const VARIANT_TYPES = [
@@ -144,7 +146,6 @@ const Store = (() => {
     };
   }
 
-  function hash(s){ let h=0; for(let i=0;i<s.length;i++) h=((h<<5)-h+s.charCodeAt(i))|0; return String(h); }
   function readLocal(){ try{ return JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){ return null; } }
   function writeLocal(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
   function normalize(db){
@@ -152,7 +153,6 @@ const Store = (() => {
     if(!db.homepage) db.homepage=defaultHomepage();
     return db;
   }
-  function load(){ const db=normalize(readLocal()); writeLocal(db); return db; }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
   function cloudClient(){
     const cfg=cloudConfig();
@@ -162,8 +162,64 @@ const Store = (() => {
   }
   function emitSync(status, detail={}){ window.dispatchEvent(new CustomEvent(CLOUD_STATUS_EVENT,{detail:{status,...detail}})); }
   function cloudRow(){ const cfg=cloudConfig(); return { table:cfg.table||'kanxi_site_data', id:cfg.rowId||'main' }; }
+  function cloudRest(method, query='', body){
+    const cfg=cloudConfig(), row=cloudRow();
+    if(!cfg.url || !cfg.publishableKey) throw new Error('Missing Supabase config');
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, `${cfg.url}/rest/v1/${row.table}${query}`, false);
+    xhr.setRequestHeader('apikey', cfg.publishableKey);
+    xhr.setRequestHeader('Authorization', `Bearer ${cfg.publishableKey}`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    if(method==='POST') xhr.setRequestHeader('Prefer', 'resolution=merge-duplicates,return=minimal');
+    xhr.send(body ? JSON.stringify(body) : null);
+    if(xhr.status < 200 || xhr.status >= 300) throw new Error(xhr.responseText || `Supabase ${method} failed`);
+    return xhr.responseText ? JSON.parse(xhr.responseText) : null;
+  }
+  function saveCloudNow(db){
+    const row=cloudRow();
+    const clean=normalize(db);
+    cloudDb = clean;
+    lastCloudHash = JSON.stringify(clean);
+    emitSync('saving');
+    try{
+      cloudRest('POST', '', { id:row.id, data:clean, updated_at:new Date().toISOString() });
+      emitSync('saved');
+    }catch(e){
+      console.warn('Kanxi Supabase save failed:', e.message);
+      emitSync('error',{message:e.message});
+    }
+  }
+  function loadCloud(force=false){
+    if(cloudLoaded && !force) return cloudDb;
+    const row=cloudRow();
+    emitSync('loading');
+    try{
+      const rows = cloudRest('GET', `?id=eq.${encodeURIComponent(row.id)}&select=data,updated_at&limit=1`);
+      cloudDb = normalize(rows && rows[0] && rows[0].data);
+      cloudLoaded = true;
+      lastCloudHash = JSON.stringify(cloudDb);
+      if(!rows || !rows.length) saveCloudNow(cloudDb);
+      emitSync('loaded');
+      return cloudDb;
+    }catch(e){
+      console.warn('Kanxi Supabase load failed:', e.message);
+      cloudDb = normalize(cloudDb || seed());
+      cloudLoaded = true;
+      emitSync('error',{message:e.message});
+      return cloudDb;
+    }
+  }
+  function load(){
+    if(USE_LOCAL){
+      const db=normalize(readLocal());
+      writeLocal(db);
+      return db;
+    }
+    return loadCloud();
+  }
   async function pushCloud(db){
-    const client=cloudClient(); if(!client) return;
+    if(USE_LOCAL) return;
+    const client=cloudClient(); if(!client){ saveCloudNow(db); return; }
     const row=cloudRow(), raw=JSON.stringify(db);
     if(raw===lastCloudHash) return;
     emitSync('saving');
@@ -177,12 +233,19 @@ const Store = (() => {
     emitSync('saved');
   }
   function queueCloudSave(db){
+    if(USE_LOCAL) return;
     if(!cloudClient()) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>pushCloud(db), 400);
   }
-  function save(db){ writeLocal(db); queueCloudSave(db); }
+  function save(db){
+    const clean=normalize(db);
+    if(USE_LOCAL){ writeLocal(clean); return; }
+    cloudDb = clean;
+    saveCloudNow(clean);
+  }
   async function syncFromCloud(){
+    if(USE_LOCAL) return { ok:true, local:true };
     const client=cloudClient(); if(!client) return { ok:false, reason:'missing-client' };
     const row=cloudRow();
     emitSync('loading');
@@ -192,13 +255,8 @@ const Store = (() => {
     const db=normalize(data.data), cloudRaw=JSON.stringify(db), localRaw=JSON.stringify(load());
     lastCloudHash = cloudRaw;
     if(cloudRaw!==localRaw){
-      writeLocal(db);
+      cloudDb = db;
       window.dispatchEvent(new CustomEvent(CLOUD_EVENT,{detail:{source:'supabase'}}));
-      const reloadHash=hash(cloudRaw);
-      if(sessionStorage.getItem(CLOUD_RELOAD_KEY)!==reloadHash){
-        sessionStorage.setItem(CLOUD_RELOAD_KEY,reloadHash);
-        location.reload();
-      }
     }
     emitSync('loaded');
     return { ok:true };
@@ -206,6 +264,7 @@ const Store = (() => {
 
   const api = {
     ORDER_FLOW, VARIANT_TYPES, uid, im,
+    useLocalStorage: USE_LOCAL,
     all(){ return load(); },
     reset(){ const db=normalize(seed()); save(db); return db; },
     syncFromCloud,
@@ -317,11 +376,10 @@ const Store = (() => {
     advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(o.status==='Paid')o.payStatus='Paid'; save(db); return o; },
     setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st;save(db);} return o; },
 
-    currentUser(){ return JSON.parse(localStorage.getItem('kanxi_session')||'null'); },
-    login(u){ localStorage.setItem('kanxi_session', JSON.stringify(u)); },
-    logout(){ localStorage.removeItem('kanxi_session'); },
+    currentUser(){ return USE_LOCAL ? JSON.parse(localStorage.getItem('kanxi_session')||'null') : (window._kanxiSession || null); },
+    login(u){ if(USE_LOCAL) localStorage.setItem('kanxi_session', JSON.stringify(u)); else window._kanxiSession = u; },
+    logout(){ if(USE_LOCAL) localStorage.removeItem('kanxi_session'); else window._kanxiSession = null; },
     findUserByPhone(phone){ return (load().users||[]).find(u=>u.phone.replace(/\D/g,'')===phone.replace(/\D/g,'')); },
   };
-  setTimeout(()=>syncFromCloud(), 0);
   return api;
 })();
