@@ -111,7 +111,7 @@
     if(el) new MutationObserver(()=>icons()).observe(el,{childList:true,subtree:true});
   });
   /* helper to emit a lucide icon string */
-  const ic = (name, cls='w-4 h-4') => `<i data-lucide="${name}" class="${cls}"></i>`;
+  const ic = (name, cls='w-4 h-4') => `<i data-lucide="${name}" class="${cls} pointer-events-none"></i>`;
 
   const $ = s => document.querySelector(s);
   const content = $('#content');
@@ -185,8 +185,8 @@
   function del(coll,id,after){ if(confirm('Delete this item?')){ Store.remove(coll,id); after(); } }
   function timeAgo(ts){ const d=Date.now()-ts,h=Math.floor(d/3.6e6); if(h<1)return Math.max(1,Math.floor(d/6e4))+'m ago'; if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; }
   const actBtns = (onEdit,onDel)=>`<div class="flex gap-1">
-    <button onclick="${onEdit}" class="p-1.5 rounded text-zinc-500 hover:bg-zinc-100 hover:text-kink">${ic('square-pen','w-4 h-4')}</button>
-    <button onclick="${onDel}" class="p-1.5 rounded text-zinc-500 hover:bg-red-50 hover:text-red-600">${ic('trash-2','w-4 h-4')}</button></div>`;
+    <button type="button" aria-label="Edit" title="Edit" onclick="event.stopPropagation(); ${onEdit}" class="inline-flex h-9 w-9 items-center justify-center rounded text-zinc-500 hover:bg-zinc-100 hover:text-kink">${ic('square-pen','w-4 h-4')}</button>
+    <button type="button" aria-label="Delete" title="Delete" onclick="event.stopPropagation(); ${onDel}" class="inline-flex h-9 w-9 items-center justify-center rounded text-zinc-500 hover:bg-red-50 hover:text-red-600">${ic('trash-2','w-4 h-4')}</button></div>`;
 
   /* ── ROUTING ── */
   const routes = { dashboard:dashboard, homepage:homepage, categories:categories, subcategories:subcats, products:products, tags:tags, inventory:inventory, orders:orders, payments:payments, users:users };
