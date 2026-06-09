@@ -135,10 +135,16 @@ const Store = (() => {
   function defaultHomepage(){
     return {
       collections: { title:'Collections', cards:[
-        { id:uid('cc_'), caption:'New Season', tagId:'t1', image:'' },
-        { id:uid('cc_'), caption:'On Sale', tagId:'t2', image:'' },
-        { id:uid('cc_'), caption:'Bestsellers', tagId:'t3', image:'' },
-        { id:uid('cc_'), caption:'Limited Edition', tagId:'t4', image:'' },
+        { id:uid('cc_'), caption:'New Season', tagId:'t1', linkType:'tag', linkValue:'t1', image:'' },
+        { id:uid('cc_'), caption:'On Sale', tagId:'t2', linkType:'tag', linkValue:'t2', image:'' },
+        { id:uid('cc_'), caption:'Bestsellers', tagId:'t3', linkType:'tag', linkValue:'t3', image:'' },
+        { id:uid('cc_'), caption:'Limited Edition', tagId:'t4', linkType:'tag', linkValue:'t4', image:'' },
+      ]},
+      menu: { items:[
+        { id:uid('hm_'), label:'Clothing', linkType:'category', linkValue:'clothing' },
+        { id:uid('hm_'), label:'Skincare', linkType:'category', linkValue:'skincare' },
+        { id:uid('hm_'), label:'Bags', linkType:'category', linkValue:'bags' },
+        { id:uid('hm_'), label:'Watches', linkType:'category', linkValue:'watches' },
       ]},
       brands: { title:'Shop by Brand', brandIds:[] },
       bestsellers: { title:'Best Sellers', limit:8 },
@@ -151,6 +157,24 @@ const Store = (() => {
   function normalize(db){
     if(!db || db._v!==VERSION) db=seed();
     if(!db.homepage) db.homepage=defaultHomepage();
+    const hp=db.homepage;
+    if(!hp.menu || !Array.isArray(hp.menu.items)) hp.menu={items:defaultHomepage().menu.items};
+    hp.menu.items = hp.menu.items.map(it=>({
+      id:it.id||uid('hm_'),
+      label:it.label||'',
+      linkType:it.linkType||'category',
+      linkValue:it.linkValue||''
+    }));
+    if(hp.collections && Array.isArray(hp.collections.cards)){
+      hp.collections.cards = hp.collections.cards.map(c=>({
+        id:c.id||uid('cc_'),
+        caption:c.caption||'',
+        tagId:c.tagId||'',
+        linkType:c.linkType || (c.categorySlug ? 'category' : (c.brandId ? 'brand' : 'tag')),
+        linkValue:c.linkValue || c.categorySlug || c.brandId || c.tagId || '',
+        image:c.image||''
+      }));
+    }
     return db;
   }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
@@ -349,6 +373,7 @@ const Store = (() => {
     getHomepage(){ return load().homepage || defaultHomepage(); },
     saveHomepage(hp){ const db=load(); db.homepage=hp; save(db); },
     imageForTag(tagId){ const p=this.storeProducts().find(p=>(p.tags||[]).includes(tagId)); return p?p.image:''; },
+    brandById(id){ return this.allBrands().find(b=>b.id===id); },
     productsByTag(tagId){ return this.storeProducts().filter(p=>(p.tags||[]).includes(tagId)).map(p=>this.card(p)); },
     productsByBrand(name){ const n=(name||'').toLowerCase(); return this.storeProducts().filter(p=>(p.brand||'').toLowerCase()===n).map(p=>this.card(p)); },
     offers(limit=12){ return this.storeProducts().filter(p=>p.oldPrice).slice(0,limit).map(p=>this.card(p)); },

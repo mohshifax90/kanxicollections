@@ -169,14 +169,8 @@
   </div>
 
   <!-- ── CHIPS ── -->
-  <div class="chip-row">
+  <div class="chip-row" id="homeMenu">
     <button class="chip active" onclick="openCats()">Categories ▾</button>
-    <button class="chip" onclick="location.href='shop.html?cat=new'">New Season</button>
-    <button class="chip" onclick="location.href='shop.html?cat=clothing'">Clothing</button>
-    <button class="chip" onclick="location.href='shop.html?cat=skincare'">Skincare</button>
-    <button class="chip" onclick="location.href='shop.html?cat=bags'">Bags</button>
-    <button class="chip" onclick="location.href='shop.html?cat=watches'">Watches</button>
-    <button class="chip" onclick="location.href='shop.html?cat=sale'">Sale</button>
   </div>
 
   <!-- ── HOMEPAGE SECTIONS (CMS-driven) ── -->
@@ -303,21 +297,56 @@
   /* ── CMS-DRIVEN HOMEPAGE SECTIONS ── */
   const hp = Store.getHomepage();
   const tag = Store.list('tags');
+  const categoryBySlug = {}; Store.list('categories').forEach(c=>categoryBySlug[c.slug]=c);
+  const brandsById = {}; Store.allBrands().forEach(b=>brandsById[b.id]=b);
   const section = (title, inner, seeAll) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAll?`<a class="see-all" href="${seeAll}">See all</a>`:''}</div>${inner}</div>`;
   const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   const prodGrid = arr => `<div class="grid-2">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
 
-  // 1) Collections — each card = a tag, with representative image + caption
+  function hpLinkMeta(linkType, linkValue){
+    if(linkType==='category'){
+      const cat = categoryBySlug[linkValue];
+      return {
+        href:`shop.html?cat=${encodeURIComponent(linkValue)}`,
+        label:(cat&&cat.name) || 'Category',
+        image:(Store.cardsBySlug(linkValue)[0]||{}).img || ''
+      };
+    }
+    if(linkType==='brand'){
+      const brand = brandsById[linkValue];
+      const name = brand ? brand.name : '';
+      return {
+        href:`shop.html?brand=${encodeURIComponent(name)}`,
+        label:name || 'Brand',
+        image:(Store.productsByBrand(name)[0]||{}).img || (brand&&brand.logo) || ''
+      };
+    }
+    const t = tag.find(x=>x.id===linkValue) || {};
+    return {
+      href:`shop.html?tag=${encodeURIComponent(linkValue)}`,
+      label:t.name || 'Collection',
+      image:Store.imageForTag(linkValue) || ''
+    };
+  }
+
+  document.getElementById('homeMenu').innerHTML =
+    `<button class="chip active" onclick="openCats()">Categories ▾</button>` +
+    (hp.menu.items||[]).map(item=>{
+      const meta = hpLinkMeta(item.linkType, item.linkValue);
+      return `<button class="chip" onclick="location.href='${meta.href}'">${item.label || meta.label}</button>`;
+    }).join('');
+
+  // 1) Collections
   const collHTML = `<div class="h-scroll">${hp.collections.cards.map(c=>{
-    const img = c.image || Store.imageForTag(c.tagId) || '';
-    const tname = (tag.find(t=>t.id===c.tagId)||{}).name || '';
-    return `<a class="collection-card" href="shop.html?tag=${c.tagId}">
+    const meta = hpLinkMeta(c.linkType || 'tag', c.linkValue || c.tagId || '');
+    const img = c.image || meta.image || '';
+    const fallback = meta.label || (tag.find(t=>t.id===c.tagId)||{}).name || '';
+    return `<a class="collection-card" href="${meta.href}">
       <img src="${img}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
-      <div class="ctitle">${(c.caption||tname).replace(/ /,'<br/>')}</div></a>`;
+      <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
   }).join('')}</div>`;
 
   // 2) Shop by Brand — admin-selected top brands (in chosen order)
-  const brandsById = {}; Store.allBrands().forEach(b=>brandsById[b.id]=b);
   const brandList = hp.brands.brandIds.map(id=>brandsById[id]).filter(Boolean);
   const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map(b=>`
     <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">

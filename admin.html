@@ -239,6 +239,28 @@
   /* ════════ HOMEPAGE CMS ════════ */
   var _hp=null;
   const titleInput=(path,val)=>`<input value="${esc(val)}" oninput="${path}=this.value" placeholder="Section title" class="px-3 py-1.5 border border-zinc-300 rounded-lg text-sm font-semibold outline-none focus:border-kink min-w-[200px]"/>`;
+  function hpCardMeta(c){
+    const type=c.linkType||'tag', value=c.linkValue||c.tagId||'';
+    if(type==='category'){
+      const cat=Store.categoryBySlug(value)||{};
+      return { label:cat.name||'Category', image:(Store.cardsBySlug(value)[0]||{}).img||'', href:`shop.html?cat=${encodeURIComponent(value)}` };
+    }
+    if(type==='brand'){
+      const brand=Store.brandById(value)||{};
+      return { label:brand.name||'Brand', image:(Store.productsByBrand(brand.name||'')[0]||{}).img||brand.logo||'', href:`shop.html?brand=${encodeURIComponent(brand.name||'')}` };
+    }
+    const t=Store.list('tags').find(x=>x.id===value)||{};
+    return { label:t.name||'Collection', image:Store.imageForTag(value)||'', href:`shop.html?tag=${encodeURIComponent(value)}` };
+  }
+  function hpTargetOptions(type, selected){
+    if(type==='category') return Store.list('categories').map(c=>`<option value="${c.slug}" ${c.slug===selected?'selected':''}>${esc(c.name)}</option>`).join('');
+    if(type==='brand') return Store.allBrands().map(b=>`<option value="${b.id}" ${b.id===selected?'selected':''}>${esc(b.name)} · ${esc(b.subName||'')}</option>`).join('');
+    return Store.list('tags').map(t=>`<option value="${t.id}" ${t.id===selected?'selected':''}>${esc(t.name)}</option>`).join('');
+  }
+  function hpMenuOptions(type, selected){
+    if(type==='category') return Store.list('categories').map(c=>`<option value="${c.slug}" ${c.slug===selected?'selected':''}>${esc(c.name)}</option>`).join('');
+    return Store.list('tags').map(t=>`<option value="${t.id}" ${t.id===selected?'selected':''}>${esc(t.name)}</option>`).join('');
+  }
   function homepage(){ _hp=JSON.parse(JSON.stringify(Store.getHomepage())); renderHP(); }
   function renderHP(){
     const brands=Store.allBrands();
@@ -247,6 +269,10 @@
     content.innerHTML =
       `<div class="flex items-center justify-between mb-4"><p class="text-sm text-zinc-500">Edit the storefront homepage. Changes appear after customers reload.</p>
         <button onclick="saveHP()" class="${btn.primary}">${ic('save','w-4 h-4')} Save Homepage</button></div>`+
+      card(`Top Menu`,`<span class="text-xs text-zinc-400">Manage the horizontal homepage menu. Drag to reorder.</span>`,
+        `<div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">${(_hp.menu.items||[]).map(menuCard).join('')}</div>
+         <div class="px-4 pb-4"><button onclick="addMenuItem()" class="${btn.light} ${btn.sm}">${ic('plus','w-4 h-4')} Add menu item</button></div>`)+
+      `<div class="h-4"></div>`+
       /* Collections */
       card(`Section 1`, titleInput('_hp.collections.title',_hp.collections.title),
         `<div class="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3" id="ccGrid">${_hp.collections.cards.map(ccCard).join('')}</div>
@@ -269,16 +295,43 @@
       card(`Section 4`, titleInput('_hp.offers.title',_hp.offers.title)+`<span class="text-xs text-zinc-400 ml-2">Show <input type="number" min="2" value="${_hp.offers.limit||12}" onchange="_hp.offers.limit=+this.value||12;renderHP()" class="w-14 px-2 py-1 border border-zinc-300 rounded text-xs"/></span>`,
         autoPreview(Store.offers(_hp.offers.limit||12),false));
   }
-  function ccCard(c,i){ const img=c.image||Store.imageForTag(c.tagId)||'';
+  function menuCard(m,i){
+    const label = m.label || (m.linkType==='category' ? ((Store.categoryBySlug(m.linkValue)||{}).name||'Category') : ((Store.list('tags').find(t=>t.id===m.linkValue)||{}).name||'Tag'));
+    return `<div class="border border-zinc-200 rounded-xl p-3 space-y-2" ondragover="dragOver(event)" ondrop="dropAt(event,'menu',${i})">
+      <div class="flex items-center gap-2">
+        <span draggable="true" ondragstart="dragStart(event,'menu',${i})" class="bg-zinc-100 rounded-md w-7 h-7 grid place-items-center text-zinc-500 cursor-grab active:cursor-grabbing" title="Drag to reorder">${ic('grip-vertical','w-4 h-4')}</span>
+        <input value="${esc(m.label||'')}" oninput="_hp.menu.items[${i}].label=this.value" placeholder="${esc(label)}" class="flex-1 px-2 py-1.5 border border-zinc-300 rounded text-xs outline-none focus:border-kink"/>
+        <button onclick="_hp.menu.items.splice(${i},1);renderHP()" class="text-red-600">${ic('trash-2','w-4 h-4')}</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <select onchange="_hp.menu.items[${i}].linkType=this.value;_hp.menu.items[${i}].linkValue='';renderHP()" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs">
+          <option value="category" ${m.linkType==='category'?'selected':''}>Product Category</option>
+          <option value="tag" ${m.linkType==='tag'?'selected':''}>Tag</option>
+        </select>
+        <select onchange="_hp.menu.items[${i}].linkValue=this.value" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs">
+          <option value="">Choose target…</option>${hpMenuOptions(m.linkType||'category',m.linkValue||'')}
+        </select>
+      </div>
+    </div>`;
+  }
+  function ccCard(c,i){ const meta=hpCardMeta(c), img=c.image||meta.image||'';
     return `<div class="border border-zinc-200 rounded-xl overflow-hidden" ondragover="dragOver(event)" ondrop="dropAt(event,'cc',${i})">
       <div class="relative bg-zinc-100 overflow-hidden" style="width:100%;padding-top:110%">${img?`<img src="${img}" class="pointer-events-none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/>`:`<div class="absolute inset-0 grid place-items-center text-zinc-300">${ic('image','w-8 h-8')}</div>`}
         <span draggable="true" ondragstart="dragStart(event,'cc',${i})" class="absolute top-1.5 left-1.5 bg-white/90 rounded-md w-7 h-7 grid place-items-center text-zinc-500 shadow cursor-grab active:cursor-grabbing" title="Drag to reorder">${ic('grip-vertical','w-4 h-4')}</span>
         <label class="absolute bottom-1.5 right-1.5 bg-white/90 rounded-lg px-2 py-1 text-[0.62rem] font-semibold cursor-pointer shadow">Upload<input type="file" accept="image/*" class="hidden" onchange="onCCImage(${i},this)"/></label>
         ${c.image?`<button onclick="adjustCCImage(${i})" class="absolute bottom-1.5 left-1.5 bg-white/90 rounded-lg px-2 py-1 text-[0.62rem] font-semibold shadow" title="Adjust image">Adjust</button>`:''}
-        ${c.image?`<button onclick="_hp.collections.cards[${i}].image='';renderHP()" class="absolute top-1.5 right-1.5 bg-white/90 rounded-full w-6 h-6 grid place-items-center text-zinc-500 shadow" title="Use tag image">${ic('rotate-ccw','w-3.5 h-3.5')}</button>`:''}</div>
+        ${c.image?`<button onclick="_hp.collections.cards[${i}].image='';renderHP()" class="absolute top-1.5 right-1.5 bg-white/90 rounded-full w-6 h-6 grid place-items-center text-zinc-500 shadow" title="Use linked image">${ic('rotate-ccw','w-3.5 h-3.5')}</button>`:''}</div>
       <div class="p-2 space-y-1.5">
         <input value="${esc(c.caption)}" oninput="_hp.collections.cards[${i}].caption=this.value" placeholder="Caption" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs outline-none focus:border-kink"/>
-        <select onchange="_hp.collections.cards[${i}].tagId=this.value;renderHP()" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs"><option value="">Pick tag…</option>${Store.list('tags').map(t=>`<option value="${t.id}" ${t.id===c.tagId?'selected':''}>${t.name}</option>`).join('')}</select>
+        <select onchange="_hp.collections.cards[${i}].linkType=this.value;_hp.collections.cards[${i}].linkValue='';renderHP()" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs">
+          <option value="tag" ${(c.linkType||'tag')==='tag'?'selected':''}>Link to Tag</option>
+          <option value="category" ${(c.linkType||'tag')==='category'?'selected':''}>Link to Product Category</option>
+          <option value="brand" ${(c.linkType||'tag')==='brand'?'selected':''}>Link to Brand</option>
+        </select>
+        <select onchange="_hp.collections.cards[${i}].linkValue=this.value; if(_hp.collections.cards[${i}].linkType==='tag') _hp.collections.cards[${i}].tagId=this.value; renderHP()" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs">
+          <option value="">Choose target…</option>${hpTargetOptions(c.linkType||'tag', c.linkValue||c.tagId||'')}
+        </select>
+        <a href="${meta.href}" target="_blank" class="block text-[0.68rem] text-zinc-400 truncate">Preview: ${meta.label}</a>
         <button onclick="_hp.collections.cards.splice(${i},1);renderHP()" class="text-[0.7rem] text-red-600 font-semibold">Remove card</button></div></div>`;
   }
   function autoPreview(items,showSold){ return `<div class="p-4 flex gap-3 overflow-x-auto">${items.length?items.map(c=>`
@@ -286,7 +339,8 @@
       <p class="text-xs mt-1 truncate font-medium">${c.name}</p>
       <p class="text-xs font-bold">${MVR(c.price)}${showSold&&c.sold?` · <span class="text-green-600">${c.sold} sold</span>`:''}</p></div>`).join('')
     :'<p class="text-sm text-zinc-400">No items yet.</p>'}</div>`; }
-  function addCC(){ _hp.collections.cards.push({id:Store.uid('cc_'),caption:'',tagId:'',image:''}); renderHP(); }
+  function addCC(){ _hp.collections.cards.push({id:Store.uid('cc_'),caption:'',tagId:'',linkType:'tag',linkValue:'',image:''}); renderHP(); }
+  function addMenuItem(){ _hp.menu.items.push({id:Store.uid('hm_'),label:'',linkType:'category',linkValue:''}); renderHP(); }
   function toggleBrand(id){ const a=_hp.brands.brandIds; const i=a.indexOf(id); if(i<0)a.push(id);else a.splice(i,1); renderHP(); }
 
   /* ── drag-to-reorder (collections cards + selected brands) ── */
@@ -295,7 +349,7 @@
   function dragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
   function dropAt(e,kind,i){ e.preventDefault(); if(!_dragFrom||_dragFrom.kind!==kind){ _dragFrom=null; return; }
     const from=_dragFrom.i, to=+i; _dragFrom=null; if(from===to) return;
-    const a = kind==='cc' ? _hp.collections.cards : _hp.brands.brandIds;
+    const a = kind==='cc' ? _hp.collections.cards : kind==='menu' ? _hp.menu.items : _hp.brands.brandIds;
     const [m]=a.splice(from,1); a.splice(to,0,m); renderHP();
   }
   /* crop-resize an image to a target aspect (cover) so it fits the homepage card exactly */
