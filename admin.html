@@ -529,7 +529,16 @@
     </div>`).join('') || '<p class="text-xs text-zinc-400 py-1">No brands yet — click "Add brand".</p>';
   }
   function addBrand(){ _brands.push({id:Store.uid('br_'),name:'',logo:''}); renderBrands(); }
-  function onBrandLogo(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>compressImage(e.target.result,200,0.8,d=>{ _brands[i].logo=d; renderBrands(); }); r.readAsDataURL(f); input.value=''; }
+  function compressLogoImage(src,maxW,cb){
+    const img=new Image();
+    img.onload=()=>{ const sc=Math.min(1,maxW/img.width), w=Math.round(img.width*sc), h=Math.round(img.height*sc);
+      const c=document.createElement('canvas'); c.width=w; c.height=h; const ctx=c.getContext('2d');
+      ctx.clearRect(0,0,w,h);
+      ctx.drawImage(img,0,0,w,h);
+      try{ cb(c.toDataURL('image/png')); }catch(e){ cb(src); } };
+    img.onerror=()=>cb(src); img.src=src;
+  }
+  function onBrandLogo(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>compressLogoImage(e.target.result,240,d=>{ _brands[i].logo=d; renderBrands(); }); r.readAsDataURL(f); input.value=''; }
   function saveSub(id){
     const name=$('#s_name').value.trim(); if(!name)return alert('Name required');
     try{ Store.upsert('subcategories',{id:id||undefined,name,categoryId:$('#s_cat').value,image:_subImage}); }
