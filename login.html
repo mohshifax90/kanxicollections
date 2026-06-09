@@ -87,8 +87,10 @@
       <p class="step-sub">Enter the 6-digit code sent to <b id="otpPhone"></b>.</p>
       <div class="hint">Enter the verification code sent by SMS.</div>
       <div class="otp-row" id="otpInputs">
-        <input maxlength="1" inputmode="numeric"/><input maxlength="1" inputmode="numeric"/><input maxlength="1" inputmode="numeric"/>
-        <input maxlength="1" inputmode="numeric"/><input maxlength="1" inputmode="numeric"/><input maxlength="1" inputmode="numeric"/>
+        <input maxlength="6" inputmode="numeric" autocomplete="one-time-code" name="one-time-code" pattern="[0-9]*"/>
+        <input maxlength="1" inputmode="numeric" pattern="[0-9]*"/><input maxlength="1" inputmode="numeric" pattern="[0-9]*"/>
+        <input maxlength="1" inputmode="numeric" pattern="[0-9]*"/><input maxlength="1" inputmode="numeric" pattern="[0-9]*"/>
+        <input maxlength="1" inputmode="numeric" pattern="[0-9]*"/>
       </div>
       <button class="btn" id="verifyBtn" onclick="verifyOtp()">Verify</button>
       <p class="resend">Didn't get it? <a onclick="resendOtp()">Resend code</a></p>
@@ -167,6 +169,12 @@
     otpInputs[0]?.focus();
   }
 
+  function fillOtpInputs(value){
+    const digits = String(value || '').replace(/\D/g,'').slice(0, 6).split('');
+    otpInputs.forEach((inp, i)=>{ inp.value = digits[i] || ''; });
+    if(digits.length < otpInputs.length) otpInputs[digits.length]?.focus();
+  }
+
   /* STEP 1 */
   async function sendOtp(){
     const num = $('#phone').value.trim();
@@ -213,8 +221,25 @@
   /* OTP input UX */
   const otpInputs = [...document.querySelectorAll('#otpInputs input')];
   otpInputs.forEach((inp,i)=>{
-    inp.addEventListener('input',()=>{ if(inp.value && i<5) otpInputs[i+1].focus(); });
+    inp.addEventListener('input',()=>{
+      const digits = inp.value.replace(/\D/g,'');
+      if(!digits){ inp.value = ''; return; }
+      if(digits.length > 1){
+        fillOtpInputs(digits);
+        return;
+      }
+      inp.value = digits;
+      if(inp.value && i < otpInputs.length - 1) otpInputs[i+1].focus();
+    });
     inp.addEventListener('keydown',e=>{ if(e.key==='Backspace' && !inp.value && i>0) otpInputs[i-1].focus(); });
+    inp.addEventListener('paste',e=>{
+      const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+      const digits = pasted.replace(/\D/g,'');
+      if(digits.length > 1){
+        e.preventDefault();
+        fillOtpInputs(digits);
+      }
+    });
   });
 
   /* STEP 2 */
