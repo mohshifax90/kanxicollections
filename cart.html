@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kanxi Collection — Bag</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --black:#1a1814; --white:#fff; --gray-100:#f8f5f1; --gray-200:#ede8e0; --gray-400:#b0a898; --gray-600:#6e6860; --accent:#b89b7a; --cream:#f5ede0; --ink:#1a1814; --muted:#8b8b8b; --line:#efefef; }
+    body { font-family:'Inter',sans-serif; color:var(--ink); background:#e9e9e9; -webkit-font-smoothing:antialiased; }
+    a { text-decoration:none; color:inherit; }
+    .app { max-width:480px; margin:0 auto; background:#fff; min-height:100vh; box-shadow:0 0 40px rgba(0,0,0,0.08); padding-bottom:140px; }
+
+    .shop-head { position:sticky; top:0; z-index:50; background:#fff; display:flex; align-items:center; gap:0.7rem; padding:0.9rem 1rem; border-bottom:1px solid var(--line); }
+    .icon-btn { background:none; border:none; cursor:pointer; font-size:1.3rem; color:var(--ink); display:flex; align-items:center; }
+    .back-btn { width:44px; height:44px; margin-left:-10px; display:flex; align-items:center; justify-content:center; background:none; border:none; cursor:pointer; border-radius:50%; -webkit-tap-highlight-color:transparent; transition:background 0.15s; flex-shrink:0; }
+    .back-btn:active { background:#f0f0f0; }
+    .back-btn svg { width:25px; height:25px; color:var(--ink); }
+    .head-title { font-size:1.05rem; font-weight:700; }
+    .spacer { flex:1; }
+
+    .empty { text-align:center; padding:5rem 2rem; }
+    .empty .ic { font-size:3rem; margin-bottom:1rem; }
+    .empty h2 { font-family:'Playfair Display',serif; font-size:1.4rem; margin-bottom:0.6rem; }
+    .empty p { color:var(--gray-600); font-size:0.9rem; margin-bottom:1.5rem; }
+    .btn-shop { display:inline-block; background:var(--black); color:#fff; padding:0.9rem 2rem; border-radius:10px; font-size:0.88rem; font-weight:700; }
+
+    .cart-items { padding:0.5rem 1rem; }
+    .citem { display:flex; gap:0.9rem; padding:1rem 0; border-bottom:1px solid var(--line); }
+    .citem-img { width:84px; height:100px; border-radius:10px; object-fit:cover; background:var(--gray-100); flex-shrink:0; }
+    .citem-info { flex:1; display:flex; flex-direction:column; }
+    .citem-brand { font-size:0.68rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--gray-400); }
+    .citem-name { font-size:0.9rem; font-weight:600; line-height:1.3; margin:0.15rem 0 0.3rem; }
+    .citem-meta { font-size:0.78rem; color:var(--gray-600); margin-bottom:auto; }
+    .citem-bottom { display:flex; align-items:center; justify-content:space-between; margin-top:0.6rem; }
+    .qty { display:flex; align-items:center; border:1.5px solid var(--gray-200); border-radius:8px; }
+    .qty button { width:30px; height:30px; background:none; border:none; cursor:pointer; font-size:1rem; font-weight:600; }
+    .qty span { width:34px; text-align:center; font-size:0.85rem; font-weight:600; }
+    .citem-price { font-size:0.95rem; font-weight:800; }
+    .citem-remove { background:none; border:none; color:var(--gray-400); font-size:0.74rem; cursor:pointer; text-decoration:underline; }
+
+    .promo { padding:1rem; }
+    .promo-box { display:flex; gap:0.5rem; }
+    .promo-box input { flex:1; padding:0.8rem 0.9rem; border:1.5px solid var(--gray-200); border-radius:10px; font-family:'Inter',sans-serif; font-size:0.85rem; outline:none; }
+    .promo-box button { padding:0.8rem 1.2rem; background:var(--black); color:#fff; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer; font-family:'Inter',sans-serif; }
+
+    .summary { padding:0.5rem 1rem 1rem; }
+    .srow { display:flex; justify-content:space-between; font-size:0.88rem; padding:0.4rem 0; color:var(--gray-600); }
+    .srow.total { font-size:1.1rem; font-weight:800; color:var(--ink); border-top:1.5px solid var(--black); margin-top:0.5rem; padding-top:0.8rem; }
+    .srow .free { color:#27ae60; font-weight:700; }
+
+    .checkout-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#fff; border-top:1px solid var(--line); padding:0.9rem 1rem; z-index:60; display:flex; align-items:center; gap:1rem; }
+    .checkout-bar .ct-total { flex-shrink:0; }
+    .checkout-bar .ct-total .lbl { font-size:0.68rem; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.08em; }
+    .checkout-bar .ct-total .amt { font-size:1.15rem; font-weight:800; }
+    .checkout-bar a { flex:1; text-align:center; background:var(--black); color:#fff; padding:1rem; border-radius:10px; font-weight:700; font-size:0.9rem; transition:background 0.2s; }
+    .checkout-bar a:hover { background:var(--accent); }
+
+    .toast { position:fixed; bottom:6rem; left:50%; transform:translateX(-50%) translateY(3rem); background:var(--black); color:#fff; padding:0.8rem 1.4rem; border-radius:10px; font-size:0.85rem; z-index:999; opacity:0; transition:all 0.3s; border-left:3px solid var(--accent); }
+    .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+    @media (min-width:520px){ body{padding:1.5rem 0;} .app{border-radius:20px; min-height:auto;} .checkout-bar{border-radius:0 0 20px 20px;} }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="shop-head">
+    <button class="back-btn" onclick="location.href='index.html'" title="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <span class="head-title">Shopping Bag</span>
+    <div class="spacer"></div>
+    <span id="bagCount" style="font-size:0.82rem;color:var(--gray-600);"></span>
+  </div>
+
+  <div id="cartContent"></div>
+
+  <div id="emptyState" class="empty" style="display:none;">
+    <div class="ic">🛍</div>
+    <h2>Your bag is empty</h2>
+    <p>Discover curated luxury in our shop.</p>
+    <a class="btn-shop" href="index.html">Start Shopping</a>
+  </div>
+
+</div>
+
+<div class="checkout-bar" id="checkoutBar" style="display:none;">
+  <div class="ct-total">
+    <div class="lbl">Total</div>
+    <div class="amt" id="barTotal">MVR 0</div>
+  </div>
+  <a href="#" onclick="goCheckout(event)">Checkout →</a>
+</div>
+
+<script src="assets/store.js?v=3"></script>
+<script src="assets/components.js"></script>
+<script>
+  function goCheckout(e){
+    if(e) e.preventDefault();
+    if(!getCart().length){ showToast('Your bag is empty'); return; }
+    if(typeof Store !== 'undefined' && !Store.currentUser()){
+      showToast('Please sign in to continue');
+      setTimeout(()=>location.href='login.html?redirect=checkout.html', 700);
+    } else {
+      location.href='checkout.html';
+    }
+  }
+</script>
+<script>
+  let discount = 0;
+
+  function render() {
+    const cart = getCart();
+    const content = document.getElementById('cartContent');
+    const empty = document.getElementById('emptyState');
+    const bar = document.getElementById('checkoutBar');
+    document.getElementById('bagCount').textContent = cart.length ? cart.reduce((s,i)=>s+i.qty,0)+' items' : '';
+
+    if (!cart.length) { content.innerHTML=''; empty.style.display='block'; bar.style.display='none'; return; }
+    empty.style.display='none'; bar.style.display='flex';
+
+    const items = cart.map((it,idx) => `
+      <div class="citem">
+        <img class="citem-img" src="${it.img||''}" alt=""/>
+        <div class="citem-info">
+          <span class="citem-brand">Kanxi Collection</span>
+          <span class="citem-name">${it.name}</span>
+          <span class="citem-meta">${it.size ? 'Size: '+it.size : 'One Size'}</span>
+          <div class="citem-bottom">
+            <div class="qty">
+              <button onclick="chg(${idx},-1)">−</button><span>${it.qty}</span><button onclick="chg(${idx},1)">+</button>
+            </div>
+            <span class="citem-price">MVR ${(it.price*it.qty).toLocaleString()}</span>
+          </div>
+          <button class="citem-remove" onclick="rm(${idx})" style="align-self:flex-start;margin-top:0.4rem;">Remove</button>
+        </div>
+      </div>`).join('');
+
+    const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
+    const shipping = subtotal >= 150 ? 0 : 50;
+    const tax = Math.round(subtotal * 0.08);
+    const total = subtotal - discount + shipping + tax;
+
+    content.innerHTML = `
+      <div class="cart-items">${items}</div>
+      <div class="promo">
+        <div class="promo-box">
+          <input id="promo" type="text" placeholder="Promo code (try KANXI10)"/>
+          <button onclick="applyPromo()">Apply</button>
+        </div>
+      </div>
+      <div class="summary">
+        <div class="srow"><span>Subtotal</span><span>MVR ${subtotal.toLocaleString()}</span></div>
+        ${discount?`<div class="srow"><span>Discount</span><span class="free">− MVR ${discount.toLocaleString()}</span></div>`:''}
+        <div class="srow"><span>Shipping</span><span class="${shipping===0?'free':''}">${shipping===0?'Free':'MVR '+shipping}</span></div>
+        <div class="srow"><span>Tax (8%)</span><span>MVR ${tax.toLocaleString()}</span></div>
+        <div class="srow total"><span>Total</span><span>MVR ${total.toLocaleString()}</span></div>
+      </div>`;
+
+    document.getElementById('barTotal').textContent = 'MVR ' + total.toLocaleString();
+  }
+
+  function chg(i,d){ const c=getCart(); c[i].qty=Math.max(1,c[i].qty+d); saveCart(c); render(); }
+  function rm(i){ const c=getCart(); c.splice(i,1); saveCart(c); render(); }
+  function applyPromo(){
+    const v=document.getElementById('promo').value.toUpperCase().trim();
+    if(v==='KANXI10'){ discount=Math.round(getCart().reduce((s,i)=>s+i.price*i.qty,0)*0.1); showToast('10% off applied!'); render(); }
+    else showToast('Invalid code');
+  }
+  render();
+</script>
+</body>
+</html>

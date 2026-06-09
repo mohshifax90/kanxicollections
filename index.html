@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kanxi Collection — Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #1a1814; --white: #fff;
+      --gray-100: #f8f5f1; --gray-200: #ede8e0;
+      --gray-400: #b0a898; --gray-600: #6e6860;
+      --accent: #b89b7a; --accent-light: #f0e8dc; --cream: #f5ede0;
+      --ink: #1a1814; --muted: #8b8b8b; --line: #efefef;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; color: var(--ink); background: #e9e9e9; -webkit-font-smoothing: antialiased; }
+    a { text-decoration: none; color: inherit; }
+    ::selection { background: var(--accent); color: #fff; }
+
+    /* App frame (mobile-first, centered on desktop) */
+    .app { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.08); }
+
+    /* ── SHOP HEADER ── */
+    .shop-head {
+      position: sticky; top: 0; z-index: 50; background: #fff;
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.8rem 1rem; border-bottom: 1px solid var(--line);
+    }
+    .icon-btn { background: none; border: none; cursor: pointer; font-size: 1.3rem; color: var(--ink); line-height: 1; display: flex; align-items: center; }
+    .bag-btn { display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.15s; width: 30px; height: 30px; background: url('assets/bag.png') center/contain no-repeat; }
+    .bag-btn:hover { transform: scale(1.08); background-image: url('assets/bag-gold.png'); }
+    .bag-btn img { display: none; }
+    .heart-btn svg { width: 27px; height: 27px; fill: var(--black); transition: fill 0.2s, transform 0.15s; display: block; }
+    .heart-btn:hover svg { fill: var(--accent); transform: scale(1.08); }
+    .heart-btn.saved svg { fill: #e0413b; }
+    .shop-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--cream); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1px solid var(--gray-200); }
+    .shop-avatar svg { height: 24px; width: auto; }
+    .shop-name { font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; display: flex; align-items: center; gap: 4px; }
+    .shop-name .verified { color: var(--accent); font-size: 0.85rem; }
+    .shop-head .spacer { flex: 1; }
+    .cart-dot { position: absolute; top: -5px; right: -7px; background: var(--accent); color: #fff; font-size: 0.58rem; font-weight: 700; border-radius: 50%; min-width: 15px; height: 15px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+    .cart-wrap { position: relative; }
+
+    /* ── SEARCH ── */
+    .search-row { padding: 0.7rem 1rem; display: flex; align-items: center; gap: 0.7rem; }
+    .search-box { flex: 1; background: #f0f0f0; border-radius: 10px; display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.9rem; }
+    .search-box input { border: none; background: none; outline: none; font-family: 'Inter', sans-serif; font-size: 0.9rem; width: 100%; color: var(--ink); }
+    .search-box input::placeholder { color: #999; }
+
+    /* ── CHIPS ── */
+    .chip-row { display: flex; gap: 0.5rem; padding: 0.3rem 1rem 0.9rem; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); }
+    .chip-row::-webkit-scrollbar { display: none; }
+    .chip { flex-shrink: 0; background: #f0f0f0; border: none; border-radius: 22px; padding: 0.55rem 1.1rem; font-size: 0.85rem; font-weight: 600; color: var(--ink); cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; transition: background 0.2s; }
+    .chip:hover, .chip.active { background: var(--black); color: #fff; }
+
+    /* ── SECTION ── */
+    .section { padding: 1.4rem 1rem 0.5rem; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .section-head h2 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+    .see-all { font-size: 0.88rem; font-weight: 600; color: var(--accent); cursor: pointer; }
+
+    /* ── COLLECTIONS (big horizontal) ── */
+    .h-scroll { display: flex; gap: 0.8rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 0.3rem; }
+    .h-scroll::-webkit-scrollbar { display: none; }
+    .collection-card { flex-shrink: 0; width: 86%; aspect-ratio: 4/4.4; border-radius: 14px; overflow: hidden; position: relative; cursor: pointer; background: var(--gray-100); }
+    .collection-card:last-child { width: 78%; }
+    .collection-card img { width: 100%; height: 100%; object-fit: cover; }
+    .collection-card .ov { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 45%); }
+    .collection-card .ctitle { position: absolute; bottom: 1.2rem; left: 1.2rem; right: 1.2rem; color: #fff; font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; line-height: 1.1; }
+
+    /* ── SHOP BY BRAND ── */
+    .brand-card { flex-shrink:0; width:96px; display:flex; flex-direction:column; align-items:center; gap:0.5rem; cursor:pointer; text-decoration:none; }
+    .brand-logo { width:80px; height:80px; border-radius:50%; border:1px solid var(--gray-200); background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .brand-logo img { width:100%; height:100%; object-fit:contain; padding:8px; }
+    .brand-logo span { font-weight:800; color:var(--accent); font-size:1.1rem; }
+    .brand-name { font-size:0.78rem; font-weight:600; color:var(--ink); text-align:center; white-space:nowrap; }
+
+    /* ── SHOP BY SIZE (horizontal) ── */
+    .size-card { flex-shrink: 0; width: 44%; aspect-ratio: 3/3.4; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer; background: var(--gray-100); }
+    .size-card img { width: 100%; height: 100%; object-fit: cover; }
+    .size-card .ov { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 55%); }
+    .size-card .slabel { position: absolute; bottom: 0.9rem; left: 1rem; color: #fff; font-size: 1.3rem; font-weight: 800; }
+
+    /* ── PRODUCT CARDS ── */
+    .prod-h-scroll .pcard { flex-shrink: 0; width: 47%; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 0.8rem; padding: 0.5rem 0 1rem; }
+    .pcard { cursor: pointer; }
+    .pcard-img { position: relative; aspect-ratio: 1/1.18; border-radius: 12px; overflow: hidden; background: var(--gray-100); margin-bottom: 0.5rem; }
+    .pcard-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s; }
+    .pcard:hover .pcard-img img { transform: scale(1.04); }
+    .pcard-badge { position: absolute; bottom: 0.55rem; left: 0.55rem; background: rgba(26,24,20,0.78); color: #fff; font-size: 0.66rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 5px; letter-spacing: 0.02em; backdrop-filter: blur(2px); }
+    .pcard-badge.gold { background: var(--accent); }
+    .pcard-save { position: absolute; top: 0.55rem; right: 0.55rem; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.92); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+    .pcard-save.saved { color: var(--accent); }
+    .pcard-name-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+    .pcard-name { font-size: 0.84rem; font-weight: 500; line-height: 1.35; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .pcard-bookmark { background: none; border: none; cursor: pointer; flex-shrink: 0; line-height: 1; padding: 1px 0 0; }
+    .pcard-bookmark svg { width: 19px; height: 19px; fill: var(--accent); transition: fill 0.2s, transform 0.15s; display: block; }
+    .pcard-bookmark.saved svg { fill: #e0413b; }
+    .pcard-bookmark:active svg { transform: scale(1.25); }
+    .pcard-price { font-size: 0.86rem; font-weight: 700; margin-top: 0.25rem; }
+    .pcard-price .old { font-weight: 400; color: var(--gray-400); text-decoration: line-through; font-size: 0.76rem; margin-left: 0.3rem; }
+    .pcard-status { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+    .pcard-status.fast { color: #c0392b; }
+    .pcard-status.new { color: var(--accent); }
+
+    /* ── FOOTER ── */
+    .shop-footer { padding: 2rem 1rem 3rem; text-align: center; border-top: 1px solid var(--line); margin-top: 1.5rem; }
+    .shop-footer .flinks { display: flex; flex-wrap: wrap; gap: 0.9rem; justify-content: center; margin-bottom: 0.9rem; }
+    .shop-footer a { font-size: 0.76rem; color: var(--gray-600); }
+    .shop-footer .copy { font-size: 0.72rem; color: var(--gray-400); }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(4rem); background: var(--black); color: #fff; padding: 0.8rem 1.4rem; border-radius: 10px; font-size: 0.85rem; z-index: 999; opacity: 0; transition: all 0.3s; border-left: 3px solid var(--accent); max-width: 90%; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    @media (min-width: 520px) {
+      body { padding: 1.5rem 0; }
+      .app { border-radius: 20px; overflow: hidden; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SHOP HEADER ── -->
+  <div class="shop-head">
+    <button class="icon-btn" title="Back" onclick="history.back()">‹</button>
+    <div class="shop-avatar">
+      <svg viewBox="415 270 325 375" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(0,1254) scale(0.1,-0.1)" stroke="none">
+          <path fill="#1a1814" d="M4477 9643 c-17 -16 -1 -20 91 -26 183 -11 246 -49 285 -171 l22 -71 0 -1290 c0 -1377 1 -1360 -48 -1448 -23 -42 -81 -80 -137 -93 -19 -4 -75 -10 -124 -13 -58 -4 -91 -10 -94 -18 -3 -10 109 -13 537 -13 307 0 542 4 545 9 8 13 -19 21 -73 21 -73 0 -151 27 -186 65 -17 18 -40 57 -51 86 -18 52 -19 95 -22 1334 -2 856 1 1306 8 1360 6 46 21 102 36 132 21 44 34 56 80 79 37 18 78 28 129 33 42 3 76 11 78 16 2 11 -1065 20 -1076 8z"/>
+          <g transform="translate(6350,7900) scale(0.78) translate(-6350,-7900)">
+          <path fill="#b89b7a" d="M6540 9635 c0 -11 11 -15 38 -15 47 0 103 -28 121 -61 21 -38 7 -89 -43 -156 -59 -79 -554 -594 -1010 -1050 l-371 -373 81 0 81 0 234 -246 c129 -135 234 -249 234 -252 0 -4 -26 -59 -57 -122 -170 -343 -170 -724 -1 -1065 61 -123 121 -204 227 -310 175 -174 377 -281 656 -346 121 -29 425 -37 568 -15 264 40 518 170 666 340 55 63 106 135 106 148 0 20 -27 5 -49 -27 -33 -49 -157 -165 -227 -212 -266 -181 -601 -236 -926 -154 -385 97 -665 363 -807 765 -78 220 -90 520 -31 752 11 42 22 79 23 81 6 6 225 -220 714 -739 l73 -78 325 0 c196 0 325 4 325 9 0 6 -21 12 -47 16 -139 17 -227 50 -322 119 -60 45 -558 558 -885 913 l-49 53 29 42 c47 70 164 181 249 236 269 176 642 210 967 88 253 -95 464 -300 514 -498 9 -38 21 -68 26 -68 10 0 6 176 -8 362 l-6 77 -47 30 c-169 108 -391 183 -624 212 -123 15 -406 6 -502 -15 -251 -56 -463 -165 -644 -331 l-44 -40 -76 82 c-42 45 -146 157 -231 248 -85 91 -156 172 -158 178 -1 7 271 285 605 618 465 464 626 619 687 659 125 84 213 117 339 129 37 3 69 11 70 16 1 7 -137 11 -395 13 -350 2 -398 0 -398 -13z"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <span class="shop-name">kanxi.collection</span>
+    <div class="spacer"></div>
+    <button class="icon-btn heart-btn" title="Wishlist" onclick="this.classList.toggle('saved')"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+    <button class="icon-btn cart-wrap" title="Cart" onclick="location.href='cart.html'">
+      <span class="bag-btn"><img src="assets/bag.png" alt="Bag"/></span>
+      <span class="cart-dot cart-count" style="display:none">0</span>
+    </button>
+    <button class="icon-btn" title="Menu">☰</button>
+  </div>
+
+  <!-- ── SEARCH ── -->
+  <div class="search-row">
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" placeholder="Search kanxi.collection"/>
+    </div>
+  </div>
+
+  <!-- ── CHIPS ── -->
+  <div class="chip-row">
+    <button class="chip active" onclick="openCats()">Categories ▾</button>
+    <button class="chip" onclick="location.href='shop.html?cat=new'">New Season</button>
+    <button class="chip" onclick="location.href='shop.html?cat=clothing'">Clothing</button>
+    <button class="chip" onclick="location.href='shop.html?cat=skincare'">Skincare</button>
+    <button class="chip" onclick="location.href='shop.html?cat=bags'">Bags</button>
+    <button class="chip" onclick="location.href='shop.html?cat=watches'">Watches</button>
+    <button class="chip" onclick="location.href='shop.html?cat=sale'">Sale</button>
+  </div>
+
+  <!-- ── HOMEPAGE SECTIONS (CMS-driven) ── -->
+  <div id="homeSections"></div>
+
+  <!-- ── MORE FROM THIS SHOP ── -->
+  <div class="section">
+    <div class="section-head"><h2>More from this shop</h2><span class="see-all">See all</span></div>
+    <div class="grid-2" id="moreGrid"></div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="shop-footer">
+    <div class="flinks">
+      <a href="#">About</a><a href="#">Shipping</a><a href="#">Returns</a>
+      <a href="#">Help</a><a href="#">Privacy</a><a href="#">Contact</a>
+    </div>
+    <p class="copy">© 2026 Kanxi Collection · Malé, Maldives</p>
+  </div>
+
+</div>
+
+<!-- ── CATEGORIES SHEET ── -->
+<div class="cat-sheet-bg" id="catBg" onclick="closeCats()"></div>
+<div class="cat-sheet" id="catSheet">
+  <div class="cs-handle"></div>
+  <h3 class="cs-title">Categories</h3>
+  <a class="cs-row" href="shop.html?cat=clothing"><span>Clothing</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=skincare"><span>Skincare</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=makeup"><span>Makeup</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=bags"><span>Bags</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=watches"><span>Watches</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=new"><span>New Arrivals</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=sale"><span>Sale</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=clothing"><span>All products</span></a>
+</div>
+<style>
+  .cat-sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;}
+  .cat-sheet-bg.show{display:block;}
+  .cat-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:480px;background:#fff;z-index:301;border-radius:18px 18px 0 0;transition:transform 0.3s ease;max-height:80vh;overflow-y:auto;padding-bottom:1.5rem;}
+  .cat-sheet.show{transform:translateX(-50%) translateY(0);}
+  .cs-handle{width:40px;height:4px;background:#ddd;border-radius:2px;margin:0.7rem auto 0;}
+  .cs-title{text-align:center;font-size:1.15rem;font-weight:800;padding:0.7rem 1rem 1rem;border-bottom:1px solid var(--line);}
+  .cs-row{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.3rem;border-bottom:1px solid #f5f5f5;font-size:1rem;font-weight:500;color:var(--ink);}
+  .cs-row:hover{background:#fafafa;}
+  .cs-chev{color:var(--muted);font-size:1.1rem;}
+  @media(min-width:520px){ .cat-sheet{border-radius:18px 18px 20px 20px;} }
+</style>
+<script>
+  function openCats(){ document.getElementById('catBg').classList.add('show'); document.getElementById('catSheet').classList.add('show'); }
+  function closeCats(){ document.getElementById('catBg').classList.remove('show'); document.getElementById('catSheet').classList.remove('show'); }
+</script>
+
+<script src="assets/store.js?v=3"></script>
+<script src="assets/components.js"></script>
+<script>
+  /* ── PRODUCTS — live from admin Store ── */
+  const products = Store.storeProducts().map(p => Store.card(p));
+
+  function cardHTML(p) {
+    const old = p.old ? `<span class="old">MVR ${p.old.toLocaleString()}</span>` : '';
+    const badge = p.badge ? `<span class="pcard-badge ${p.bgold?'gold':''}">${p.badge}</span>` : '';
+    return `<div class="pcard">
+      <a href="post.html?id=${p.id}&cat=${p.cat}">
+        <div class="pcard-img">
+          ${badge}
+          <img src="${p.img}" alt="${p.name}"/>
+        </div>
+      </a>
+      <div class="pcard-name-row">
+        <a href="post.html?id=${p.id}&cat=${p.cat}" class="pcard-name">${p.name}</a>
+        <button class="pcard-bookmark" onclick="toggleSave(this)" title="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+      </div>
+      <div class="pcard-price">MVR ${p.price.toLocaleString()}${old}</div>
+      <div class="pcard-status ${p.sclass||''}">${p.status}</div>
+    </div>`;
+  }
+
+  /* ── CMS-DRIVEN HOMEPAGE SECTIONS ── */
+  const hp = Store.getHomepage();
+  const tag = Store.list('tags');
+  const section = (title, inner, seeAll) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAll?`<a class="see-all" href="${seeAll}">See all</a>`:''}</div>${inner}</div>`;
+  const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
+  const prodGrid = arr => `<div class="grid-2">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
+
+  // 1) Collections — each card = a tag, with representative image + caption
+  const collHTML = `<div class="h-scroll">${hp.collections.cards.map(c=>{
+    const img = c.image || Store.imageForTag(c.tagId) || '';
+    const tname = (tag.find(t=>t.id===c.tagId)||{}).name || '';
+    return `<a class="collection-card" href="shop.html?tag=${c.tagId}">
+      <img src="${img}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
+      <div class="ctitle">${(c.caption||tname).replace(/ /,'<br/>')}</div></a>`;
+  }).join('')}</div>`;
+
+  // 2) Shop by Brand — admin-selected top brands (in chosen order)
+  const brandsById = {}; Store.allBrands().forEach(b=>brandsById[b.id]=b);
+  const brandList = hp.brands.brandIds.map(id=>brandsById[id]).filter(Boolean);
+  const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map(b=>`
+    <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">
+      <div class="brand-logo">${b.logo?`<img src="${b.logo}"/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
+      <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
+    : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands selected yet.</p>`;
+
+  // 3) Best Sellers (by sales)  4) Offers
+  const best = Store.bestSellers(hp.bestsellers.limit||8);
+  const offers = Store.offers(hp.offers.limit||12);
+
+  document.getElementById('homeSections').innerHTML =
+    section(hp.collections.title, collHTML) +
+    section(hp.brands.title, brandHTML) +
+    section(hp.bestsellers.title, prodScroll(best)) +
+    (offers.length ? section(hp.offers.title, prodGrid(offers)) : '');
+
+  document.getElementById('moreGrid').innerHTML = products.map(cardHTML).join('');
+
+  function toggleSave(btn) {
+    const on = btn.classList.toggle('saved');
+    showToast(on ? '♥ Added to wishlist' : 'Removed from wishlist');
+  }
+
+  /* chips */
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+  }));
+</script>
+</body>
+</html>
