@@ -122,18 +122,8 @@ const Store = (() => {
         addresses:[{ id:uid('a_'), label:'Home', line:'Hithigasdhoshuge, Fareedhee Magu', city:'Malé', atoll:'Kaafu', postcode:'20026', country:'Maldives', lat:4.1755, lng:73.5093, isDefault:true }] },
       { id:uid('u_'), name:'Mohamed Naseem', phone:'+960 999-8765', gender:'Male', dob:'1990-11-03', createdAt:Date.now()-86400000*8, addresses:[] },
     ];
-    const orders = [
-      { id:'KNX-104821', userName:'Aishath Ibrahim', userPhone:'+960 777-1234', date:Date.now()-86400000*1, status:'Packing', payStatus:'Paid', payMethod:'Card',
-        items:[{name:'Tailored Linen Blazer (M)', qty:1, price:2910, image:im('photo-1594938298603-c8148c4b4e7b',200)}], shipping:0, address:'Malé, Maldives' },
-      { id:'KNX-104822', userName:'Mohamed Naseem', userPhone:'+960 999-8765', date:Date.now()-3600000*5, status:'Pending Payment', payStatus:'Pending', payMethod:'Transfer',
-        items:[{name:'Gold Minimalist Watch', qty:1, price:7480, image:im('photo-1542496658-e33a6d0d50f6',200)}], shipping:0, address:'Hulhumalé, Maldives' },
-      { id:'KNX-104823', userName:'Aishath Ibrahim', userPhone:'+960 777-1234', date:Date.now()-86400000*3, status:'Delivered', payStatus:'Paid', payMethod:'Card',
-        items:[{name:'Vitamin C Serum (30ml)', qty:2, price:1048, image:im('photo-1620916566398-39f1143ab7be',200)}], shipping:0, address:'Malé, Maldives' },
-      { id:'KNX-104824', userName:'Sara Ali', userPhone:'+960 730-5566', date:Date.now()-3600000*30, status:'Out for Delivery', payStatus:'Paid', payMethod:'Apple Pay',
-        items:[{name:'Velvet Matte Lipstick (Rose)', qty:1, price:690, image:im('photo-1586495777744-4413f21062fa',200)}], shipping:0, address:'Addu City, Maldives' },
-    ];
-    const payments = orders.map(o => ({ id:uid('p_'), orderId:o.id, amount:o.items.reduce((s,i)=>s+i.price*i.qty,0)+o.shipping,
-      method:o.payMethod, status:o.payStatus==='Paid'?'Paid':(o.payStatus==='Pending'?'Pending':'Refunded'), date:o.date }));
+    const orders = [];
+    const payments = [];
 
     return { _v:VERSION, categories:cats, subcategories:subs, tags, products, batches, users, orders, payments, paymentSettings:defaultPaymentSettings() };
   }
