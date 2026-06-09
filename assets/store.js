@@ -376,9 +376,25 @@ const Store = (() => {
     advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(o.status==='Paid')o.payStatus='Paid'; save(db); return o; },
     setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st;save(db);} return o; },
 
-    currentUser(){ return USE_LOCAL ? JSON.parse(localStorage.getItem('kanxi_session')||'null') : (window._kanxiSession || null); },
-    login(u){ if(USE_LOCAL) localStorage.setItem('kanxi_session', JSON.stringify(u)); else window._kanxiSession = u; },
-    logout(){ if(USE_LOCAL) localStorage.removeItem('kanxi_session'); else window._kanxiSession = null; },
+    currentUser(){
+      if(USE_LOCAL) return JSON.parse(localStorage.getItem('kanxi_session')||'null');
+      if(window._kanxiSession) return window._kanxiSession;
+      try{ return JSON.parse(sessionStorage.getItem('kanxi_session')||'null'); }catch(_){ return null; }
+    },
+    login(u){
+      if(USE_LOCAL) localStorage.setItem('kanxi_session', JSON.stringify(u));
+      else {
+        window._kanxiSession = u;
+        try{ sessionStorage.setItem('kanxi_session', JSON.stringify(u)); }catch(_){}
+      }
+    },
+    logout(){
+      if(USE_LOCAL) localStorage.removeItem('kanxi_session');
+      else {
+        window._kanxiSession = null;
+        try{ sessionStorage.removeItem('kanxi_session'); }catch(_){}
+      }
+    },
     findUserByPhone(phone){ return (load().users||[]).find(u=>u.phone.replace(/\D/g,'')===phone.replace(/\D/g,'')); },
   };
   return api;

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kanxi Collection — My Account</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--black:#1a1814;--white:#fff;--gray-100:#f8f5f1;--gray-200:#ede8e0;--gray-400:#b0a898;--gray-600:#6e6860;--accent:#b89b7a;--cream:#f5ede0;--ink:#1a1814;--muted:#8b8b8b;--line:#efefef;}
+    body{font-family:'Inter',sans-serif;color:var(--ink);background:#e9e9e9;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;color:inherit;}
+    .app{max-width:480px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 40px rgba(0,0,0,0.08);padding-bottom:2rem;}
+    .ph{position:sticky;top:0;z-index:50;background:#fff;display:flex;align-items:center;padding:0.9rem 1rem;border-bottom:1px solid var(--line);}
+    .back-btn{width:44px;height:44px;margin-left:-10px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;border-radius:50%;}
+    .back-btn:active{background:#f0f0f0;}
+    .back-btn svg{width:25px;height:25px;color:var(--ink);}
+    .ph h1{flex:1;text-align:center;font-size:1.05rem;font-weight:800;margin-right:34px;}
+    /* profile */
+    .prof{background:var(--cream);padding:1.6rem 1.3rem;display:flex;align-items:center;gap:1rem;}
+    .prof-av{width:60px;height:60px;border-radius:50%;background:#fff;border:1px solid var(--gray-200);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent);font-size:1.3rem;flex-shrink:0;}
+    .prof-name{font-size:1.2rem;font-weight:800;}
+    .prof-sub{font-size:0.85rem;color:var(--gray-600);}
+    /* tabs */
+    .tabs{display:flex;border-bottom:1px solid var(--line);position:sticky;top:62px;background:#fff;z-index:40;}
+    .tab{flex:1;text-align:center;padding:0.9rem 0;font-size:0.88rem;font-weight:600;color:var(--gray-600);border-bottom:2px solid transparent;cursor:pointer;}
+    .tab.active{color:var(--ink);border-bottom-color:var(--black);}
+    .panel{display:none;padding:1.2rem 1.3rem;}
+    .panel.active{display:block;}
+    /* details */
+    .field{padding:0.9rem 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:1rem;}
+    .field .k{font-size:0.78rem;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;}
+    .field .v{font-size:0.95rem;font-weight:500;text-align:right;}
+    .addr-card{border:1px solid var(--line);border-radius:12px;padding:1rem;margin-top:1rem;font-size:0.9rem;line-height:1.5;}
+    .addr-card .lbl{font-weight:700;margin-bottom:0.2rem;}
+    .badge-def{display:inline-block;background:#e7f6ec;color:#27ae60;font-size:0.66rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:10px;margin-left:0.4rem;}
+    .btn{display:flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;background:var(--black);color:#fff;border:none;border-radius:11px;padding:0.95rem;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;margin-top:1.2rem;}
+    .btn:hover{background:var(--accent);}
+    .btn-light{background:var(--gray-100);color:var(--ink);border:1.5px solid var(--gray-200);}
+    .btn-light:hover{background:var(--gray-200);}
+    .fg{margin-bottom:0.9rem;}
+    .fg label{display:block;font-size:0.74rem;letter-spacing:0.05em;text-transform:uppercase;font-weight:700;color:var(--gray-600);margin-bottom:0.4rem;}
+    .fg input,.fg select{width:100%;padding:0.85rem 0.9rem;border:1.5px solid var(--gray-200);border-radius:11px;font-size:1rem;font-family:'Inter',sans-serif;outline:none;}
+    .fg input:focus,.fg select:focus{border-color:var(--black);}
+    /* orders */
+    .order{border:1px solid var(--line);border-radius:12px;padding:1rem;margin-bottom:0.9rem;}
+    .order-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;}
+    .order-id{font-family:ui-monospace,monospace;font-size:0.8rem;color:var(--gray-600);}
+    .opill{font-size:0.7rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:20px;}
+    .order-item{display:flex;gap:0.7rem;align-items:center;padding:0.5rem 0;}
+    .order-item img{width:44px;height:52px;border-radius:8px;object-fit:cover;background:var(--gray-100);}
+    .order-item .nm{font-size:0.85rem;font-weight:600;}
+    .order-item .mt{font-size:0.76rem;color:var(--gray-600);}
+    .order-foot{display:flex;justify-content:space-between;font-size:0.9rem;font-weight:700;border-top:1px solid var(--line);padding-top:0.6rem;margin-top:0.4rem;}
+    .empty{text-align:center;color:var(--muted);padding:3rem 1rem;}
+    .empty .ic{font-size:2.4rem;margin-bottom:0.5rem;}
+    /* offers grid */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem 0.8rem;}
+    .pcard-img{position:relative;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:var(--gray-100);margin-bottom:0.5rem;border:1px solid #e3e3e3;}
+    .pcard-img img{width:100%;height:100%;object-fit:cover;}
+    .pcard-badge{position:absolute;bottom:0.5rem;left:0.5rem;background:#e0413b;color:#fff;font-size:0.66rem;font-weight:700;padding:0.2rem 0.5rem;border-radius:5px;}
+    .pcard-name{font-size:0.84rem;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .pcard-price{font-size:0.86rem;font-weight:700;margin-top:0.2rem;}
+    .pcard-price .old{font-weight:400;color:var(--gray-400);text-decoration:line-through;font-size:0.75rem;margin-left:0.3rem;}
+    .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);background:var(--black);color:#fff;padding:0.8rem 1.4rem;border-radius:10px;font-size:0.85rem;z-index:999;opacity:0;transition:all 0.3s;border-left:3px solid var(--accent);}
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+    @media(min-width:520px){body{padding:1.5rem 0;}.app{border-radius:20px;min-height:auto;}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="ph">
+    <button class="back-btn" onclick="location.href='index.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <h1>My Account</h1>
+  </div>
+
+  <div class="prof" id="prof"></div>
+
+  <div class="tabs">
+    <div class="tab" data-tab="details" onclick="showTab('details')">Details</div>
+    <div class="tab" data-tab="orders" onclick="showTab('orders')">Orders</div>
+    <div class="tab" data-tab="offers" onclick="showTab('offers')">Offers</div>
+  </div>
+
+  <div class="panel" id="panel-details"></div>
+  <div class="panel" id="panel-orders"></div>
+  <div class="panel" id="panel-offers"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/supabase-config.js?v=1"></script>
+<script src="assets/store.js?v=4"></script>
+<script>
+  const $ = s => document.querySelector(s);
+  const MVR = n => 'MVR ' + (+n).toLocaleString();
+  let u = Store.currentUser();
+  if(!u){ location.href = 'login.html?redirect=account.html'; }
+
+  function showToast(m){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t);} t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+
+  /* profile header */
+  function renderProf(){
+    const initials = u.name ? u.name.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase() : '👤';
+    $('#prof').innerHTML = `<div class="prof-av">${initials}</div><div><div class="prof-name">${u.name||'Kanxi Customer'}</div><div class="prof-sub">${u.phone||''}</div></div>`;
+  }
+
+  /* ── DETAILS ── */
+  function renderDetails(){
+    const a = (u.addresses||[]).find(x=>x.isDefault) || (u.addresses||[])[0];
+    $('#panel-details').innerHTML = `
+      <div class="field"><span class="k">Full name</span><span class="v">${u.name||'—'}</span></div>
+      <div class="field"><span class="k">Mobile</span><span class="v">${u.phone||'—'}</span></div>
+      <div class="field"><span class="k">Gender</span><span class="v">${u.gender||'—'}</span></div>
+      <div class="field"><span class="k">Date of birth</span><span class="v">${u.dob||'—'}</span></div>
+      <div style="margin-top:1.2rem"><span class="k" style="font-size:0.78rem;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.06em;font-weight:600">Delivery address</span>
+        ${a?`<div class="addr-card"><div class="lbl">${a.label||'Home'}${a.isDefault?'<span class="badge-def">Default</span>':''}</div>${a.line||''}<br/>${[a.city,a.postcode].filter(Boolean).join(', ')}<br/>${a.country||'Maldives'}</div>`
+          :`<div class="addr-card" style="color:var(--muted)">No saved address.</div>`}</div>
+      <button class="btn" onclick="editDetails()">✎ Edit details</button>`;
+  }
+  function editDetails(){
+    const a = (u.addresses||[]).find(x=>x.isDefault) || (u.addresses||[])[0] || {};
+    $('#panel-details').innerHTML = `
+      <div class="fg"><label>Full name</label><input id="e_name" value="${u.name||''}"/></div>
+      <div class="fg"><label>Gender</label><select id="e_gender"><option ${u.gender==='Female'?'selected':''}>Female</option><option ${u.gender==='Male'?'selected':''}>Male</option><option ${u.gender==='Other'?'selected':''}>Other</option></select></div>
+      <div class="fg"><label>Date of birth</label><input id="e_dob" type="date" value="${u.dob||''}"/></div>
+      <button class="btn btn-light" onclick="useLocation()" style="margin-top:0">📍 ${a.line?'Update address from location':'Use my current location'}</button>
+      <div class="fg" style="margin-top:0.9rem"><label>Address</label><input id="e_line" value="${a.line||''}" placeholder="House / Street"/></div>
+      <div class="fg"><label>City / Island</label><input id="e_city" value="${a.city||''}"/></div>
+      <div class="fg"><label>Postcode</label><input id="e_post" value="${a.postcode||''}"/></div>
+      <button class="btn" onclick="saveDetails()">Save changes</button>
+      <button class="btn btn-light" onclick="renderDetails()">Cancel</button>`;
+  }
+  let _geo=null;
+  function useLocation(){
+    if(!navigator.geolocation) return showToast('Geolocation not supported');
+    showToast('Locating…');
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      _geo={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      try{ const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${_geo.lat}&lon=${_geo.lng}&zoom=18&addressdetails=1`); const d=await r.json(); const ad=d.address||{};
+        $('#e_line').value=[ad.house_number,ad.road||ad.neighbourhood].filter(Boolean).join(' ')||$('#e_line').value;
+        $('#e_city').value=ad.city||ad.town||ad.village||$('#e_city').value;
+        $('#e_post').value=ad.postcode||$('#e_post').value;
+        showToast('Address filled from location');
+      }catch(e){ showToast('Saved coordinates'); }
+    }, ()=>showToast('Could not get location'), {enableHighAccuracy:true,timeout:10000});
+  }
+  function saveDetails(){
+    const addresses = (u.addresses||[]).slice();
+    const line=$('#e_line').value.trim();
+    if(line){
+      let a = addresses.find(x=>x.isDefault) || addresses[0];
+      if(!a){ a={id:Store.uid('a_'),label:'Home',isDefault:true}; addresses.push(a); }
+      a.line=line; a.city=$('#e_city').value.trim(); a.postcode=$('#e_post').value.trim(); a.country=a.country||'Maldives';
+      if(_geo){ a.lat=_geo.lat; a.lng=_geo.lng; }
+    }
+    u = Store.upsert('users', { ...u, name:$('#e_name').value.trim()||u.name, gender:$('#e_gender').value, dob:$('#e_dob').value, addresses });
+    Store.login(u);
+    renderProf(); renderDetails(); showToast('Details updated ✓');
+  }
+
+  /* ── ORDERS ── */
+  function statusTone(s){ const m={'Pending Payment':['#fdf3e3','#d68910'],'Paid':['#eaf1fb','#3a7bd5'],'Order Accepted':['#eaf1fb','#3a7bd5'],'Packing':['#f3eafa','#8e44ad'],'Ready to Dispatch':['#f3eafa','#8e44ad'],'Out for Delivery':['#eaf1fb','#3a7bd5'],'Delivered':['#e7f6ec','#27ae60'],'Returned':['#fdecea','#e0413b']}; return m[s]||['#f0f0f0','#666']; }
+  function renderOrders(){
+    const orders = Store.list('orders').filter(o=>o.userPhone===u.phone).slice().reverse();
+    if(!orders.length){ $('#panel-orders').innerHTML = `<div class="empty"><div class="ic">📦</div>No orders yet.<br/><a href="index.html" style="color:var(--accent);font-weight:600">Start shopping →</a></div>`; return; }
+    $('#panel-orders').innerHTML = orders.map(o=>{
+      const total=o.items.reduce((s,i)=>s+i.price*i.qty,0)+o.shipping;
+      const [bg,fg]=statusTone(o.status);
+      return `<div class="order">
+        <div class="order-top"><span class="order-id">#${o.id}</span><span class="opill" style="background:${bg};color:${fg}">${o.status}</span></div>
+        ${o.items.map(it=>`<div class="order-item"><img src="${it.image||''}" alt=""/><div style="flex:1"><div class="nm">${it.name}</div><div class="mt">${MVR(it.price)} × ${it.qty}</div></div></div>`).join('')}
+        <div class="order-foot"><span>${timeAgo(o.date)}</span><span>${MVR(total)}</span></div>
+      </div>`;
+    }).join('');
+  }
+  function timeAgo(ts){ const d=Date.now()-ts,h=Math.floor(d/3.6e6); if(h<1)return Math.max(1,Math.floor(d/6e4))+'m ago'; if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; }
+
+  /* ── OFFERS ── */
+  function renderOffers(){
+    const offers = Store.offers(20);
+    if(!offers.length){ $('#panel-offers').innerHTML = `<div class="empty"><div class="ic">🏷</div>No offers right now.</div>`; return; }
+    $('#panel-offers').innerHTML = `<div class="grid-2">${offers.map(p=>`
+      <a href="post.html?id=${p.id}&cat=${p.cat}">
+        <div class="pcard-img"><span class="pcard-badge">SALE</span><img src="${p.img}" alt=""/></div>
+        <div class="pcard-name">${p.name}</div>
+        <div class="pcard-price">MVR ${p.price.toLocaleString()}${p.old?`<span class="old">MVR ${p.old.toLocaleString()}</span>`:''}</div>
+      </a>`).join('')}</div>`;
+  }
+
+  /* tabs */
+  function showTab(t){
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    $('#panel-'+t).classList.add('active');
+    history.replaceState(null,'','account.html?tab='+t);
+  }
+
+  /* init */
+  renderProf(); renderDetails(); renderOrders(); renderOffers();
+  const tab = new URLSearchParams(location.search).get('tab') || 'details';
+  showTab(['details','orders','offers'].includes(tab)?tab:'details');
+</script>
+</body>
+</html>
