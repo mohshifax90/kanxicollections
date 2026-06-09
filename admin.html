@@ -235,6 +235,13 @@
     window.scrollTo(0,0);
   }
   document.querySelectorAll('.navi[data-route]').forEach(n=>n.addEventListener('click',()=>go(n.dataset.route)));
+  function currentRoute(){ return (location.hash||'#dashboard').slice(1) || 'dashboard'; }
+  function refreshCurrentRoute(){
+    const route=currentRoute();
+    if(routes[route]) routes[route]();
+    refreshBadge();
+    icons();
+  }
   function refreshBadge(){ const p=Store.list('orders').filter(o=>!['Delivered','Returned'].includes(o.status)).length; const b=$('#ordBadge'); b.textContent=p||''; b.classList.toggle('hidden',!p); }
 
   /* ════════ HOMEPAGE CMS ════════ */
@@ -938,8 +945,23 @@
 
   /* init */
   window.addEventListener('error', e => { try{ toast('⚠ '+(e.message||'Script error')); }catch(_){} });
+  let _syncBusy=false;
+  async function refreshAdminFromCloud(){
+    if(_syncBusy || !Store || Store.useLocalStorage) return;
+    _syncBusy=true;
+    try{
+      const result = await Store.syncFromCloud();
+      if(result && result.ok) refreshCurrentRoute();
+    }catch(_){}
+    _syncBusy=false;
+  }
+  window.addEventListener('kanxi:store-changed', refreshCurrentRoute);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAdminFromCloud(); });
+  window.addEventListener('focus', refreshAdminFromCloud);
+  setInterval(refreshAdminFromCloud, 10000);
   refreshBadge();
-  go((location.hash||'#dashboard').slice(1));
+  go(currentRoute());
+  refreshAdminFromCloud();
   icons(); // render static nav icons
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
