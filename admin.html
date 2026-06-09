@@ -254,7 +254,7 @@
   }
   function hpTargetOptions(type, selected){
     if(type==='category') return Store.list('categories').map(c=>`<option value="${c.slug}" ${c.slug===selected?'selected':''}>${esc(c.name)}</option>`).join('');
-    if(type==='brand') return Store.allBrands().map(b=>`<option value="${b.id}" ${b.id===selected?'selected':''}>${esc(b.name)} · ${esc(b.subName||'')}</option>`).join('');
+    if(type==='brand') return Store.allBrands().map(b=>`<option value="${b.id}" ${b.id===selected?'selected':''}>${esc(b.name)} · ${esc(b.categoryName||'')}</option>`).join('');
     return Store.list('tags').map(t=>`<option value="${t.id}" ${t.id===selected?'selected':''}>${esc(t.name)}</option>`).join('');
   }
   function hpMenuOptions(type, selected){
@@ -284,7 +284,7 @@
           <label class="flex items-center gap-2 border rounded-lg p-2 cursor-pointer ${_hp.brands.brandIds.includes(b.id)?'border-kacc ring-1 ring-kacc bg-kcream/40':'border-zinc-200'}">
             <input type="checkbox" ${_hp.brands.brandIds.includes(b.id)?'checked':''} onchange="toggleBrand('${b.id}')" class="accent-kink"/>
             ${b.logo?`<img src="${b.logo}" class="w-8 h-8 object-contain rounded"/>`:`<span class="w-8 h-8 rounded-full bg-kcream text-kacc grid place-items-center text-[0.62rem] font-bold">${(b.name||'?').slice(0,2).toUpperCase()}</span>`}
-            <span class="text-sm font-medium">${b.name}</span><span class="text-[0.7rem] text-zinc-400 ml-auto">${b.subName}</span></label>`).join('')}</div>`
+            <span class="text-sm font-medium">${b.name}</span><span class="text-[0.7rem] text-zinc-400 ml-auto">${b.categoryName}</span></label>`).join('')}</div>`
           :`<p class="p-5 text-sm text-zinc-400">No brands yet — add brands in <b>Categories</b> first.</p>`)+
       `<div class="h-4"></div>`+
       /* Best Sellers */
