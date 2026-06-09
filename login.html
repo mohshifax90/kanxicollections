@@ -85,13 +85,13 @@
     <div id="step-otp" class="hide">
       <h2 class="step-title">Verify number</h2>
       <p class="step-sub">Enter the 6-digit code sent to <b id="otpPhone"></b>.</p>
-      <div class="hint">Demo OTP: <b>123456</b> (auto-filled)</div>
+      <div class="hint">Enter the verification code sent by SMS.</div>
       <div class="otp-row" id="otpInputs">
         <input maxlength="1" inputmode="numeric"/><input maxlength="1" inputmode="numeric"/><input maxlength="1" inputmode="numeric"/>
         <input maxlength="1" inputmode="numeric"/><input maxlength="1" inputmode="numeric"/><input maxlength="1" inputmode="numeric"/>
       </div>
-      <button class="btn" onclick="verifyOtp()">Verify</button>
-      <p class="resend">Didn't get it? <a onclick="sendOtp()">Resend code</a></p>
+      <button class="btn" id="verifyBtn" onclick="verifyOtp()">Verify</button>
+      <p class="resend">Didn't get it? <a onclick="resendOtp()">Resend code</a></p>
     </div>
 
     <!-- STEP 3: PROFILE -->
@@ -130,7 +130,7 @@
   const $ = s => document.querySelector(s);
   const params = new URLSearchParams(location.search);
   const redirect = params.get('redirect') || 'index.html';
-  let phoneFull = '', existingUser = null, gender = '', geo = null;
+  let phoneFull = '', phoneForOtp = '', existingUser = null, gender = '', geo = null, otpRequestId = null;
 
   function showToast(m){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t);} t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
   function back(){ if(!$('#step-otp').classList.contains('hide')){ showStep('phone'); } else if(!$('#step-profile').classList.contains('hide')){ showStep('otp'); } else { location.href = redirect; } }
@@ -139,17 +139,75 @@
     $('#phTitle').textContent = s==='phone'?'Sign in':s==='otp'?'Verify':'Your profile';
   }
 
+  function setButtonLoading(btn, loading, text){
+    if(!btn) return;
+    if(loading){
+      btn.dataset.label = btn.textContent;
+      btn.textContent = text || 'Please wait...';
+      btn.disabled = true;
+    }else{
+      btn.textContent = btn.dataset.label || text || btn.textContent;
+      btn.disabled = false;
+    }
+  }
+
+  async function callOtpApi(path, payload){
+    const res = await fetch(path, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error || data.message || 'OTP request failed');
+    return data;
+  }
+
+  function clearOtpInputs(){
+    otpInputs.forEach(inp=>inp.value='');
+    otpInputs[0]?.focus();
+  }
+
   /* STEP 1 */
-  function sendOtp(){
+  async function sendOtp(){
     const num = $('#phone').value.trim();
     if(num.replace(/\D/g,'').length < 6) return showToast('Enter a valid mobile number');
     phoneFull = $('#cc').value + ' ' + num;
+    phoneForOtp = phoneFull.replace(/\D/g,'');
     existingUser = Store.findUserByPhone(phoneFull);
     $('#otpPhone').textContent = phoneFull;
-    showStep('otp');
-    // auto-fill demo OTP
-    setTimeout(()=>{ [...$('#otpInputs').children].forEach((inp,i)=>inp.value='123456'[i]); }, 400);
-    showToast('OTP sent (demo: 123456)');
+    const btn = document.querySelector('#step-phone .btn');
+    setButtonLoading(btn, true, 'Sending...');
+    try{
+      const data = await callOtpApi('/api/msgowl-send-otp', { phone_number: phoneForOtp });
+      otpRequestId = data.id || otpRequestId;
+      showStep('otp');
+      clearOtpInputs();
+      showToast('OTP sent');
+    }catch(error){
+      showToast(error.message);
+    }finally{
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function resendOtp(){
+    if(!phoneForOtp) return sendOtp();
+    const link = document.querySelector('#step-otp .resend a');
+    const oldText = link.textContent;
+    link.textContent = 'Sending...';
+    link.style.pointerEvents = 'none';
+    try{
+      const payload = otpRequestId ? { phone_number: phoneForOtp, id: otpRequestId } : { phone_number: phoneForOtp };
+      const data = await callOtpApi(otpRequestId ? '/api/msgowl-resend-otp' : '/api/msgowl-send-otp', payload);
+      otpRequestId = data.id || otpRequestId;
+      clearOtpInputs();
+      showToast('OTP resent');
+    }catch(error){
+      showToast(error.message);
+    }finally{
+      link.textContent = oldText;
+      link.style.pointerEvents = '';
+    }
   }
 
   /* OTP input UX */
@@ -160,11 +218,21 @@
   });
 
   /* STEP 2 */
-  function verifyOtp(){
+  async function verifyOtp(){
     const code = otpInputs.map(i=>i.value).join('');
-    if(code !== '123456') return showToast('Invalid code — use 123456');
-    if(existingUser){ Store.login(existingUser); showToast('Welcome back, '+(existingUser.name||'')); setTimeout(()=>location.href=redirect, 700); }
-    else { showStep('profile'); }
+    if(code.length !== 6) return showToast('Enter the 6-digit code');
+    const btn = $('#verifyBtn');
+    setButtonLoading(btn, true, 'Verifying...');
+    try{
+      const data = await callOtpApi('/api/msgowl-verify-otp', { phone_number: phoneForOtp, code });
+      if(data.status !== true) return showToast(data.message || 'Invalid code');
+      if(existingUser){ Store.login(existingUser); showToast('Welcome back, '+(existingUser.name||'')); setTimeout(()=>location.href=redirect, 700); }
+      else { showStep('profile'); }
+    }catch(error){
+      showToast(error.message);
+    }finally{
+      setButtonLoading(btn, false);
+    }
   }
 
   /* STEP 3 */
