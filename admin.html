@@ -85,6 +85,36 @@
   </div>
 </div>
 
+<!-- ── IMAGE ADJUST OVERLAY ── -->
+<div id="imgAdjustBg" class="hidden fixed inset-0 bg-black/60 z-[65] items-start justify-center p-4 sm:py-10 overflow-y-auto">
+  <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-200">
+      <h3 id="imgAdjustTitle" class="text-base font-extrabold">Adjust image</h3>
+      <button onclick="closeImageAdjust()" class="text-2xl text-zinc-400 hover:text-kink leading-none">&times;</button>
+    </div>
+    <div class="px-5 py-5">
+      <div class="bg-zinc-100 rounded-xl border border-zinc-200 overflow-hidden flex justify-center">
+        <canvas id="imgAdjustCanvas" class="w-full max-w-md bg-zinc-200"></canvas>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-3 mt-4">
+        <label class="text-xs font-bold uppercase tracking-wide text-kgray">Zoom
+          <input id="imgAdjustZoom" type="range" min="1" max="3" step="0.01" value="1" oninput="drawImageAdjust()" class="w-full accent-kink mt-2"/>
+        </label>
+        <label class="text-xs font-bold uppercase tracking-wide text-kgray">Left / Right
+          <input id="imgAdjustX" type="range" min="-100" max="100" step="1" value="0" oninput="drawImageAdjust()" class="w-full accent-kink mt-2"/>
+        </label>
+        <label class="text-xs font-bold uppercase tracking-wide text-kgray">Up / Down
+          <input id="imgAdjustY" type="range" min="-100" max="100" step="1" value="0" oninput="drawImageAdjust()" class="w-full accent-kink mt-2"/>
+        </label>
+      </div>
+    </div>
+    <div class="flex gap-2 justify-end px-5 py-4 border-t border-zinc-200">
+      <button onclick="closeImageAdjust()" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-zinc-100 text-kink border border-zinc-200 hover:bg-zinc-200 transition">Cancel</button>
+      <button onclick="applyImageAdjust()" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-kink text-white hover:bg-kacc transition">Apply image</button>
+    </div>
+  </div>
+</div>
+
 <style>
   .navi{display:flex;align-items:center;gap:0.65rem;width:100%;text-align:left;padding:0.6rem 1.25rem;font-size:0.875rem;font-weight:500;color:#d4d4d8;border-left:3px solid transparent;transition:.15s;}
   .navi:hover{background:#252118;color:#fff;}
@@ -126,6 +156,7 @@
   function openModal(title, body, foot){ $('#modalTitle').textContent=title; $('#modalBody').innerHTML=body; $('#modalFoot').innerHTML=foot||''; const m=$('#modalBg'); m.classList.add('flex'); m.classList.remove('hidden'); m.scrollTop=0; }
   function closeModal(){ const m=$('#modalBg'); m.classList.add('hidden'); m.classList.remove('flex'); }
   $('#modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') closeModal(); });
+  $('#imgAdjustBg').addEventListener('click', e=>{ if(e.target.id==='imgAdjustBg') closeImageAdjust(); });
 
   /* ── admin toast ── */
   function toast(msg){ let t=document.getElementById('atoast'); if(!t){ t=document.createElement('div'); t.id='atoast'; t.className='fixed bottom-5 left-1/2 -translate-x-1/2 bg-kink text-white px-4 py-2.5 rounded-lg text-sm z-[70] shadow-lg transition-all'; t.style.opacity='0'; document.body.appendChild(t);} t.textContent=msg; t.style.opacity='1'; clearTimeout(window._tt); window._tt=setTimeout(()=>t.style.opacity='0',2400); }
@@ -243,6 +274,7 @@
       <div class="relative bg-zinc-100 overflow-hidden" style="width:100%;padding-top:110%">${img?`<img src="${img}" class="pointer-events-none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/>`:`<div class="absolute inset-0 grid place-items-center text-zinc-300">${ic('image','w-8 h-8')}</div>`}
         <span draggable="true" ondragstart="dragStart(event,'cc',${i})" class="absolute top-1.5 left-1.5 bg-white/90 rounded-md w-7 h-7 grid place-items-center text-zinc-500 shadow cursor-grab active:cursor-grabbing" title="Drag to reorder">${ic('grip-vertical','w-4 h-4')}</span>
         <label class="absolute bottom-1.5 right-1.5 bg-white/90 rounded-lg px-2 py-1 text-[0.62rem] font-semibold cursor-pointer shadow">Upload<input type="file" accept="image/*" class="hidden" onchange="onCCImage(${i},this)"/></label>
+        ${c.image?`<button onclick="adjustCCImage(${i})" class="absolute bottom-1.5 left-1.5 bg-white/90 rounded-lg px-2 py-1 text-[0.62rem] font-semibold shadow" title="Adjust image">Adjust</button>`:''}
         ${c.image?`<button onclick="_hp.collections.cards[${i}].image='';renderHP()" class="absolute top-1.5 right-1.5 bg-white/90 rounded-full w-6 h-6 grid place-items-center text-zinc-500 shadow" title="Use tag image">${ic('rotate-ccw','w-3.5 h-3.5')}</button>`:''}</div>
       <div class="p-2 space-y-1.5">
         <input value="${esc(c.caption)}" oninput="_hp.collections.cards[${i}].caption=this.value" placeholder="Caption" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs outline-none focus:border-kink"/>
@@ -276,8 +308,52 @@
       try{ cb(c.toDataURL('image/jpeg',q)); }catch(e){ cb(src); } };
     img.onerror=()=>cb(src); img.src=src;
   }
+  var _imgAdjust=null;
+  function openImageAdjust(opts){
+    const img=new Image();
+    img.onload=()=>{
+      _imgAdjust={...opts,img,zoom:1,x:0,y:0};
+      $('#imgAdjustTitle').textContent=opts.title||'Adjust image';
+      $('#imgAdjustZoom').value='1'; $('#imgAdjustX').value='0'; $('#imgAdjustY').value='0';
+      const bg=$('#imgAdjustBg'); bg.classList.add('flex'); bg.classList.remove('hidden'); bg.scrollTop=0;
+      drawImageAdjust();
+    };
+    img.onerror=()=>{ toast('Could not load image'); };
+    img.src=opts.src;
+  }
+  function closeImageAdjust(){ const bg=$('#imgAdjustBg'); bg.classList.add('hidden'); bg.classList.remove('flex'); _imgAdjust=null; }
+  function drawAdjustedTo(canvas,outW,outH){
+    if(!_imgAdjust)return;
+    const img=_imgAdjust.img, ctx=canvas.getContext('2d');
+    canvas.width=outW; canvas.height=outH;
+    ctx.fillStyle='#f4f4f5'; ctx.fillRect(0,0,outW,outH);
+    const zoom=+$('#imgAdjustZoom').value||1, panX=+$('#imgAdjustX').value||0, panY=+$('#imgAdjustY').value||0;
+    const scale=Math.max(outW/img.width,outH/img.height)*zoom;
+    const dw=img.width*scale, dh=img.height*scale;
+    const extraX=Math.max(0,dw-outW), extraY=Math.max(0,dh-outH);
+    const dx=(outW-dw)/2 - (panX/100)*(extraX/2);
+    const dy=(outH-dh)/2 - (panY/100)*(extraY/2);
+    ctx.drawImage(img,dx,dy,dw,dh);
+  }
+  function drawImageAdjust(){
+    if(!_imgAdjust)return;
+    const c=$('#imgAdjustCanvas'), w=560, h=Math.round(w/_imgAdjust.aspect);
+    drawAdjustedTo(c,w,h);
+  }
+  function applyImageAdjust(){
+    if(!_imgAdjust)return;
+    const outW=_imgAdjust.outW||560, outH=Math.round(outW/_imgAdjust.aspect);
+    const c=document.createElement('canvas');
+    drawAdjustedTo(c,outW,outH);
+    let data;
+    try{ data=c.toDataURL('image/jpeg',_imgAdjust.q||0.78); }catch(e){ data=_imgAdjust.src; }
+    const done=_imgAdjust.onApply;
+    closeImageAdjust();
+    if(done)done(data);
+  }
   const CC_ASPECT = 4/4.4; // homepage collection-card aspect
-  function onCCImage(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>cropCover(e.target.result,560,CC_ASPECT,0.75,d=>{ _hp.collections.cards[i].image=d; renderHP(); }); r.readAsDataURL(f); input.value=''; }
+  function onCCImage(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust homepage image',aspect:CC_ASPECT,outW:560,q:0.75,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); r.readAsDataURL(f); input.value=''; }
+  function adjustCCImage(i){ const src=_hp.collections.cards[i]&&_hp.collections.cards[i].image; if(!src)return; openImageAdjust({src,title:'Adjust homepage image',aspect:CC_ASPECT,outW:560,q:0.75,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); }
   function saveHP(){ try{ Store.saveHomepage(_hp); toast('Homepage saved ✓'); }catch(e){ alert('Could not save — storage full. Use smaller images.'); } }
 
   /* ════════ DASHBOARD ════════ */
@@ -369,6 +445,7 @@
         <label class="w-24 h-20 rounded-xl border border-zinc-200 grid place-items-center cursor-pointer overflow-hidden bg-zinc-50 shrink-0 text-zinc-400 hover:border-kink" id="subImageBox"></label>
         <div class="flex flex-col gap-2">
           <label class="${btn.light} ${btn.sm} cursor-pointer">${ic('image-plus','w-4 h-4')} Upload image<input type="file" accept="image/*" class="hidden" onchange="onSubImage(this)"/></label>
+          <button type="button" onclick="adjustSubImage()" class="${btn.light} ${btn.sm}">Adjust image</button>
           <button type="button" onclick="clearSubImage()" class="${btn.light} ${btn.sm}">Use product image</button>
         </div>
       </div>`)+
@@ -383,7 +460,8 @@
   function renderSubImage(){ const box=$('#subImageBox'); if(!box)return;
     box.innerHTML = _subImage ? `<img src="${_subImage}" class="w-full h-full object-cover"/>` : `<div class="text-center">${ic('image-plus','w-6 h-6 mx-auto mb-1')}<div class="text-[0.62rem] font-semibold">Upload</div></div>`;
   }
-  function onSubImage(input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>cropCover(e.target.result,500,SUB_ASPECT,0.78,d=>{ _subImage=d; renderSubImage(); }); r.readAsDataURL(f); input.value=''; }
+  function onSubImage(input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust sub-category image',aspect:SUB_ASPECT,outW:500,q:0.78,onApply:d=>{ _subImage=d; renderSubImage(); }}); r.readAsDataURL(f); input.value=''; }
+  function adjustSubImage(){ if(!_subImage){ toast('Upload an image first'); return; } openImageAdjust({src:_subImage,title:'Adjust sub-category image',aspect:SUB_ASPECT,outW:500,q:0.78,onApply:d=>{ _subImage=d; renderSubImage(); }}); }
   function clearSubImage(){ _subImage=''; renderSubImage(); }
   function renderBrands(){
     const wrap=$('#brandList'); if(!wrap)return;
