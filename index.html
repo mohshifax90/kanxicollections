@@ -346,13 +346,13 @@
       <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
   }).join('')}</div>`;
 
-  // 2) Shop by Brand — admin-selected top brands (in chosen order)
-  const brandList = hp.brands.brandIds.map(id=>brandsById[id]).filter(Boolean);
+  // 2) Shop by Brand — show all mapped brands
+  const brandList = Store.allBrands();
   const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map(b=>`
     <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">
       <div class="brand-logo">${b.logo?`<img src="${b.logo}"/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
       <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
-    : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands selected yet.</p>`;
+    : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
 
   // 3) Best Sellers (by sales)  4) Offers
   const best = Store.bestSellers(hp.bestsellers.limit||8);
