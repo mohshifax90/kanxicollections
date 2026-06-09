@@ -155,6 +155,55 @@ const Store = (() => {
     };
   }
 
+  function normalizeDelivery(address){
+    const info = address && address.deliveryInfo || {};
+    return {
+      type: address && address.deliveryType || 'standard',
+      boatName: info.boatName || '',
+      contactNumber: info.contactNumber || '',
+      departureTime: info.departureTime || '',
+      note: info.note || ''
+    };
+  }
+
+  function normalizeAddress(address, index){
+    if(!address) return null;
+    const delivery = normalizeDelivery(address);
+    return {
+      id: address.id || uid('a_'),
+      label: address.label || `Address ${index + 1}`,
+      line: address.line || '',
+      city: address.city || '',
+      atoll: address.atoll || '',
+      postcode: address.postcode || '',
+      country: address.country || 'Maldives',
+      lat: address.lat || null,
+      lng: address.lng || null,
+      isDefault: !!address.isDefault,
+      deliveryType: delivery.type,
+      deliveryInfo: {
+        boatName: delivery.boatName,
+        contactNumber: delivery.contactNumber,
+        departureTime: delivery.departureTime,
+        note: delivery.note
+      }
+    };
+  }
+
+  function normalizeUser(user){
+    const addresses = (user && user.addresses || []).map(normalizeAddress).filter(Boolean);
+    if(addresses.length && !addresses.some(a=>a.isDefault)) addresses[0].isDefault = true;
+    return {
+      id: user.id || uid('u_'),
+      name: user.name || 'Kanxi Customer',
+      phone: user.phone || '',
+      gender: user.gender || '',
+      dob: user.dob || '',
+      createdAt: user.createdAt || Date.now(),
+      addresses
+    };
+  }
+
   function readLocal(){ try{ return JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){ return null; } }
   function writeLocal(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
   function normalize(db){
@@ -212,7 +261,8 @@ const Store = (() => {
       bankName: db.paymentSettings.bankTransfer && db.paymentSettings.bankTransfer.bankName || paymentDefaults.bankTransfer.bankName,
       accountNumber: db.paymentSettings.bankTransfer && db.paymentSettings.bankTransfer.accountNumber || paymentDefaults.bankTransfer.accountNumber,
     };
-    db.orders = (db.orders||[]).map(o=>({ transferSlip:'', bankName:'', accountNumber:'', ...o }));
+    db.users = (db.users||[]).map(normalizeUser);
+    db.orders = (db.orders||[]).map(o=>({ transferSlip:'', bankName:'', accountNumber:'', deliveryType:'standard', deliveryInfo:null, ...o }));
     db.payments = (db.payments||[]).map(p=>({ slipImage:'', bankName:'', accountNumber:'', verifiedAt:null, ...p }));
     return db;
   }
@@ -463,12 +513,20 @@ const Store = (() => {
       const bankTransfer=settings.bankTransfer || defaultPaymentSettings().bankTransfer;
       const orderStatus=transfer?'Pending Slip Verification':(cod?'Order Accepted':'Paid');
       const payStatus=transfer?'Pending Slip Verification':(cod?'Pending':'Paid');
+      const delivery = o.deliveryInfo ? {
+        boatName:o.deliveryInfo.boatName || '',
+        contactNumber:o.deliveryInfo.contactNumber || '',
+        departureTime:o.deliveryInfo.departureTime || '',
+        note:o.deliveryInfo.note || ''
+      } : null;
       const order={ id, userName:o.userName||'Guest', userPhone:o.userPhone||'', date:Date.now(),
         status:orderStatus, payStatus, payMethod:method.label,
         items:(o.items||[]).map(i=>({ productId:i.productId||null, name:i.name, qty:i.qty, price:i.price, image:i.image||'' })),
         shipping:o.shipping||0, address:o.address||'', transferSlip:o.transferSlip||'',
         bankName:transfer?(o.bankName||bankTransfer.bankName||''):'',
-        accountNumber:transfer?(o.accountNumber||bankTransfer.accountNumber||''):''
+        accountNumber:transfer?(o.accountNumber||bankTransfer.accountNumber||''):'',
+        deliveryType:o.deliveryType || 'standard',
+        deliveryInfo:delivery
       };
       db.orders.push(order);
       db.payments.push({

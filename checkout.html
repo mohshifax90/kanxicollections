@@ -216,9 +216,15 @@
     const a = u && ((u.addresses||[]).find(x=>x.isDefault) || (u.addresses||[])[0]);
     const el = document.getElementById('addrInfo');
     if(!el) return;
+    const delivery = a ? ({
+      standard:'Standard',
+      speed_boat:'Speed Boat',
+      boat:'Boat'
+    })[a.deliveryType || 'standard'] : '';
+    const boat = a && a.deliveryInfo || {};
     el.innerHTML = u ? `
       <div class="name">${u.name || 'Customer'}</div>
-      ${a ? `<div class="line">${a.line || ''}</div><div class="line">${[a.city,a.postcode].filter(Boolean).join(', ')}${a.country ? ' · '+a.country : ''}</div>` : `<div class="line">${u.phone || ''}</div>`}
+      ${a ? `<div class="line">${a.line || ''}</div><div class="line">${[a.city,a.postcode].filter(Boolean).join(', ')}${a.country ? ' · '+a.country : ''}</div><div class="line">${delivery}${boat.boatName ? ' · ' + boat.boatName : ''}${boat.departureTime ? ' · ' + boat.departureTime : ''}</div>` : `<div class="line">${u.phone || ''}</div>`}
     ` : `<div class="name">Guest</div><div class="line">Sign in to continue</div>`;
   }
   function renderPayments(){
@@ -357,7 +363,9 @@
       transferSlip:selectedPay==='transfer' ? transferSlip : '',
       bankName:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.bankName || '') : '',
       accountNumber:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || '') : '',
-      address:a ? [a.line,a.city,a.postcode,a.country].filter(Boolean).join(', ') : 'Maldives'
+      address:a ? [a.line,a.city,a.atoll,a.postcode,a.country].filter(Boolean).join(', ') : 'Maldives',
+      deliveryType:a && a.deliveryType || 'standard',
+      deliveryInfo:a && a.deliveryInfo || null
     });
     document.getElementById('onum').textContent = '#' + order.id;
     document.getElementById('success').classList.add('show');

@@ -296,7 +296,8 @@
     const line = $('#ad_line').value.trim();
     if(line || geo){
       addresses.push({ id:Store.uid('a_'), label:'Home', line, city:$('#ad_city').value.trim(), postcode:$('#ad_post').value.trim(),
-        country:$('#ad_country').value.trim()||'Maldives', lat:geo?.lat, lng:geo?.lng, isDefault:true });
+        country:$('#ad_country').value.trim()||'Maldives', lat:geo?.lat, lng:geo?.lng, isDefault:true,
+        deliveryType:'standard', deliveryInfo:{ boatName:'', contactNumber:'', departureTime:'', note:'' } });
     }
     const user = Store.upsert('users', { name:name||'Kanxi Customer', phone:phoneFull, gender, dob:$('#pf_dob').value, createdAt:Date.now(), addresses });
     Store.login(user);
