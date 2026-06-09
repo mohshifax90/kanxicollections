@@ -112,7 +112,7 @@
   let discount = 0;
 
   function render() {
-    const cart = getCart();
+    const cart = refreshCartPrices();
     const content = document.getElementById('cartContent');
     const empty = document.getElementById('emptyState');
     const bar = document.getElementById('checkoutBar');

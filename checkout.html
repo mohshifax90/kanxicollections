@@ -219,7 +219,7 @@
   })();
 
   function render() {
-    const cart = getCart();
+    const cart = refreshCartPrices();
     const qty = cart.reduce((s,i)=>s+i.qty,0);
 
     document.getElementById('lineItems').innerHTML = cart.map(it=>`
@@ -258,7 +258,7 @@
   function fmtExp(i){ let v=i.value.replace(/\D/g,''); if(v.length>=2)v=v.substring(0,2)+' / '+v.substring(2,4); i.value=v; }
 
   function placeOrder(){
-    const cart = getCart();
+    const cart = refreshCartPrices();
     if(!cart.length){ showToast('Your bag is empty'); return; }
     const sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
     const tax = Math.round(sub*0.08);

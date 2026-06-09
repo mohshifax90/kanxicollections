@@ -17,8 +17,30 @@ function addToCart(product) {
   saveCart(cart);
   showToast((product.name || 'Item') + ' added to bag');
 }
+function activeCartPrice(item) {
+  if (!(window.Store && item && item.id)) return item.price || 0;
+  const rawId = String(item.id || '');
+  const [productId, variantId] = rawId.split('_');
+  const product = Store.get('products', productId);
+  if (!product) return item.price || 0;
+  return variantId ? (Store.priceOfVariant(productId, variantId) || Store.priceOf(product) || item.price || 0)
+    : (Store.priceOf(product) || item.price || 0);
+}
+function refreshCartPrices() {
+  const cart = getCart();
+  let changed = false;
+  cart.forEach(item => {
+    const next = activeCartPrice(item);
+    if (Number(item.price || 0) !== Number(next || 0)) {
+      item.price = next;
+      changed = true;
+    }
+  });
+  if (changed) saveCart(cart);
+  return cart;
+}
 function updateCartCount() {
-  const c = getCart().reduce((s, i) => s + i.qty, 0);
+  const c = refreshCartPrices().reduce((s, i) => s + i.qty, 0);
   document.querySelectorAll('.cart-dot, .cart-count').forEach(el => {
     el.textContent = c;
     el.style.display = c > 0 ? 'flex' : 'none';
