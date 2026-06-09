@@ -1,12 +1,17 @@
 /* ════════════════════════════════════════
-   KANXI COLLECTION — DATA STORE (localStorage)
-   Catalog + Inventory(batches) for admin & storefront.
+   KANXI COLLECTION — DATA STORE
+   Local fallback + Supabase sync for admin & storefront.
 ═══════════════════════════════════════════ */
 const Store = (() => {
   const KEY = 'kanxi_db';
   const VERSION = 3;
+  const CLOUD_EVENT = 'kanxi:store-changed';
+  const CLOUD_STATUS_EVENT = 'kanxi:store-sync';
+  const CLOUD_RELOAD_KEY = 'kanxi_cloud_reload_hash';
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
   const im = (photo, w=600) => `https://images.unsplash.com/${photo}?w=${w}&q=80`;
+  let saveTimer = null;
+  let lastCloudHash = '';
 
   const ORDER_FLOW = ['Pending Payment','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
   const VARIANT_TYPES = [
@@ -139,13 +144,71 @@ const Store = (() => {
     };
   }
 
-  function load(){ let db=JSON.parse(localStorage.getItem(KEY)||'null'); if(!db||db._v!==VERSION){ db=seed(); localStorage.setItem(KEY,JSON.stringify(db)); } if(!db.homepage){ db.homepage=defaultHomepage(); localStorage.setItem(KEY,JSON.stringify(db)); } return db; }
-  function save(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
+  function hash(s){ let h=0; for(let i=0;i<s.length;i++) h=((h<<5)-h+s.charCodeAt(i))|0; return String(h); }
+  function readLocal(){ try{ return JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){ return null; } }
+  function writeLocal(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
+  function normalize(db){
+    if(!db || db._v!==VERSION) db=seed();
+    if(!db.homepage) db.homepage=defaultHomepage();
+    return db;
+  }
+  function load(){ const db=normalize(readLocal()); writeLocal(db); return db; }
+  function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
+  function cloudClient(){
+    const cfg=cloudConfig();
+    if(!window.supabase || !cfg.url || !cfg.publishableKey) return null;
+    if(!window._kanxiSupabaseClient) window._kanxiSupabaseClient = window.supabase.createClient(cfg.url, cfg.publishableKey);
+    return window._kanxiSupabaseClient;
+  }
+  function emitSync(status, detail={}){ window.dispatchEvent(new CustomEvent(CLOUD_STATUS_EVENT,{detail:{status,...detail}})); }
+  function cloudRow(){ const cfg=cloudConfig(); return { table:cfg.table||'kanxi_site_data', id:cfg.rowId||'main' }; }
+  async function pushCloud(db){
+    const client=cloudClient(); if(!client) return;
+    const row=cloudRow(), raw=JSON.stringify(db);
+    if(raw===lastCloudHash) return;
+    emitSync('saving');
+    const { error } = await client.from(row.table).upsert({
+      id: row.id,
+      data: db,
+      updated_at: new Date().toISOString()
+    }, { onConflict:'id' });
+    if(error){ console.warn('Kanxi Supabase save failed:', error.message); emitSync('error',{message:error.message}); return; }
+    lastCloudHash = raw;
+    emitSync('saved');
+  }
+  function queueCloudSave(db){
+    if(!cloudClient()) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>pushCloud(db), 400);
+  }
+  function save(db){ writeLocal(db); queueCloudSave(db); }
+  async function syncFromCloud(){
+    const client=cloudClient(); if(!client) return { ok:false, reason:'missing-client' };
+    const row=cloudRow();
+    emitSync('loading');
+    const { data, error } = await client.from(row.table).select('data,updated_at').eq('id', row.id).maybeSingle();
+    if(error){ console.warn('Kanxi Supabase load failed:', error.message); emitSync('error',{message:error.message}); return { ok:false, error }; }
+    if(!data || !data.data){ await pushCloud(load()); return { ok:true, seeded:true }; }
+    const db=normalize(data.data), cloudRaw=JSON.stringify(db), localRaw=JSON.stringify(load());
+    lastCloudHash = cloudRaw;
+    if(cloudRaw!==localRaw){
+      writeLocal(db);
+      window.dispatchEvent(new CustomEvent(CLOUD_EVENT,{detail:{source:'supabase'}}));
+      const reloadHash=hash(cloudRaw);
+      if(sessionStorage.getItem(CLOUD_RELOAD_KEY)!==reloadHash){
+        sessionStorage.setItem(CLOUD_RELOAD_KEY,reloadHash);
+        location.reload();
+      }
+    }
+    emitSync('loaded');
+    return { ok:true };
+  }
 
   const api = {
     ORDER_FLOW, VARIANT_TYPES, uid, im,
     all(){ return load(); },
-    reset(){ localStorage.removeItem(KEY); return load(); },
+    reset(){ const db=normalize(seed()); save(db); return db; },
+    syncFromCloud,
     list(c){ return load()[c]||[]; },
     get(c,id){ return (load()[c]||[]).find(x=>x.id===id); },
     upsert(c,item){ const db=load(); if(!db[c])db[c]=[]; if(!item.id){ item.id=uid(c[0]+'_'); db[c].push(item);} else { const i=db[c].findIndex(x=>x.id===item.id); if(i===-1)db[c].push(item); else db[c][i]={...db[c][i],...item}; } save(db); return item; },
@@ -259,5 +322,6 @@ const Store = (() => {
     logout(){ localStorage.removeItem('kanxi_session'); },
     findUserByPhone(phone){ return (load().users||[]).find(u=>u.phone.replace(/\D/g,'')===phone.replace(/\D/g,'')); },
   };
+  setTimeout(()=>syncFromCloud(), 0);
   return api;
 })();
