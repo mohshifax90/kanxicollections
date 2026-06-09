@@ -25,11 +25,11 @@ const Store = (() => {
 
   function seed() {
     const cats = [
-      { id:'c_cloth', name:'Clothing', slug:'clothing', icon:'shirt', active:true, variantType:'size', title:'Clothing & Apparel', description:'Curated fashion crafted from premium fabrics — tailored blazers, silk dresses and effortless co-ords designed to elevate your everyday wardrobe with timeless elegance.' },
-      { id:'c_skin',  name:'Skincare', slug:'skincare', icon:'sparkles', active:true, variantType:'volume', title:'Skincare & Beauty', description:'Science-backed, clean formulas that nourish and glow. From brightening serums to deep hydration, discover skincare made to love your skin every single day.' },
-      { id:'c_make',  name:'Makeup',   slug:'makeup',   icon:'palette', active:true, variantType:'shade', title:'Makeup & Colour', description:'Bold shades and silky textures for every look. Long-wear lipsticks, luminous foundations and blushes in colours made to flatter.' },
-      { id:'c_bags',  name:'Bags',     slug:'bags',     icon:'shopping-bag', active:true, variantType:'none', title:'Bags & Accessories', description:'Handcrafted leather and canvas bags built to last. Structured totes, sleek crossbodies and weekend carryalls — timeless pieces for the modern individual.' },
-      { id:'c_watch', name:'Watches',  slug:'watches',  icon:'watch', active:true, variantType:'none', title:'Watches & Timepieces', description:'Precision engineering meets refined design. From minimalist classics to bold complications, mark every moment with a Kanxi timepiece built to endure.' },
+      { id:'c_cloth', name:'Clothing', slug:'clothing', icon:'shirt', active:true, variantType:'size', brands:[], title:'Clothing & Apparel', description:'Curated fashion crafted from premium fabrics — tailored blazers, silk dresses and effortless co-ords designed to elevate your everyday wardrobe with timeless elegance.' },
+      { id:'c_skin',  name:'Skincare', slug:'skincare', icon:'sparkles', active:true, variantType:'volume', brands:[], title:'Skincare & Beauty', description:'Science-backed, clean formulas that nourish and glow. From brightening serums to deep hydration, discover skincare made to love your skin every single day.' },
+      { id:'c_make',  name:'Makeup',   slug:'makeup',   icon:'palette', active:true, variantType:'shade', brands:[], title:'Makeup & Colour', description:'Bold shades and silky textures for every look. Long-wear lipsticks, luminous foundations and blushes in colours made to flatter.' },
+      { id:'c_bags',  name:'Bags',     slug:'bags',     icon:'shopping-bag', active:true, variantType:'none', brands:[], title:'Bags & Accessories', description:'Handcrafted leather and canvas bags built to last. Structured totes, sleek crossbodies and weekend carryalls — timeless pieces for the modern individual.' },
+      { id:'c_watch', name:'Watches',  slug:'watches',  icon:'watch', active:true, variantType:'none', brands:[], title:'Watches & Timepieces', description:'Precision engineering meets refined design. From minimalist classics to bold complications, mark every moment with a Kanxi timepiece built to endure.' },
     ];
     const subs = [
       { id:'s1', name:'Blazers & Jackets', categoryId:'c_cloth' },
@@ -156,6 +156,29 @@ const Store = (() => {
   function writeLocal(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
   function normalize(db){
     if(!db || db._v!==VERSION) db=seed();
+    const catBrandMap={};
+    (db.categories||[]).forEach(c=>{
+      const seen={};
+      const own=(c.brands||[]).filter(b=>(b.name||'').trim()).map(b=>({
+        id:b.id||uid('br_'),
+        name:(b.name||'').trim(),
+        logo:b.logo||''
+      })).filter(b=>seen[b.name.toLowerCase()]?false:(seen[b.name.toLowerCase()]=true));
+      catBrandMap[c.id]=own;
+      c.brands=own;
+    });
+    (db.subcategories||[]).forEach(s=>{
+      if(!Array.isArray(s.brands) || !s.brands.length) return;
+      const list=catBrandMap[s.categoryId] || (catBrandMap[s.categoryId]=[]);
+      const seen=new Set(list.map(b=>(b.name||'').toLowerCase()));
+      s.brands.forEach(b=>{
+        const name=(b.name||'').trim();
+        if(!name || seen.has(name.toLowerCase())) return;
+        list.push({ id:b.id||uid('br_'), name, logo:b.logo||'' });
+        seen.add(name.toLowerCase());
+      });
+      s.brands=[];
+    });
     if(!db.homepage) db.homepage=defaultHomepage();
     const hp=db.homepage;
     if(!hp.menu || !Array.isArray(hp.menu.items)) hp.menu={items:defaultHomepage().menu.items};
@@ -299,8 +322,8 @@ const Store = (() => {
 
     categoryName(id){ const c=this.get('categories',id); return c?c.name:'—'; },
     subName(id){ const s=(load().subcategories||[]).find(x=>x.id===id); return s?s.name:'—'; },
-    brandsOfSub(subId){ const s=this.get('subcategories',subId); return (s&&s.brands)||[]; },
-    allBrands(){ return this.list('subcategories').flatMap(s=>(s.brands||[]).map(b=>({...b,subId:s.id,subName:s.name,categoryId:s.categoryId}))); },
+    brandsOfCategory(categoryId){ const c=this.get('categories',categoryId); return (c&&c.brands)||[]; },
+    allBrands(){ return this.list('categories').flatMap(c=>(c.brands||[]).map(b=>({...b,categoryId:c.id,categoryName:c.name}))); },
     tagNames(ids=[]){ const t=load().tags; return ids.map(id=>(t.find(x=>x.id===id)||{}).name).filter(Boolean); },
     variantTypeLabel(k){ return (VARIANT_TYPES.find(v=>v.key===k)||{}).label || '—'; },
 
