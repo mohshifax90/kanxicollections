@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kanxi Collection — Shop</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -57,6 +59,7 @@
 
     /* ── SECTION ── */
     .section { padding: 1.4rem 1rem 0.5rem; }
+    .deferred-section { content-visibility: auto; contain-intrinsic-size: 900px; }
     .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
     .section-head h2 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
     .see-all { font-size: 0.88rem; font-weight: 600; color: var(--accent); cursor: pointer; }
@@ -267,7 +270,6 @@
   }
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/supabase-config.js?v=1"></script>
 <script src="assets/store.js?v=4"></script>
 <script src="assets/components.js"></script>
@@ -275,14 +277,16 @@
   /* ── PRODUCTS — live from admin Store ── */
   const products = Store.storeProducts().map(p => Store.card(p));
 
+  let productImgIndex = 0;
   function cardHTML(p) {
+    const imgAttr = imgAttrs('product', productImgIndex++);
     const old = p.old ? `<span class="old">MVR ${p.old.toLocaleString()}</span>` : '';
     const badge = p.badge ? `<span class="pcard-badge ${p.bgold?'gold':''}">${p.badge}</span>` : '';
     return `<div class="pcard">
       <a href="post.html?id=${p.id}&cat=${p.cat}">
         <div class="pcard-img">
           ${badge}
-          <img src="${p.img}" alt="${p.name}"/>
+          <img src="${p.img}" alt="${p.name}" ${imgAttr}/>
         </div>
       </a>
       <div class="pcard-name-row">
@@ -302,6 +306,17 @@
   const section = (title, inner, seeAll) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAll?`<a class="see-all" href="${seeAll}">See all</a>`:''}</div>${inner}</div>`;
   const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   const prodGrid = arr => `<div class="grid-2">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
+  function imgAttrs(kind, index){
+    if(kind==='collection'){
+      return index===0
+        ? `loading="eager" fetchpriority="high" decoding="sync"`
+        : `loading="lazy" fetchpriority="low" decoding="async"`;
+    }
+    if(kind==='brand') return `loading="lazy" fetchpriority="low" decoding="async"`;
+    return index < 2
+      ? `loading="eager" fetchpriority="high" decoding="async"`
+      : `loading="lazy" fetchpriority="low" decoding="async"`;
+  }
 
   function hpLinkMeta(linkType, linkValue){
     if(linkType==='category'){
@@ -337,20 +352,20 @@
     }).join('');
 
   // 1) Collections
-  const collHTML = `<div class="h-scroll">${hp.collections.cards.map(c=>{
+  const collHTML = `<div class="h-scroll">${hp.collections.cards.map((c, i)=>{
     const meta = hpLinkMeta(c.linkType || 'tag', c.linkValue || c.tagId || '');
     const img = c.image || meta.image || '';
     const fallback = meta.label || (tag.find(t=>t.id===c.tagId)||{}).name || '';
     return `<a class="collection-card" href="${meta.href}">
-      <img src="${img}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
+      <img src="${img}" alt="${c.caption||fallback}" ${imgAttrs('collection', i)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
       <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
   }).join('')}</div>`;
 
   // 2) Shop by Brand — show all mapped brands
   const brandList = Store.allBrands();
-  const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map(b=>`
+  const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map((b, i)=>`
     <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">
-      <div class="brand-logo">${b.logo?`<img src="${b.logo}"/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
+      <div class="brand-logo">${b.logo?`<img src="${b.logo}" alt="${b.name}" ${imgAttrs('brand', i)}/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
       <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
     : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
 
@@ -361,8 +376,8 @@
   document.getElementById('homeSections').innerHTML =
     section(hp.collections.title, collHTML) +
     section(hp.brands.title, brandHTML) +
-    section(hp.bestsellers.title, prodScroll(best)) +
-    (offers.length ? section(hp.offers.title, prodGrid(offers)) : '');
+    `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
+    (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodGrid(offers))}</div>` : '');
 
   document.getElementById('moreGrid').innerHTML = products.map(cardHTML).join('');
 
