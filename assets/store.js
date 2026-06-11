@@ -18,6 +18,8 @@ const Store = (() => {
   const IS_ADMIN_PAGE = /admin\.html$/i.test(location.pathname);
   const PAGE_NEEDS_FULL_SYNC = /^(admin|checkout|account|login)\.html$/i.test(PAGE_NAME);
   const DEFER_CLOUD_BOOT = !IS_LOCALHOST && !IS_ADMIN_PAGE;
+  const REALTIME_ENABLED = CAN_SYNC_CLOUD && !IS_LOCALHOST;
+  const SUPABASE_JS_SRC = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
   const BLANK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Crect width='600' height='600' fill='%23f4f4f5'/%3E%3Cpath d='M185 374l77-96 54 64 33-40 66 72H185z' fill='%23d4d4d8'/%3E%3Ccircle cx='238' cy='223' r='36' fill='%23e4e4e7'/%3E%3C/svg%3E";
   const sanitizeImage = (value) => {
@@ -31,6 +33,9 @@ const Store = (() => {
   let cloudDb = null;
   let cloudLoaded = false;
   let cloudBootTimer = null;
+  let realtimeStarted = false;
+  let realtimeClientPromise = null;
+  let realtimeChannel = null;
 
   const ORDER_FLOW = ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
   const PAYMENT_METHODS = [
@@ -461,6 +466,60 @@ const Store = (() => {
     if(window.requestIdleCallback && !force) requestIdleCallback(run, { timeout: 1500 });
     else setTimeout(run, 1);
   }
+  function loadSupabaseRuntime(){
+    if(window.supabase && typeof window.supabase.createClient === 'function') return Promise.resolve(window.supabase);
+    if(realtimeClientPromise) return realtimeClientPromise;
+    realtimeClientPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-kanxi-supabase="1"]`);
+      if(existing){
+        existing.addEventListener('load', () => resolve(window.supabase), { once:true });
+        existing.addEventListener('error', () => reject(new Error('Supabase runtime failed to load')), { once:true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = SUPABASE_JS_SRC;
+      script.async = true;
+      script.defer = true;
+      script.dataset.kanxiSupabase = '1';
+      script.onload = () => {
+        if(window.supabase && typeof window.supabase.createClient === 'function') resolve(window.supabase);
+        else reject(new Error('Supabase runtime unavailable'));
+      };
+      script.onerror = () => reject(new Error('Supabase runtime failed to load'));
+      document.head.appendChild(script);
+    }).catch(error => {
+      realtimeClientPromise = null;
+      throw error;
+    });
+    return realtimeClientPromise;
+  }
+  function startRealtimeSync(){
+    if(!REALTIME_ENABLED || realtimeStarted) return;
+    realtimeStarted = true;
+    loadSupabaseRuntime().then((runtime) => {
+      const cfg = cloudConfig();
+      if(!cfg.url || !cfg.publishableKey) return;
+      const row = cloudRow();
+      const client = runtime.createClient(cfg.url, cfg.publishableKey, {
+        auth: { persistSession:false, autoRefreshToken:false, detectSessionInUrl:false }
+      });
+      realtimeChannel = client
+        .channel(`kanxi-store-${row.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: row.table,
+          filter: `id=eq.${row.id}`
+        }, () => {
+          scheduleCloudSync(true);
+        })
+        .subscribe((status) => {
+          if(status === 'SUBSCRIBED') emitSync('realtime', { mode:row.mode });
+        });
+    }).catch(error => {
+      console.warn('Kanxi realtime subscription failed:', error.message);
+    });
+  }
   function loadCloud(force=false){
     if(cloudLoaded && !force) return cloudDb;
     const cached = normalize(readCloudCache(PAGE_NEEDS_FULL_SYNC ? 'full' : 'storefront') || cloudDb || seed());
@@ -468,6 +527,7 @@ const Store = (() => {
     cloudLoaded = true;
     lastCloudHash = JSON.stringify(cached);
     emitSync('loaded', { cached:true });
+    startRealtimeSync();
     if(force || !DEFER_CLOUD_BOOT) scheduleCloudSync(force);
     else scheduleDeferredCloudBoot(force);
     return cloudDb;

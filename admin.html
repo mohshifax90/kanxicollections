@@ -133,7 +133,7 @@
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="assets/supabase-config.js?v=1"></script>
-<script src="assets/store.js?v=5"></script>
+<script src="assets/store.js?v=6"></script>
 <script>
   /* ── Lucide auto-render: re-create icons whenever content/modal changes ── */
   let _iconRAF;
@@ -971,7 +971,6 @@
   window.addEventListener('kanxi:store-changed', refreshCurrentRoute);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAdminFromCloud(); });
   window.addEventListener('focus', refreshAdminFromCloud);
-  setInterval(refreshAdminFromCloud, 10000);
   refreshBadge();
   go(currentRoute());
   refreshAdminFromCloud();
