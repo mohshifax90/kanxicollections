@@ -6,7 +6,6 @@
   <title>Kanxi Collection — Shop</title>
   <meta name="description" content="Shop Kanxi Collection for fashion, beauty, skincare, accessories, and lifestyle products in the Maldives. Discover new arrivals and bestsellers.">
   <link rel="canonical" href="https://kanxicollection.com/">
-  <link rel="preload" as="image" href="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=640&q=72&auto=format&fit=crop&fm=webp" fetchpriority="high">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -178,22 +177,7 @@
   </div>
 
   <!-- ── HOMEPAGE SECTIONS (CMS-driven) ── -->
-  <div id="homeSections">
-    <div class="section">
-      <div class="section-head"><h2>Collections</h2></div>
-      <div class="h-scroll">
-        <a class="collection-card" href="shop.html?tag=t1">
-          <picture>
-            <source type="image/avif" srcset="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=480&q=68&auto=format&fit=crop&fm=avif 480w, https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=68&auto=format&fit=crop&fm=avif 800w, https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1200&q=68&auto=format&fit=crop&fm=avif 1200w" sizes="(max-width: 520px) 86vw, 360px">
-            <source type="image/webp" srcset="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=480&q=72&auto=format&fit=crop&fm=webp 480w, https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=72&auto=format&fit=crop&fm=webp 800w, https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1200&q=72&auto=format&fit=crop&fm=webp 1200w" sizes="(max-width: 520px) 86vw, 360px">
-            <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=640&q=72&auto=format&fit=crop&fm=webp" alt="New Season" width="640" height="704" loading="eager" fetchpriority="high" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center">
-          </picture>
-          <div class="ov"></div>
-          <div class="ctitle">New<br/>Season</div>
-        </a>
-      </div>
-    </div>
-  </div>
+  <div id="homeSections"></div>
 
   <!-- ── MORE FROM THIS SHOP ── -->
   <div class="section deferred-section">
@@ -329,10 +313,6 @@
   }
 
   /* ── CMS-DRIVEN HOMEPAGE SECTIONS ── */
-  const hp = Store.getHomepage();
-  const tag = Store.list('tags');
-  const categoryBySlug = {}; Store.list('categories').forEach(c=>categoryBySlug[c.slug]=c);
-  const brandsById = {}; Store.allBrands().forEach(b=>brandsById[b.id]=b);
   const section = (title, inner, seeAll) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAll?`<a class="see-all" href="${seeAll}">See all</a>`:''}</div>${inner}</div>`;
   const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   const prodGrid = arr => `<div class="grid-2">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
@@ -344,7 +324,7 @@
     return responsiveAttrs(url, '(max-width: 520px) 46vw, 220px', 320, 320, false);
   }
 
-  function hpLinkMeta(linkType, linkValue){
+  function hpLinkMeta(linkType, linkValue, tag, categoryBySlug, brandsById){
     if(linkType==='category'){
       const cat = categoryBySlug[linkValue];
       return {
@@ -370,56 +350,66 @@
     };
   }
 
-  document.getElementById('homeMenu').innerHTML =
-    `<button class="chip active" onclick="openCats()">Categories ▾</button>` +
-    (hp.menu.items||[]).map(item=>{
-      const meta = hpLinkMeta(item.linkType, item.linkValue);
-      return `<button class="chip" onclick="location.href='${meta.href}'">${item.label || meta.label}</button>`;
-    }).join('');
+  function renderHomepage(){
+    const hp = Store.getHomepage();
+    const tag = Store.list('tags');
+    const categoryBySlug = {};
+    Store.list('categories').forEach(c=>categoryBySlug[c.slug]=c);
+    const brandsById = {};
+    Store.allBrands().forEach(b=>brandsById[b.id]=b);
 
-  // 1) Collections
-  const collHTML = `<div class="h-scroll">${hp.collections.cards.map((c, i)=>{
-    const meta = hpLinkMeta(c.linkType || 'tag', c.linkValue || c.tagId || '');
-    const img = c.image || meta.image || '';
-    const fallback = meta.label || (tag.find(t=>t.id===c.tagId)||{}).name || '';
-    return `<a class="collection-card" href="${meta.href}">
-      <img alt="${c.caption||fallback}" ${imgAttrs('collection', i, img)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
-      <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
-  }).join('')}</div>`;
+    document.getElementById('homeMenu').innerHTML =
+      `<button class="chip active" onclick="openCats()">Categories ▾</button>` +
+      (hp.menu.items||[]).map(item=>{
+        const meta = hpLinkMeta(item.linkType, item.linkValue, tag, categoryBySlug, brandsById);
+        return `<button class="chip" onclick="location.href='${meta.href}'">${item.label || meta.label}</button>`;
+      }).join('');
 
-  // 2) Shop by Brand — show all mapped brands
-  const brandList = Store.allBrands();
-  const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map((b, i)=>`
-    <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">
-      <div class="brand-logo">${b.logo?`<img alt="${b.name}" ${imgAttrs('brand', i, b.logo)}/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
-      <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
-    : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
+    const collHTML = `<div class="h-scroll">${hp.collections.cards.map((c, i)=>{
+      const meta = hpLinkMeta(c.linkType || 'tag', c.linkValue || c.tagId || '', tag, categoryBySlug, brandsById);
+      const img = c.image || meta.image || '';
+      const fallback = meta.label || (tag.find(t=>t.id===c.tagId)||{}).name || '';
+      return `<a class="collection-card" href="${meta.href}">
+        <img alt="${c.caption||fallback}" ${imgAttrs('collection', i, img)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
+        <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
+    }).join('')}</div>`;
 
-  document.getElementById('homeSections').innerHTML =
-    section(hp.collections.title, collHTML) +
-    section(hp.brands.title, brandHTML);
+    const brandList = Store.allBrands();
+    const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map((b, i)=>`
+      <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">
+        <div class="brand-logo">${b.logo?`<img alt="${b.name}" ${imgAttrs('brand', i, b.logo)}/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
+        <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
+      : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
 
-  deferWork(() => {
-    const best = Store.bestSellers(hp.bestsellers.limit||8);
-    const offers = Store.offers(hp.offers.limit||12);
-    document.getElementById('homeSections').insertAdjacentHTML('beforeend',
-      `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
-      (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodGrid(offers))}</div>` : '')
-    );
-    const more = Store.storeProducts().slice(0, 8).map(p => Store.card(p));
-    document.getElementById('moreGrid').innerHTML = more.map(cardHTML).join('');
-  });
+    document.getElementById('homeSections').innerHTML =
+      section(hp.collections.title, collHTML) +
+      section(hp.brands.title, brandHTML);
+
+    deferWork(() => {
+      const best = Store.bestSellers(hp.bestsellers.limit||8);
+      const offers = Store.offers(hp.offers.limit||12);
+      document.getElementById('homeSections').insertAdjacentHTML('beforeend',
+        `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
+        (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodGrid(offers))}</div>` : '')
+      );
+      const more = Store.storeProducts().slice(0, 8).map(p => Store.card(p));
+      document.getElementById('moreGrid').innerHTML = more.map(cardHTML).join('');
+    });
+
+    document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    }));
+  }
+
+  renderHomepage();
+  window.addEventListener('kanxi:store-changed', renderHomepage);
 
   function toggleSave(btn) {
     const on = btn.classList.toggle('saved');
     showToast(on ? '♥ Added to wishlist' : 'Removed from wishlist');
   }
 
-  /* chips */
-  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
-    document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
-    c.classList.add('active');
-  }));
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>

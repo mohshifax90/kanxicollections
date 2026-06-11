@@ -12,12 +12,17 @@ const Store = (() => {
   const IS_LOCALHOST = ['localhost','127.0.0.1','::1'].includes(location.hostname);
   const USE_LOCAL = IS_FILE || IS_LOCALHOST;
   const CAN_SYNC_CLOUD = !IS_FILE;
+  const PAGE_NAME = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  const IS_ADMIN_PAGE = /admin\.html$/i.test(location.pathname);
+  const PAGE_NEEDS_FULL_SYNC = /^(admin|checkout|account|login)\.html$/i.test(PAGE_NAME);
+  const DEFER_CLOUD_BOOT = !IS_LOCALHOST && !IS_ADMIN_PAGE;
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
   const im = (photo, w=600, format='webp') => `https://images.unsplash.com/${photo}?w=${w}&q=72&auto=format&fit=crop&fm=${format}`;
   let saveTimer = null;
   let lastCloudHash = '';
   let cloudDb = null;
   let cloudLoaded = false;
+  let cloudBootTimer = null;
 
   const ORDER_FLOW = ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
   const PAYMENT_METHODS = [
@@ -71,7 +76,7 @@ const Store = (() => {
     const products = [
       // ── Clothing (size) ──
       P('cl-001','Tailored Linen Blazer','Kanxi Studio','c_cloth','s1',2910,3545,'photo-1594938298603-c8148c4b4e7b',['t2','t3'],'size',['XS','S','M','L','XL'],'Sharp tailoring with a relaxed drape for polished everyday wear.',['Structured shoulders','Breathable linen blend','Fully lined finish']),
-      P('cl-002','Silk Midi Dress','Kanxi Atelier','c_cloth','s2',3775,null,'photo-1539109136881-3be0616acf4b',['t1'],'size',['XS','S','M','L'],'A fluid silk silhouette designed for soft movement and elevated evenings.',['Pure-feel satin touch','Midi length cut','Lightweight all-day comfort']),
+      P('cl-002','Silk Midi Dress','Kanxi Atelier','c_cloth','s2',3775,null,'photo-1496747611176-843222e1e57c',['t1'],'size',['XS','S','M','L'],'A fluid silk silhouette designed for soft movement and elevated evenings.',['Pure-feel satin touch','Midi length cut','Lightweight all-day comfort']),
       P('cl-003','Wide Leg Trousers','Kanxi Studio','c_cloth','s3',1990,2545,'photo-1551488831-00ddcb6c6bd3',['t2'],'size',['XS','S','M','L','XL'],'Modern wide-leg tailoring with clean lines and an easy, flattering fall.',['High-rise waist','Soft structured fabric','Easy day-to-night styling']),
       P('cl-005','Classic Trench Coat','Kanxi Studio','c_cloth','s1',6550,7865,'photo-1572804013309-59a88b7e92f1',['t1'],'size',['S','M','L','XL'],'A timeless trench with crisp detailing and a refined outer layer feel.',['Double-breasted front','Belted waist','Seasonless layering piece']),
       P('cl-006','Linen Co-ord Set','Kanxi Atelier','c_cloth','s2',3010,null,'photo-1469334031218-e382a71b716b',['t3'],'size',['XS','S','M','L'],'An effortless matching set cut for comfort and understated luxury.',['Breathable linen texture','Relaxed tailored shape','Easy mix-and-match wear']),
@@ -282,9 +287,91 @@ const Store = (() => {
   function readCloudCache(){ try{ return JSON.parse(localStorage.getItem(CLOUD_CACHE_KEY)||'null'); }catch(_){ return null; } }
   function writeCloudCache(db){ try{ localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db)); }catch(_){} }
   function emitSync(status, detail={}){ window.dispatchEvent(new CustomEvent(CLOUD_STATUS_EVENT,{detail:{status,...detail}})); }
-  function cloudRow(){ const cfg=cloudConfig(); return { table:cfg.table||'kanxi_site_data', id:cfg.rowId||'main' }; }
+  function cloudRow(kind='auto'){
+    const cfg=cloudConfig();
+    const fullId = cfg.rowId || 'main';
+    const storefrontId = cfg.storefrontRowId || `${fullId}_storefront`;
+    const mode = kind === 'auto' ? (PAGE_NEEDS_FULL_SYNC ? 'full' : 'storefront') : kind;
+    return {
+      table: cfg.table || 'kanxi_site_data',
+      id: mode === 'full' ? fullId : storefrontId,
+      mode,
+      fullId,
+      storefrontId
+    };
+  }
+  function storefrontProduct(product){
+    return {
+      id: product.id,
+      name: product.name || '',
+      brand: product.brand || '',
+      categoryId: product.categoryId || '',
+      subId: product.subId || '',
+      price: +product.price || 0,
+      oldPrice: product.oldPrice || null,
+      status: product.status || 'active',
+      tags: Array.isArray(product.tags) ? product.tags.slice() : [],
+      image: product.image || '',
+      images: Array.isArray(product.images) ? product.images.filter(Boolean).slice(0, 6) : (product.image ? [product.image] : []),
+      variantType: product.variantType || 'none',
+      description: product.description || '',
+      details: Array.isArray(product.details) ? product.details.filter(Boolean) : [],
+      variants: (product.variants || []).map(v=>({
+        id: v.id || uid('v_'),
+        value: v.value || '',
+        color: v.color || null,
+        barcode: v.barcode || '',
+        sku: v.sku || ''
+      }))
+    };
+  }
+  function storefrontBatch(batch){
+    return {
+      id: batch.id,
+      productId: batch.productId,
+      variantId: batch.variantId || null,
+      sellingPrice: +batch.sellingPrice || 0,
+      stock: +batch.stock || 0,
+      date: batch.date || 0
+    };
+  }
+  function storefrontSnapshot(db){
+    const full = normalize(db);
+    return normalize({
+      _v: full._v || VERSION,
+      homepage: full.homepage || defaultHomepage(),
+      categories: (full.categories || []).map(c=>({
+        id: c.id,
+        name: c.name || '',
+        slug: c.slug || '',
+        icon: c.icon || '',
+        active: c.active !== false,
+        variantType: c.variantType || 'none',
+        title: c.title || '',
+        description: c.description || '',
+        brands: (c.brands || []).map(b=>({
+          id: b.id || uid('br_'),
+          name: b.name || '',
+          logo: b.logo || ''
+        }))
+      })),
+      subcategories: (full.subcategories || []).map(s=>({
+        id: s.id,
+        name: s.name || '',
+        categoryId: s.categoryId || '',
+        image: s.image || ''
+      })),
+      tags: (full.tags || []).map(t=>({ id: t.id, name: t.name || '' })),
+      products: (full.products || []).filter(p=>p.status === 'active').map(storefrontProduct),
+      batches: (full.batches || []).filter(b=>(+b.stock || 0) > 0 || (+b.sellingPrice || 0) > 0).map(storefrontBatch),
+      users: [],
+      orders: [],
+      payments: [],
+      paymentSettings: defaultPaymentSettings()
+    });
+  }
   async function cloudFetch(method, query='', body){
-    const cfg=cloudConfig(), row=cloudRow();
+    const cfg=cloudConfig(), row=cloudRow('full');
     if(!cfg.url || !cfg.publishableKey) throw new Error('Missing Supabase config');
     const res = await fetch(`${cfg.url}/rest/v1/${row.table}${query}`, {
       method,
@@ -300,15 +387,19 @@ const Store = (() => {
     if(!res.ok) throw new Error(text || `Supabase ${method} failed`);
     return text ? JSON.parse(text) : null;
   }
+  async function upsertCloudRow(row, payload){
+    await cloudFetch('POST', '', { id:row.id, data:payload, updated_at:new Date().toISOString() });
+  }
   async function saveCloudNow(db){
-    const row=cloudRow();
+    const row=cloudRow('full');
     const clean=normalize(db);
     cloudDb = clean;
     lastCloudHash = JSON.stringify(clean);
     writeCloudCache(clean);
     emitSync('saving');
     try{
-      await cloudFetch('POST', '', { id:row.id, data:clean, updated_at:new Date().toISOString() });
+      await upsertCloudRow(row, clean);
+      await upsertCloudRow(cloudRow('storefront'), storefrontSnapshot(clean));
       emitSync('saved');
     }catch(e){
       console.warn('Kanxi Supabase save failed:', e.message);
@@ -316,6 +407,20 @@ const Store = (() => {
     }
   }
   let cloudSyncQueued = false;
+  function scheduleDeferredCloudBoot(force=false){
+    if(!CAN_SYNC_CLOUD || !DEFER_CLOUD_BOOT) return;
+    if(cloudBootTimer && !force) return;
+    const start = () => {
+      if(cloudBootTimer){ clearTimeout(cloudBootTimer); cloudBootTimer = null; }
+      scheduleCloudSync(true);
+    };
+    const queue = () => {
+      if(cloudBootTimer) clearTimeout(cloudBootTimer);
+      cloudBootTimer = setTimeout(start, force ? 200 : 2800);
+    };
+    if(document.readyState === 'complete') queue();
+    else window.addEventListener('load', queue, { once:true });
+  }
   function scheduleCloudSync(force=false){
     if(!CAN_SYNC_CLOUD || (cloudSyncQueued && !force)) return;
     cloudSyncQueued = true;
@@ -330,7 +435,8 @@ const Store = (() => {
     cloudLoaded = true;
     lastCloudHash = JSON.stringify(cached);
     emitSync('loaded', { cached:true });
-    scheduleCloudSync(force);
+    if(force || !DEFER_CLOUD_BOOT) scheduleCloudSync(force);
+    else scheduleDeferredCloudBoot(force);
     return cloudDb;
   }
   function load(){
@@ -344,16 +450,13 @@ const Store = (() => {
   }
   async function pushCloud(db){
     if(USE_LOCAL) return;
-    const row=cloudRow(), raw=JSON.stringify(db);
+    const row=cloudRow('full'), raw=JSON.stringify(db);
     if(raw===lastCloudHash) return;
     emitSync('saving');
     writeCloudCache(db);
     try{
-      await cloudFetch('POST', '', {
-        id: row.id,
-        data: db,
-        updated_at: new Date().toISOString()
-      });
+      await upsertCloudRow(row, db);
+      await upsertCloudRow(cloudRow('storefront'), storefrontSnapshot(db));
     }catch(error){
       console.warn('Kanxi Supabase save failed:', error.message);
       emitSync('error',{message:error.message});
@@ -388,13 +491,26 @@ const Store = (() => {
       emitSync('error',{message:error.message});
       return { ok:false, error };
     }
+    if((!data || !data.data) && row.mode === 'storefront'){
+      try{
+        const fullRows = await cloudFetch('GET', `?id=eq.${encodeURIComponent(row.fullId)}&select=data,updated_at&limit=1`);
+        const fullData = fullRows && fullRows[0] && fullRows[0].data;
+        if(fullData){
+          const slim = storefrontSnapshot(fullData);
+          await upsertCloudRow(row, slim);
+          data = { data: slim };
+        }
+      }catch(error){
+        console.warn('Kanxi storefront snapshot bootstrap failed:', error.message);
+      }
+    }
     if(!data || !data.data){
       if(!USE_LOCAL){
         await pushCloud(load());
-        return { ok:true, seeded:true };
+        return { ok:true, seeded:true, mode:row.mode };
       }
       emitSync('loaded', { empty:true });
-      return { ok:true, empty:true };
+      return { ok:true, empty:true, mode:row.mode };
     }
     const localDb = USE_LOCAL ? normalize(readLocal()) : load();
     if(USE_LOCAL) writeLocal(localDb);
@@ -417,7 +533,7 @@ const Store = (() => {
       window.dispatchEvent(new CustomEvent(CLOUD_EVENT,{detail:{source:'supabase'}}));
     }
     emitSync('loaded');
-    return { ok:true };
+    return { ok:true, mode:row.mode };
   }
 
   const api = {
