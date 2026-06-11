@@ -130,14 +130,16 @@
     .guest-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
     .login-card{display:grid;gap:.85rem}
     .login-copy{font-size:.85rem;color:#6b7280;line-height:1.45}
-    .otp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.45rem}
-    .otp-grid input{height:52px;border:1px solid #e5e7eb;border-radius:14px;text-align:center;font-size:1.08rem;font-weight:700;outline:none}
-    .otp-grid input:focus{border-color:#4f5cf0}
+    .otp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.38rem}
+    .otp-grid input{width:100%;height:54px;border:1px solid #e5e7eb;border-radius:16px;text-align:center;font-size:1.1rem;font-weight:700;outline:none;background:#fff;appearance:none;-webkit-appearance:none}
+    .otp-grid input:focus{border-color:#4f5cf0;box-shadow:0 0 0 4px rgba(79,92,240,.08)}
+    .otp-code-wrap{padding:.5rem;border:1px solid #eef2f7;border-radius:18px;background:#fafbff}
+    .otp-ghost-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
     .inline-link{border:none;background:none;color:#5563f7;font-weight:700;cursor:pointer;padding:0}
     .fetch-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid #e5e7eb;border-radius:14px;background:#fff;color:#2f2f35;padding:.86rem .95rem;font-weight:700;cursor:pointer}
     .sheet-actions{display:flex;gap:.7rem;margin-top:1rem}
     .sheet-actions .save-addr-btn,.sheet-actions .cancel-addr-btn{flex:1;border:none;border-radius:14px;padding:.95rem 1rem;font-size:.92rem;font-weight:800;cursor:pointer}
-    .save-addr-btn{background:#4f5cf0;color:#fff}
+    .save-addr-btn{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:52px;background:#4f5cf0;color:#fff}
     .cancel-addr-btn{background:#f3f4f6;color:#2f2f35}
     @media (min-width:520px){body{padding:1.4rem 0}.app{border-radius:28px;min-height:auto}.bar{border-radius:0 0 28px 28px}}
   </style>
@@ -419,9 +421,11 @@
       return `
         <div class="login-card">
           <div class="login-copy">Enter the 6-digit code sent to <b>${checkoutLogin.phone}</b>.</div>
-          <input id="checkoutOtpAutofill" type="text" inputmode="numeric" autocomplete="one-time-code" class="hidden"/>
-          <div class="otp-grid" id="checkoutOtpGrid">
-            ${Array.from({length:6}).map((_,i)=>`<input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit ${i+1}"/>`).join('')}
+          <input id="checkoutOtpAutofill" type="text" inputmode="numeric" autocomplete="one-time-code" class="otp-ghost-input"/>
+          <div class="otp-code-wrap">
+            <div class="otp-grid" id="checkoutOtpGrid">
+              ${Array.from({length:6}).map((_,i)=>`<input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit ${i+1}"/>`).join('')}
+            </div>
           </div>
           <button class="save-addr-btn" id="loginVerifyBtn" type="button" onclick="verifyCheckoutOtp()">Verify OTP</button>
           <div class="mini-note">Didn’t get it? <button class="inline-link" type="button" onclick="resendCheckoutOtp()">Resend code</button></div>
