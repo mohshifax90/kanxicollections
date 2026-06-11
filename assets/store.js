@@ -5,8 +5,6 @@
 const Store = (() => {
   const KEY = 'kanxi_db';
   const CLOUD_CACHE_KEY = 'kanxi_cloud_cache';
-  const CLOUD_CACHE_FULL_KEY = `${CLOUD_CACHE_KEY}_full`;
-  const CLOUD_CACHE_STOREFRONT_KEY = `${CLOUD_CACHE_KEY}_storefront`;
   const VERSION = 3;
   const CLOUD_EVENT = 'kanxi:store-changed';
   const CLOUD_STATUS_EVENT = 'kanxi:store-sync';
@@ -14,9 +12,7 @@ const Store = (() => {
   const IS_LOCALHOST = ['localhost','127.0.0.1','::1'].includes(location.hostname);
   const USE_LOCAL = IS_FILE || IS_LOCALHOST;
   const CAN_SYNC_CLOUD = !IS_FILE;
-  const PAGE_NAME = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
   const IS_ADMIN_PAGE = /admin\.html$/i.test(location.pathname);
-  const PAGE_NEEDS_FULL_SYNC = /^(admin|checkout|account|login)\.html$/i.test(PAGE_NAME);
   const DEFER_CLOUD_BOOT = !IS_LOCALHOST && !IS_ADMIN_PAGE;
   const REALTIME_ENABLED = CAN_SYNC_CLOUD && !IS_LOCALHOST;
   const SUPABASE_JS_SRC = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
@@ -300,114 +296,11 @@ const Store = (() => {
     return db;
   }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
-  function cacheKey(mode='auto'){
-    const resolved = mode === 'auto' ? (PAGE_NEEDS_FULL_SYNC ? 'full' : 'storefront') : mode;
-    return resolved === 'full' ? CLOUD_CACHE_FULL_KEY : CLOUD_CACHE_STOREFRONT_KEY;
-  }
-  function readCloudCache(mode='auto'){
-    try{
-      const key = cacheKey(mode);
-      const next = localStorage.getItem(key);
-      if(next) return JSON.parse(next);
-      if(mode === 'full'){
-        const legacy = localStorage.getItem(CLOUD_CACHE_KEY);
-        return legacy ? JSON.parse(legacy) : null;
-      }
-      return null;
-    }catch(_){ return null; }
-  }
-  function writeCloudCache(db, mode='auto'){
-    try{
-      localStorage.setItem(cacheKey(mode), JSON.stringify(db));
-      if(mode === 'full') localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db));
-    }catch(_){}
-  }
+  function readCloudCache(){ try{ return JSON.parse(localStorage.getItem(CLOUD_CACHE_KEY)||'null'); }catch(_){ return null; } }
+  function writeCloudCache(db){ try{ localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db)); }catch(_){} }
   function emitSync(status, detail={}){ window.dispatchEvent(new CustomEvent(CLOUD_STATUS_EVENT,{detail:{status,...detail}})); }
-  function cloudRow(kind='auto'){
-    const cfg=cloudConfig();
-    const fullId = cfg.rowId || 'main';
-    const storefrontId = cfg.storefrontRowId || `${fullId}_storefront`;
-    const mode = kind === 'auto' ? (PAGE_NEEDS_FULL_SYNC ? 'full' : 'storefront') : kind;
-    return {
-      table: cfg.table || 'kanxi_site_data',
-      id: mode === 'full' ? fullId : storefrontId,
-      mode,
-      fullId,
-      storefrontId
-    };
-  }
-  function storefrontProduct(product){
-    return {
-      id: product.id,
-      name: product.name || '',
-      brand: product.brand || '',
-      categoryId: product.categoryId || '',
-      subId: product.subId || '',
-      price: +product.price || 0,
-      oldPrice: product.oldPrice || null,
-      status: product.status || 'active',
-      tags: Array.isArray(product.tags) ? product.tags.slice() : [],
-      image: product.image || '',
-      images: Array.isArray(product.images) ? product.images.filter(Boolean).slice(0, 6) : (product.image ? [product.image] : []),
-      variantType: product.variantType || 'none',
-      description: product.description || '',
-      details: Array.isArray(product.details) ? product.details.filter(Boolean) : [],
-      variants: (product.variants || []).map(v=>({
-        id: v.id || uid('v_'),
-        value: v.value || '',
-        color: v.color || null,
-        barcode: v.barcode || '',
-        sku: v.sku || ''
-      }))
-    };
-  }
-  function storefrontBatch(batch){
-    return {
-      id: batch.id,
-      productId: batch.productId,
-      variantId: batch.variantId || null,
-      sellingPrice: +batch.sellingPrice || 0,
-      stock: +batch.stock || 0,
-      date: batch.date || 0
-    };
-  }
-  function storefrontSnapshot(db){
-    const full = normalize(db);
-    return normalize({
-      _v: full._v || VERSION,
-      homepage: full.homepage || defaultHomepage(),
-      categories: (full.categories || []).map(c=>({
-        id: c.id,
-        name: c.name || '',
-        slug: c.slug || '',
-        icon: c.icon || '',
-        active: c.active !== false,
-        variantType: c.variantType || 'none',
-        title: c.title || '',
-        description: c.description || '',
-        brands: (c.brands || []).map(b=>({
-          id: b.id || uid('br_'),
-          name: b.name || '',
-          logo: b.logo || ''
-        }))
-      })),
-      subcategories: (full.subcategories || []).map(s=>({
-        id: s.id,
-        name: s.name || '',
-        categoryId: s.categoryId || '',
-        image: s.image || ''
-      })),
-      tags: (full.tags || []).map(t=>({ id: t.id, name: t.name || '' })),
-      products: (full.products || []).filter(p=>p.status === 'active').map(storefrontProduct),
-      batches: (full.batches || []).filter(b=>(+b.stock || 0) > 0 || (+b.sellingPrice || 0) > 0).map(storefrontBatch),
-      users: [],
-      orders: [],
-      payments: [],
-      paymentSettings: defaultPaymentSettings()
-    });
-  }
   async function cloudFetch(method, query='', body){
-    const cfg=cloudConfig(), row=cloudRow('full');
+    const cfg=cloudConfig(), row=cloudRow();
     if(!cfg.url || !cfg.publishableKey) throw new Error('Missing Supabase config');
     const res = await fetch(`${cfg.url}/rest/v1/${row.table}${query}`, {
       method,
@@ -423,21 +316,16 @@ const Store = (() => {
     if(!res.ok) throw new Error(text || `Supabase ${method} failed`);
     return text ? JSON.parse(text) : null;
   }
-  async function upsertCloudRow(row, payload){
-    await cloudFetch('POST', '', { id:row.id, data:payload, updated_at:new Date().toISOString() });
-  }
+  function cloudRow(){ const cfg=cloudConfig(); return { table:cfg.table||'kanxi_site_data', id:cfg.rowId||'main' }; }
   async function saveCloudNow(db){
-    const row=cloudRow('full');
+    const row=cloudRow();
     const clean=normalize(db);
     cloudDb = clean;
     lastCloudHash = JSON.stringify(clean);
-    writeCloudCache(clean, 'full');
+    writeCloudCache(clean);
     emitSync('saving');
     try{
-      await upsertCloudRow(row, clean);
-      const storefront = storefrontSnapshot(clean);
-      await upsertCloudRow(cloudRow('storefront'), storefront);
-      writeCloudCache(storefront, 'storefront');
+      await cloudFetch('POST', '', { id:row.id, data:clean, updated_at:new Date().toISOString() });
       emitSync('saved');
     }catch(e){
       console.warn('Kanxi Supabase save failed:', e.message);
@@ -514,7 +402,7 @@ const Store = (() => {
           scheduleCloudSync(true);
         })
         .subscribe((status) => {
-          if(status === 'SUBSCRIBED') emitSync('realtime', { mode:row.mode });
+          if(status === 'SUBSCRIBED') emitSync('realtime');
         });
     }).catch(error => {
       console.warn('Kanxi realtime subscription failed:', error.message);
@@ -522,7 +410,7 @@ const Store = (() => {
   }
   function loadCloud(force=false){
     if(cloudLoaded && !force) return cloudDb;
-    const cached = normalize(readCloudCache(PAGE_NEEDS_FULL_SYNC ? 'full' : 'storefront') || cloudDb || seed());
+    const cached = normalize(readCloudCache() || cloudDb || seed());
     cloudDb = cached;
     cloudLoaded = true;
     lastCloudHash = JSON.stringify(cached);
@@ -543,15 +431,16 @@ const Store = (() => {
   }
   async function pushCloud(db){
     if(USE_LOCAL) return;
-    const row=cloudRow('full'), raw=JSON.stringify(db);
+    const row=cloudRow(), raw=JSON.stringify(db);
     if(raw===lastCloudHash) return;
     emitSync('saving');
-    writeCloudCache(db, 'full');
+    writeCloudCache(db);
     try{
-      await upsertCloudRow(row, db);
-      const storefront = storefrontSnapshot(db);
-      await upsertCloudRow(cloudRow('storefront'), storefront);
-      writeCloudCache(storefront, 'storefront');
+      await cloudFetch('POST', '', {
+        id: row.id,
+        data: db,
+        updated_at: new Date().toISOString()
+      });
     }catch(error){
       console.warn('Kanxi Supabase save failed:', error.message);
       emitSync('error',{message:error.message});
@@ -580,7 +469,7 @@ const Store = (() => {
       return Promise.resolve(clean);
     }
     cloudDb = clean;
-    writeCloudCache(clean, 'full');
+    writeCloudCache(clean);
     lastCloudHash = JSON.stringify(clean);
     return saveCloudNow(clean).then(()=>clean);
   }
@@ -597,27 +486,13 @@ const Store = (() => {
       emitSync('error',{message:error.message});
       return { ok:false, error };
     }
-    if((!data || !data.data) && row.mode === 'storefront'){
-      try{
-        const fullRows = await cloudFetch('GET', `?id=eq.${encodeURIComponent(row.fullId)}&select=data,updated_at&limit=1`);
-        const fullData = fullRows && fullRows[0] && fullRows[0].data;
-        if(fullData){
-          const slim = storefrontSnapshot(fullData);
-          await upsertCloudRow(row, slim);
-          writeCloudCache(slim, 'storefront');
-          data = { data: slim };
-        }
-      }catch(error){
-        console.warn('Kanxi storefront snapshot bootstrap failed:', error.message);
-      }
-    }
     if(!data || !data.data){
       if(!USE_LOCAL){
         await pushCloud(load());
-        return { ok:true, seeded:true, mode:row.mode };
+        return { ok:true, seeded:true };
       }
       emitSync('loaded', { empty:true });
-      return { ok:true, empty:true, mode:row.mode };
+      return { ok:true, empty:true };
     }
     const localDb = USE_LOCAL ? normalize(readLocal()) : load();
     if(USE_LOCAL) writeLocal(localDb);
@@ -625,7 +500,7 @@ const Store = (() => {
     lastCloudHash = cloudRaw;
     if(cloudRaw!==localRaw){
       cloudDb = db;
-      writeCloudCache(db, row.mode);
+      writeCloudCache(db);
       if(USE_LOCAL) writeLocal(db);
       try{
         const session = JSON.parse(sessionStorage.getItem('kanxi_session')||'null') || window._kanxiSession || null;
@@ -640,7 +515,7 @@ const Store = (() => {
       window.dispatchEvent(new CustomEvent(CLOUD_EVENT,{detail:{source:'supabase'}}));
     }
     emitSync('loaded');
-    return { ok:true, mode:row.mode };
+    return { ok:true };
   }
 
   const api = {
