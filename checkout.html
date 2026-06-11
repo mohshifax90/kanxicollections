@@ -134,7 +134,6 @@
     .otp-grid input{width:100%;height:54px;border:1px solid #e5e7eb;border-radius:16px;text-align:center;font-size:1.1rem;font-weight:700;outline:none;background:#fff;appearance:none;-webkit-appearance:none}
     .otp-grid input:focus{border-color:#4f5cf0;box-shadow:0 0 0 4px rgba(79,92,240,.08)}
     .otp-code-wrap{padding:.5rem;border:1px solid #eef2f7;border-radius:18px;background:#fafbff}
-    .otp-ghost-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
     .inline-link{border:none;background:none;color:#5563f7;font-weight:700;cursor:pointer;padding:0}
     .fetch-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid #e5e7eb;border-radius:14px;background:#fff;color:#2f2f35;padding:.86rem .95rem;font-weight:700;cursor:pointer}
     .sheet-actions{display:flex;gap:.7rem;margin-top:1rem}
@@ -421,10 +420,9 @@
       return `
         <div class="login-card">
           <div class="login-copy">Enter the 6-digit code sent to <b>${checkoutLogin.phone}</b>.</div>
-          <input id="checkoutOtpAutofill" type="text" inputmode="numeric" autocomplete="one-time-code" class="otp-ghost-input"/>
           <div class="otp-code-wrap">
             <div class="otp-grid" id="checkoutOtpGrid">
-              ${Array.from({length:6}).map((_,i)=>`<input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit ${i+1}"/>`).join('')}
+              ${Array.from({length:6}).map((_,i)=>`<input maxlength="1" inputmode="numeric" pattern="[0-9]*" ${i===0?'autocomplete="one-time-code" name="one-time-code"':''} aria-label="OTP digit ${i+1}"/>`).join('')}
             </div>
           </div>
           <button class="save-addr-btn" id="loginVerifyBtn" type="button" onclick="verifyCheckoutOtp()">Verify OTP</button>
@@ -452,7 +450,6 @@
   }
   function mountCheckoutOtpInputs(){
     const inputs = [...document.querySelectorAll('#checkoutOtpGrid input')];
-    const autofill = document.getElementById('checkoutOtpAutofill');
     if(!inputs.length) return;
     const fill = (value) => {
       const digits = phoneDigits(value).slice(0, 6).split('');
@@ -478,11 +475,7 @@
         }
       });
     });
-    if(autofill){
-      autofill.addEventListener('input', ()=>fill(autofill.value));
-      autofill.addEventListener('change', ()=>fill(autofill.value));
-      autofill.focus();
-    }
+    inputs[0].focus();
   }
   function renderAddressSheet(){
     syncAddressDefaults();
