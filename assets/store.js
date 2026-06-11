@@ -5,6 +5,8 @@
 const Store = (() => {
   const KEY = 'kanxi_db';
   const CLOUD_CACHE_KEY = 'kanxi_cloud_cache';
+  const CLOUD_CACHE_FULL_KEY = `${CLOUD_CACHE_KEY}_full`;
+  const CLOUD_CACHE_STOREFRONT_KEY = `${CLOUD_CACHE_KEY}_storefront`;
   const VERSION = 3;
   const CLOUD_EVENT = 'kanxi:store-changed';
   const CLOUD_STATUS_EVENT = 'kanxi:store-sync';
@@ -17,7 +19,13 @@ const Store = (() => {
   const PAGE_NEEDS_FULL_SYNC = /^(admin|checkout|account|login)\.html$/i.test(PAGE_NAME);
   const DEFER_CLOUD_BOOT = !IS_LOCALHOST && !IS_ADMIN_PAGE;
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
-  const im = (photo, w=600, format='webp') => `https://images.unsplash.com/${photo}?w=${w}&q=72&auto=format&fit=crop&fm=${format}`;
+  const BLANK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Crect width='600' height='600' fill='%23f4f4f5'/%3E%3Cpath d='M185 374l77-96 54 64 33-40 66 72H185z' fill='%23d4d4d8'/%3E%3Ccircle cx='238' cy='223' r='36' fill='%23e4e4e7'/%3E%3C/svg%3E";
+  const sanitizeImage = (value) => {
+    const url = String(value || '').trim();
+    if(!url) return BLANK_IMAGE;
+    return url.indexOf('images.unsplash.com/') !== -1 ? BLANK_IMAGE : url;
+  };
+  const im = () => BLANK_IMAGE;
   let saveTimer = null;
   let lastCloudHash = '';
   let cloudDb = null;
@@ -75,33 +83,33 @@ const Store = (() => {
 
     const products = [
       // ── Clothing (size) ──
-      P('cl-001','Tailored Linen Blazer','Kanxi Studio','c_cloth','s1',2910,3545,'photo-1594938298603-c8148c4b4e7b',['t2','t3'],'size',['XS','S','M','L','XL'],'Sharp tailoring with a relaxed drape for polished everyday wear.',['Structured shoulders','Breathable linen blend','Fully lined finish']),
-      P('cl-002','Silk Midi Dress','Kanxi Atelier','c_cloth','s2',3775,null,'photo-1496747611176-843222e1e57c',['t1'],'size',['XS','S','M','L'],'A fluid silk silhouette designed for soft movement and elevated evenings.',['Pure-feel satin touch','Midi length cut','Lightweight all-day comfort']),
-      P('cl-003','Wide Leg Trousers','Kanxi Studio','c_cloth','s3',1990,2545,'photo-1551488831-00ddcb6c6bd3',['t2'],'size',['XS','S','M','L','XL'],'Modern wide-leg tailoring with clean lines and an easy, flattering fall.',['High-rise waist','Soft structured fabric','Easy day-to-night styling']),
-      P('cl-005','Classic Trench Coat','Kanxi Studio','c_cloth','s1',6550,7865,'photo-1572804013309-59a88b7e92f1',['t1'],'size',['S','M','L','XL'],'A timeless trench with crisp detailing and a refined outer layer feel.',['Double-breasted front','Belted waist','Seasonless layering piece']),
-      P('cl-006','Linen Co-ord Set','Kanxi Atelier','c_cloth','s2',3010,null,'photo-1469334031218-e382a71b716b',['t3'],'size',['XS','S','M','L'],'An effortless matching set cut for comfort and understated luxury.',['Breathable linen texture','Relaxed tailored shape','Easy mix-and-match wear']),
-      P('cl-010','Soft Leather Jacket','Kanxi Leather','c_cloth','s1',8940,null,'photo-1548123378-bde4eca81d2d',['t5'],'size',['S','M','L','XL'],'Supple leather with a clean silhouette built for statement layering.',['Soft premium finish','Minimal hardware detailing','Structured modern fit']),
+      P('cl-001','Tailored Linen Blazer','Kanxi Studio','c_cloth','s1',2910,3545,'',['t2','t3'],'size',['XS','S','M','L','XL'],'Sharp tailoring with a relaxed drape for polished everyday wear.',['Structured shoulders','Breathable linen blend','Fully lined finish']),
+      P('cl-002','Silk Midi Dress','Kanxi Atelier','c_cloth','s2',3775,null,'',['t1'],'size',['XS','S','M','L'],'A fluid silk silhouette designed for soft movement and elevated evenings.',['Pure-feel satin touch','Midi length cut','Lightweight all-day comfort']),
+      P('cl-003','Wide Leg Trousers','Kanxi Studio','c_cloth','s3',1990,2545,'',['t2'],'size',['XS','S','M','L','XL'],'Modern wide-leg tailoring with clean lines and an easy, flattering fall.',['High-rise waist','Soft structured fabric','Easy day-to-night styling']),
+      P('cl-005','Classic Trench Coat','Kanxi Studio','c_cloth','s1',6550,7865,'',['t1'],'size',['S','M','L','XL'],'A timeless trench with crisp detailing and a refined outer layer feel.',['Double-breasted front','Belted waist','Seasonless layering piece']),
+      P('cl-006','Linen Co-ord Set','Kanxi Atelier','c_cloth','s2',3010,null,'',['t3'],'size',['XS','S','M','L'],'An effortless matching set cut for comfort and understated luxury.',['Breathable linen texture','Relaxed tailored shape','Easy mix-and-match wear']),
+      P('cl-010','Soft Leather Jacket','Kanxi Leather','c_cloth','s1',8940,null,'',['t5'],'size',['S','M','L','XL'],'Supple leather with a clean silhouette built for statement layering.',['Soft premium finish','Minimal hardware detailing','Structured modern fit']),
       // ── Skincare (volume) ──
-      P('sk-001','Vitamin C Brightening Serum','Kanxi Glow','c_skin','s4',1048,null,'photo-1620916566398-39f1143ab7be',['t3','t6'],'volume',['30ml','50ml'],'A daily brightening serum formulated to revive dull skin and support a clear glow.',['Vitamin C support','Light fast-absorbing texture','Suitable for daily layering']),
-      P('sk-004','Retinol Night Renewal Cream','Kanxi Glow','c_skin','s5',1356,null,'photo-1556228720-195a672e8a03',['t3','t6'],'volume',['50ml'],'A nourishing overnight cream that helps smooth texture and support renewal while you sleep.',['Night-use formula','Comforting cream finish','Targets texture and tone']),
-      P('sk-008','Daily SPF 50 Sunscreen','Kanxi Glow','c_skin','s6',586,740,'photo-1512290923902-8a9f81dc236c',['t2','t6'],'volume',['50ml'],'Lightweight broad-spectrum sun care designed for daily protection without heavy residue.',['SPF 50 protection','Invisible lightweight finish','Everyday wear friendly']),
-      P('sk-002','Deep Hydration Face Cream','Kanxi Glow','c_skin','s5',832,1079,'photo-1608248597279-f99d160bfcbc',['t2','t6'],'volume',['50ml'],'A moisture-rich cream that cushions the skin and helps seal in hydration.',['Soft cream texture','Comfort-focused hydration','Ideal for dry or tired skin']),
-      P('sk-006','Hyaluronic Acid Toner','Kanxi Glow','c_skin','s4',740,null,'photo-1615397349754-cfa2066a298e',['t1','t6'],'volume',['200ml'],'A fresh toner that replenishes hydration and preps skin for the rest of your routine.',['Hydrating prep step','Layerable watery texture','Balances and softens']),
+      P('sk-001','Vitamin C Brightening Serum','Kanxi Glow','c_skin','s4',1048,null,'',['t3','t6'],'volume',['30ml','50ml'],'A daily brightening serum formulated to revive dull skin and support a clear glow.',['Vitamin C support','Light fast-absorbing texture','Suitable for daily layering']),
+      P('sk-004','Retinol Night Renewal Cream','Kanxi Glow','c_skin','s5',1356,null,'',['t3','t6'],'volume',['50ml'],'A nourishing overnight cream that helps smooth texture and support renewal while you sleep.',['Night-use formula','Comforting cream finish','Targets texture and tone']),
+      P('sk-008','Daily SPF 50 Sunscreen','Kanxi Glow','c_skin','s6',586,740,'',['t2','t6'],'volume',['50ml'],'Lightweight broad-spectrum sun care designed for daily protection without heavy residue.',['SPF 50 protection','Invisible lightweight finish','Everyday wear friendly']),
+      P('sk-002','Deep Hydration Face Cream','Kanxi Glow','c_skin','s5',832,1079,'',['t2','t6'],'volume',['50ml'],'A moisture-rich cream that cushions the skin and helps seal in hydration.',['Soft cream texture','Comfort-focused hydration','Ideal for dry or tired skin']),
+      P('sk-006','Hyaluronic Acid Toner','Kanxi Glow','c_skin','s4',740,null,'',['t1','t6'],'volume',['200ml'],'A fresh toner that replenishes hydration and preps skin for the rest of your routine.',['Hydrating prep step','Layerable watery texture','Balances and softens']),
       // ── Makeup (shade) ──
-      P('mk-001','Velvet Matte Lipstick','Kanxi Beauty','c_make','s11',690,null,'photo-1586495777744-4413f21062fa',['t3'],'shade',[{value:'Rose',color:'#C46A6A'},{value:'Plum',color:'#7D3C5A'},{value:'Coral',color:'#E5736A'},{value:'Nude',color:'#C8967A'}],'A pigment-rich lipstick with a soft matte finish and comfortable wear.',['Velvet matte payoff','Smooth glide application','Curated wearable shades']),
-      P('mk-002','Luminous Silk Foundation','Kanxi Beauty','c_make','s12',1180,null,'photo-1631214540242-3cd8c4b0b3aa',['t1'],'shade',[{value:'Ivory',color:'#F0D9C0'},{value:'Beige',color:'#E0BE9A'},{value:'Sand',color:'#C99B70'},{value:'Caramel',color:'#A06B43'}],'A lightweight complexion base that leaves skin looking even, fresh, and luminous.',['Buildable coverage','Silky skin-like finish','Comfortable all-day wear']),
-      P('mk-003','Silk Powder Blush','Kanxi Beauty','c_make','s12',540,690,'photo-1599733589046-75e8d9d0e2b9',['t2'],'shade',[{value:'Peach',color:'#F0A98C'},{value:'Berry',color:'#B05070'},{value:'Mauve',color:'#C98CA0'}],'A soft-focus powder blush that adds natural-looking color with a refined finish.',['Blendable pigment','Silky powder texture','Soft radiant effect']),
+      P('mk-001','Velvet Matte Lipstick','Kanxi Beauty','c_make','s11',690,null,'',['t3'],'shade',[{value:'Rose',color:'#C46A6A'},{value:'Plum',color:'#7D3C5A'},{value:'Coral',color:'#E5736A'},{value:'Nude',color:'#C8967A'}],'A pigment-rich lipstick with a soft matte finish and comfortable wear.',['Velvet matte payoff','Smooth glide application','Curated wearable shades']),
+      P('mk-002','Luminous Silk Foundation','Kanxi Beauty','c_make','s12',1180,null,'',['t1'],'shade',[{value:'Ivory',color:'#F0D9C0'},{value:'Beige',color:'#E0BE9A'},{value:'Sand',color:'#C99B70'},{value:'Caramel',color:'#A06B43'}],'A lightweight complexion base that leaves skin looking even, fresh, and luminous.',['Buildable coverage','Silky skin-like finish','Comfortable all-day wear']),
+      P('mk-003','Silk Powder Blush','Kanxi Beauty','c_make','s12',540,690,'',['t2'],'shade',[{value:'Peach',color:'#F0A98C'},{value:'Berry',color:'#B05070'},{value:'Mauve',color:'#C98CA0'}],'A soft-focus powder blush that adds natural-looking color with a refined finish.',['Blendable pigment','Silky powder texture','Soft radiant effect']),
       // ── Bags (none) ──
-      P('bg-001','Structured Leather Tote','Kanxi Leather','c_bags','s7',4934,null,'photo-1584917865442-de89df76afd3',['t1'],'none',[],'A refined tote with room for daily essentials and a polished structured shape.',['Premium leather build','Spacious interior','Everyday carry silhouette']),
-      P('bg-002','Mini Crossbody Bag','Kanxi Leather','c_bags','s8',2745,3238,'photo-1566150905458-1bf1fc113f0d',['t2'],'none',[],'A compact crossbody made for light carry and easy all-day styling.',['Hands-free design','Compact daily size','Adjustable strap']),
-      P('bg-006','Leather Bucket Bag','Kanxi Leather','c_bags','s7',3701,null,'photo-1547949003-9792a18a2601',['t3'],'none',[],'A soft bucket profile that balances relaxed style with practical storage.',['Premium leather texture','Roomy interior','Modern relaxed shape']),
-      P('bg-010','Leather Weekend Bag','Kanxi Leather','c_bags','s7',6940,8020,'photo-1548036328-c9fa89d128fa',['t5'],'none',[],'A travel-ready carryall sized for quick escapes and elevated packing.',['Weekend-ready capacity','Structured handles','Luxury finish']),
+      P('bg-001','Structured Leather Tote','Kanxi Leather','c_bags','s7',4934,null,'',['t1'],'none',[],'A refined tote with room for daily essentials and a polished structured shape.',['Premium leather build','Spacious interior','Everyday carry silhouette']),
+      P('bg-002','Mini Crossbody Bag','Kanxi Leather','c_bags','s8',2745,3238,'',['t2'],'none',[],'A compact crossbody made for light carry and easy all-day styling.',['Hands-free design','Compact daily size','Adjustable strap']),
+      P('bg-006','Leather Bucket Bag','Kanxi Leather','c_bags','s7',3701,null,'',['t3'],'none',[],'A soft bucket profile that balances relaxed style with practical storage.',['Premium leather texture','Roomy interior','Modern relaxed shape']),
+      P('bg-010','Leather Weekend Bag','Kanxi Leather','c_bags','s7',6940,8020,'',['t5'],'none',[],'A travel-ready carryall sized for quick escapes and elevated packing.',['Weekend-ready capacity','Structured handles','Luxury finish']),
       // ── Watches (none) ──
-      P('wt-001','Gold Minimalist Watch','Kanxi Time','c_watch','s9',7480,null,'photo-1542496658-e33a6d0d50f6',['t5'],'none',[],'A clean gold-tone watch with a minimal face for understated daily wear.',['Minimal dial design','Polished gold-tone finish','Versatile everyday styling']),
-      P('wt-004','Rose Gold Dress Watch','Kanxi Time','c_watch','s9',9565,null,'photo-1614164185128-e4ec99c436d7',['t5'],'none',[],'An elegant dress watch with warm rose gold tones and a refined presence.',['Dress-ready case profile','Rose gold finish','Refined timeless styling']),
-      P('wt-003','Chronograph Sport Watch','Kanxi Sport','c_watch','s10',4474,null,'photo-1587836374828-4dbafa94cf0e',['t1'],'none',[],'A sporty chronograph built for bold everyday wear and functional detail.',['Sport chronograph face','Statement case design','Active lifestyle appeal']),
-      P('wt-009','Moonphase Complication','Kanxi Time','c_watch','s9',15121,null,'photo-1466685700116-4b62c77f3c27',['t4'],'none',[],'A premium statement timepiece featuring a moonphase complication and classic detailing.',['Complication dial feature','Collector-style presence','Premium finishing details']),
-      P('wt-002','Classic Silver Timepiece','Kanxi Time','c_watch','s9',5630,6478,'photo-1524592094714-0f0654e20314',['t2'],'none',[],'A classic silver watch designed for simple versatility and polished finishing.',['Silver-tone case','Timeless proportions','Clean everyday pairing']),
+      P('wt-001','Gold Minimalist Watch','Kanxi Time','c_watch','s9',7480,null,'',['t5'],'none',[],'A clean gold-tone watch with a minimal face for understated daily wear.',['Minimal dial design','Polished gold-tone finish','Versatile everyday styling']),
+      P('wt-004','Rose Gold Dress Watch','Kanxi Time','c_watch','s9',9565,null,'',['t5'],'none',[],'An elegant dress watch with warm rose gold tones and a refined presence.',['Dress-ready case profile','Rose gold finish','Refined timeless styling']),
+      P('wt-003','Chronograph Sport Watch','Kanxi Sport','c_watch','s10',4474,null,'',['t1'],'none',[],'A sporty chronograph built for bold everyday wear and functional detail.',['Sport chronograph face','Statement case design','Active lifestyle appeal']),
+      P('wt-009','Moonphase Complication','Kanxi Time','c_watch','s9',15121,null,'',['t4'],'none',[],'A premium statement timepiece featuring a moonphase complication and classic detailing.',['Complication dial feature','Collector-style presence','Premium finishing details']),
+      P('wt-002','Classic Silver Timepiece','Kanxi Time','c_watch','s9',5630,6478,'',['t2'],'none',[],'A classic silver watch designed for simple versatility and polished finishing.',['Silver-tone case','Timeless proportions','Clean everyday pairing']),
     ];
 
     // ── Auto SKU per variant ──
@@ -221,19 +229,20 @@ const Store = (() => {
       const own=(c.brands||[]).filter(b=>(b.name||'').trim()).map(b=>({
         id:b.id||uid('br_'),
         name:(b.name||'').trim(),
-        logo:b.logo||''
+        logo:sanitizeImage(b.logo)
       })).filter(b=>seen[b.name.toLowerCase()]?false:(seen[b.name.toLowerCase()]=true));
       catBrandMap[c.id]=own;
       c.brands=own;
     });
     (db.subcategories||[]).forEach(s=>{
+      s.image = sanitizeImage(s.image);
       if(!Array.isArray(s.brands) || !s.brands.length) return;
       const list=catBrandMap[s.categoryId] || (catBrandMap[s.categoryId]=[]);
       const seen=new Set(list.map(b=>(b.name||'').toLowerCase()));
       s.brands.forEach(b=>{
         const name=(b.name||'').trim();
         if(!name || seen.has(name.toLowerCase())) return;
-        list.push({ id:b.id||uid('br_'), name, logo:b.logo||'' });
+        list.push({ id:b.id||uid('br_'), name, logo:sanitizeImage(b.logo) });
         seen.add(name.toLowerCase());
       });
       s.brands=[];
@@ -254,11 +263,13 @@ const Store = (() => {
         tagId:c.tagId||'',
         linkType:c.linkType || (c.categorySlug ? 'category' : (c.brandId ? 'brand' : 'tag')),
         linkValue:c.linkValue || c.categorySlug || c.brandId || c.tagId || '',
-        image:c.image||''
+        image:sanitizeImage(c.image)
       }));
     }
     db.products = (db.products||[]).map(p=>({
       ...p,
+      image:sanitizeImage(p.image),
+      images:(Array.isArray(p.images) ? p.images : [p.image]).map(sanitizeImage).filter(Boolean),
       description:p.description || '',
       details:Array.isArray(p.details) ? p.details.filter(Boolean) : [],
       variants:(p.variants||[]).map(v=>({
@@ -284,8 +295,28 @@ const Store = (() => {
     return db;
   }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
-  function readCloudCache(){ try{ return JSON.parse(localStorage.getItem(CLOUD_CACHE_KEY)||'null'); }catch(_){ return null; } }
-  function writeCloudCache(db){ try{ localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db)); }catch(_){} }
+  function cacheKey(mode='auto'){
+    const resolved = mode === 'auto' ? (PAGE_NEEDS_FULL_SYNC ? 'full' : 'storefront') : mode;
+    return resolved === 'full' ? CLOUD_CACHE_FULL_KEY : CLOUD_CACHE_STOREFRONT_KEY;
+  }
+  function readCloudCache(mode='auto'){
+    try{
+      const key = cacheKey(mode);
+      const next = localStorage.getItem(key);
+      if(next) return JSON.parse(next);
+      if(mode === 'full'){
+        const legacy = localStorage.getItem(CLOUD_CACHE_KEY);
+        return legacy ? JSON.parse(legacy) : null;
+      }
+      return null;
+    }catch(_){ return null; }
+  }
+  function writeCloudCache(db, mode='auto'){
+    try{
+      localStorage.setItem(cacheKey(mode), JSON.stringify(db));
+      if(mode === 'full') localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db));
+    }catch(_){}
+  }
   function emitSync(status, detail={}){ window.dispatchEvent(new CustomEvent(CLOUD_STATUS_EVENT,{detail:{status,...detail}})); }
   function cloudRow(kind='auto'){
     const cfg=cloudConfig();
@@ -395,11 +426,13 @@ const Store = (() => {
     const clean=normalize(db);
     cloudDb = clean;
     lastCloudHash = JSON.stringify(clean);
-    writeCloudCache(clean);
+    writeCloudCache(clean, 'full');
     emitSync('saving');
     try{
       await upsertCloudRow(row, clean);
-      await upsertCloudRow(cloudRow('storefront'), storefrontSnapshot(clean));
+      const storefront = storefrontSnapshot(clean);
+      await upsertCloudRow(cloudRow('storefront'), storefront);
+      writeCloudCache(storefront, 'storefront');
       emitSync('saved');
     }catch(e){
       console.warn('Kanxi Supabase save failed:', e.message);
@@ -430,7 +463,7 @@ const Store = (() => {
   }
   function loadCloud(force=false){
     if(cloudLoaded && !force) return cloudDb;
-    const cached = normalize(readCloudCache() || cloudDb || seed());
+    const cached = normalize(readCloudCache(PAGE_NEEDS_FULL_SYNC ? 'full' : 'storefront') || cloudDb || seed());
     cloudDb = cached;
     cloudLoaded = true;
     lastCloudHash = JSON.stringify(cached);
@@ -453,10 +486,12 @@ const Store = (() => {
     const row=cloudRow('full'), raw=JSON.stringify(db);
     if(raw===lastCloudHash) return;
     emitSync('saving');
-    writeCloudCache(db);
+    writeCloudCache(db, 'full');
     try{
       await upsertCloudRow(row, db);
-      await upsertCloudRow(cloudRow('storefront'), storefrontSnapshot(db));
+      const storefront = storefrontSnapshot(db);
+      await upsertCloudRow(cloudRow('storefront'), storefront);
+      writeCloudCache(storefront, 'storefront');
     }catch(error){
       console.warn('Kanxi Supabase save failed:', error.message);
       emitSync('error',{message:error.message});
@@ -474,7 +509,7 @@ const Store = (() => {
     const clean=normalize(db);
     if(USE_LOCAL){ writeLocal(clean); return; }
     cloudDb = clean;
-    writeCloudCache(clean);
+    writeCloudCache(clean, 'full');
     lastCloudHash = JSON.stringify(clean);
     queueCloudSave(clean);
   }
@@ -498,6 +533,7 @@ const Store = (() => {
         if(fullData){
           const slim = storefrontSnapshot(fullData);
           await upsertCloudRow(row, slim);
+          writeCloudCache(slim, 'storefront');
           data = { data: slim };
         }
       }catch(error){
@@ -518,7 +554,7 @@ const Store = (() => {
     lastCloudHash = cloudRaw;
     if(cloudRaw!==localRaw){
       cloudDb = db;
-      writeCloudCache(db);
+      writeCloudCache(db, row.mode);
       if(USE_LOCAL) writeLocal(db);
       try{
         const session = JSON.parse(sessionStorage.getItem('kanxi_session')||'null') || window._kanxiSession || null;
@@ -537,7 +573,7 @@ const Store = (() => {
   }
 
   const api = {
-    ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, uid, im,
+    ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, uid, im, BLANK_IMAGE,
     useLocalStorage: USE_LOCAL,
     all(){ return load(); },
     reset(){ const db=normalize(seed()); save(db); return db; },

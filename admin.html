@@ -717,7 +717,7 @@
       const val=v.value.trim();
       return { id:v.id||Store.uid('v_'), value:val, color:_vtype==='shade'?(v.color||'#cccccc'):null, sku:Store.skuFor(pid,{value:val}), barcode:(v.barcode||'').trim() };
     });
-    const primary = _imgs[0] || 'https://images.unsplash.com/photo-1594938298603-c8148c4b4e7b?w=600&q=80';
+    const primary = _imgs[0] || (Store.BLANK_IMAGE || '');
     const detailLines=$('#p_details').value.split('\n').map(s=>s.trim()).filter(Boolean);
     try {
       Store.upsert('products',{

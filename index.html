@@ -279,18 +279,11 @@
   /* ── PRODUCTS — live from admin Store ── */
   let productImgIndex = 0;
   const deferWork = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1200 }) : setTimeout(fn, 1));
-  function unsplashSized(url, width, format='webp'){
-    if(!url || url.indexOf('images.unsplash.com/') === -1) return url;
-    const clean = url.split('?')[0];
-    return `${clean}?w=${width}&q=72&auto=format&fit=crop&fm=${format}`;
-  }
   function responsiveAttrs(url, sizes, width, height, eager){
-    if(url.indexOf('images.unsplash.com/') === -1){
+    if(!url || url.indexOf('data:image/') === 0 || url.indexOf('images.unsplash.com/') === -1){
       return `src="${url}" width="${width}" height="${height}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'} decoding="async" sizes="${sizes}"`;
     }
-    const src = unsplashSized(url, width > 600 ? 800 : 480, 'webp');
-    const srcset = [320, 480, 640, 800, 1200].map(w => `${unsplashSized(url, w, 'webp')} ${w}w`).join(', ');
-    return `src="${src}" srcset="${srcset}" sizes="${sizes}" width="${width}" height="${height}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'} decoding="async"`;
+    return `src="${url}" width="${width}" height="${height}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'} decoding="async" sizes="${sizes}"`;
   }
   function cardHTML(p) {
     const imgAttr = imgAttrs('product', productImgIndex++, p.img);
