@@ -11,35 +11,44 @@
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
     a{text-decoration:none;color:inherit}
     button,input{font:inherit}
-    .app{max-width:480px;margin:0 auto;background:var(--panel);min-height:100vh;padding-bottom:150px;box-shadow:0 0 40px rgba(17,24,39,.08)}
+    .app{max-width:480px;margin:0 auto;background:var(--panel);min-height:100vh;padding-bottom:168px;box-shadow:0 0 40px rgba(17,24,39,.08)}
     .hidden{display:none}
-    .head{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:.75rem;padding:.95rem 1rem;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
-    .icon-btn{width:42px;height:42px;border:none;background:none;border-radius:999px;display:grid;place-items:center;color:var(--ink);cursor:pointer}
-    .icon-btn:active{background:#f3f4f6}
-    .head h1{flex:1;text-align:center;font-size:1.05rem;font-weight:800;margin-right:42px}
-    .section{padding:1rem;border-bottom:8px solid #f5f5f5}
+    .head{position:sticky;top:0;z-index:40;display:grid;grid-template-columns:72px 1fr 72px;align-items:center;padding:1rem;background:rgba(255,255,255,.98);backdrop-filter:blur(16px);border-bottom:1px solid #f1f1f1}
+    .head-cancel{border:none;background:none;color:#2f2f35;font-size:1rem;font-weight:500;text-align:left;cursor:pointer}
+    .head-center{display:flex;align-items:center;justify-content:center;gap:.45rem;font-size:1.05rem;font-weight:800}
+    .head-spacer{width:72px}
+    .section{padding:1rem 1rem 0;border-bottom:10px solid #f5f5f5}
     .section:last-of-type{border-bottom:none}
-    .section-title{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.9rem}
+    .section-title{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:1rem}
     .section-title h2{font-size:1rem;font-weight:800}
     .linkish{font-size:.86rem;font-weight:600;color:#5563f7}
-    .address,.ship-card,.summary-card,.pay-card,.transfer-box{border:1px solid var(--line);border-radius:20px;background:var(--panel)}
+    .address,.ship-card,.summary-card,.pay-card,.transfer-box{border:1px solid #f1f1f1;border-radius:18px;background:var(--panel)}
     .address{padding:1rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
     .address .name{font-weight:700;font-size:.95rem}
-    .address .line{font-size:.88rem;color:var(--muted);margin-top:.2rem;line-height:1.45}
-    .brand-row{display:flex;align-items:center;gap:.7rem;margin-bottom:1rem}
-    .brand-badge{width:30px;height:30px;border-radius:999px;border:1px solid var(--line);display:grid;place-items:center;background:#fff}
-    .brand-name{font-size:.92rem;font-weight:700}
-    .item-list{display:grid;gap:.9rem}
-    .line-item{display:grid;grid-template-columns:84px 1fr auto;gap:.8rem;align-items:flex-start}
-    .line-item img{width:84px;height:100px;border-radius:18px;object-fit:cover;background:var(--soft)}
-    .li-name{font-size:.92rem;font-weight:600;line-height:1.35}
-    .li-meta{font-size:.8rem;color:var(--muted);margin:.25rem 0 .5rem}
-    .li-price{font-size:.92rem;font-weight:700}
-    .li-qty{font-size:.85rem;color:var(--muted);font-weight:600}
-    .ship-card{padding:1rem}
-    .ship-card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem}
-    .ship-main{font-size:.92rem;font-weight:700}
-    .ship-sub{font-size:.84rem;color:var(--muted);margin-top:.2rem}
+    .address .line{font-size:.88rem;color:#8f8f96;margin-top:.2rem;line-height:1.45}
+    .item-list{display:grid;gap:0}
+    .line-item{display:grid;grid-template-columns:92px 1fr;gap:1rem;align-items:center;padding:1rem 0}
+    .line-item + .line-item{border-top:1px solid #f1f1f1}
+    .line-item img{width:92px;height:92px;border-radius:16px;object-fit:cover;background:#fafafa;border:1px solid #ececec}
+    .li-name{font-size:.92rem;font-weight:700;line-height:1.3;color:#2f2f35}
+    .li-meta{font-size:.8rem;color:#a1a1aa;margin-top:.22rem;line-height:1.35}
+    .li-price{display:none}
+    .li-qty{display:none}
+    .summary-card{padding:1rem 0 0;border:none;border-radius:0}
+    .sum-row{display:flex;align-items:center;justify-content:space-between;font-size:.92rem;padding:.32rem 0;color:#9b9ba1}
+    .sum-row.total{padding-top:1rem;margin-top:.85rem;border-top:1px solid #ededed;font-size:1.05rem;font-weight:800;color:#2d2d33}
+    .sum-row .green{color:#9b9ba1;font-weight:500}
+    .ship-options{padding-bottom:.2rem}
+    .ship-option{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:1rem 0;cursor:pointer}
+    .ship-option + .ship-option{border-top:1px solid #f1f1f1}
+    .ship-left{display:flex;align-items:center;gap:1rem}
+    .ship-radio{width:18px;height:18px;border-radius:999px;border:2px solid #d6d6db;display:grid;place-items:center;flex-shrink:0}
+    .ship-radio::after{content:'';width:8px;height:8px;border-radius:999px;background:transparent}
+    .ship-option.active .ship-radio{border-color:#4294e8;background:#4294e8}
+    .ship-option.active .ship-radio::after{background:#fff}
+    .ship-main{font-size:.95rem;font-weight:500;color:#2f2f35}
+    .ship-sub{font-size:.82rem;color:#a1a1aa;margin-top:.12rem}
+    .ship-price{font-size:.95rem;color:#2f2f35}
     .pay-list{display:grid;gap:.7rem}
     .pay-card{padding:.95rem 1rem;display:flex;align-items:center;gap:.85rem;cursor:pointer;transition:.18s;border-color:var(--line)}
     .pay-card.active{border-color:rgba(79,92,240,.45);box-shadow:0 0 0 3px rgba(79,92,240,.1)}
@@ -66,18 +75,14 @@
     .slip-row{margin-top:1rem;display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}
     .slip-preview{width:88px;height:88px;border-radius:16px;border:1px solid var(--line);background:#fff;object-fit:cover}
     .slip-empty{width:88px;height:88px;border-radius:16px;border:1px dashed #cbd5e1;display:grid;place-items:center;color:#94a3b8;background:#fff}
-    .summary-card{padding:1rem}
-    .sum-row{display:flex;align-items:center;justify-content:space-between;font-size:.92rem;padding:.35rem 0;color:var(--muted)}
-    .sum-row.total{padding-top:.8rem;margin-top:.6rem;border-top:1px solid var(--line);font-size:1.05rem;font-weight:800;color:var(--ink)}
-    .sum-row .green{color:var(--green);font-weight:700}
     .bar{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--line);padding:.9rem 1rem 1rem;z-index:60}
     .total-line{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
     .total-line .label{font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
     .total-line .amount{font-size:1.18rem;font-weight:800}
-    .place-btn{width:100%;border:none;border-radius:16px;background:var(--blue);color:#fff;padding:1rem 1.1rem;font-size:1rem;font-weight:800;cursor:pointer;transition:.18s}
+    .place-btn{width:100%;border:none;border-radius:8px;background:#4294e8;color:#fff;padding:1rem 1.1rem;font-size:1rem;font-weight:700;cursor:pointer;transition:.18s}
     .place-btn:hover{background:var(--blue-dark)}
     .place-btn:disabled{background:#c7d2fe;color:#eef2ff;cursor:not-allowed}
-    .hint{margin-top:.65rem;font-size:.8rem;color:var(--muted);text-align:center}
+    .hint{margin-top:.8rem;font-size:.8rem;color:#9b9ba1;text-align:center;line-height:1.45}
     .success{display:none;position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:100;align-items:center;justify-content:center;padding:1.25rem}
     .success.show{display:flex}
     .success-card{background:#fff;border-radius:28px;padding:2rem 1.4rem;text-align:center;width:100%;max-width:360px}
@@ -90,8 +95,9 @@
 <body>
 <div class="app">
   <div class="head">
-    <button class="icon-btn" onclick="location.href='cart.html'" aria-label="Back"><i data-lucide="chevron-left"></i></button>
-    <h1>Checkout</h1>
+    <button class="head-cancel" onclick="location.href='cart.html'">Cancel</button>
+    <div class="head-center"><i data-lucide="lock" style="width:18px;height:18px"></i><span>Checkout</span></div>
+    <div class="head-spacer"></div>
   </div>
 
   <div class="section">
@@ -105,21 +111,25 @@
   </div>
 
   <div class="section">
-    <div class="section-title"><h2>Delivery</h2></div>
+    <div class="section-title"><h2>Items</h2></div>
     <div class="ship-card">
-      <div class="brand-row">
-        <div class="brand-badge"><i data-lucide="store"></i></div>
-        <div class="brand-name">kanxi.collection</div>
-      </div>
       <div class="item-list" id="lineItems"></div>
-      <div class="ship-card top" style="padding:1rem 0 0;border:none;border-top:1px solid var(--line);border-radius:0;background:none;margin-top:1rem">
-        <div>
-          <div class="ship-main">Standard shipping: Free</div>
-          <div class="ship-sub" id="shipSub">Estimated delivery in 3–5 days</div>
-        </div>
-        <i data-lucide="chevron-right" style="width:18px;height:18px;color:#94a3b8"></i>
-      </div>
     </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><h2>Summary</h2></div>
+    <div class="summary-card">
+      <div class="sum-row"><span>Subtotal</span><span id="oSub">MVR 0</span></div>
+      <div class="sum-row"><span>Estimated Tax</span><span id="oTax">MVR 0</span></div>
+      <div class="sum-row"><span>Shipping</span><span id="oShip">MVR 0</span></div>
+      <div class="sum-row total"><span>Total</span><span id="oTotal">MVR 0</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><h2>Shipping</h2></div>
+    <div class="ship-options" id="shipOptions"></div>
   </div>
 
   <div class="section">
@@ -151,15 +161,6 @@
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-title"><h2>Summary</h2></div>
-    <div class="summary-card">
-      <div class="sum-row"><span>Subtotal</span><span id="oSub">MVR 0</span></div>
-      <div class="sum-row"><span>Shipping</span><span class="green">Free</span></div>
-      <div class="sum-row"><span>Tax (8%)</span><span id="oTax">MVR 0</span></div>
-      <div class="sum-row total"><span id="itemCount">Total (0 items)</span><span id="oTotal">MVR 0</span></div>
-    </div>
-  </div>
 </div>
 
 <div class="bar">
@@ -170,7 +171,7 @@
     </div>
   </div>
   <button class="place-btn" id="placeBtn" onclick="placeOrder()">Place order</button>
-  <div class="hint" id="placeHint">Ready to place your order.</div>
+  <div class="hint" id="placeHint">By tapping Place Order you agree to our <a href="#" style="color:#0f3b69;font-weight:500">payment terms and policies</a>.</div>
 </div>
 
 <div class="success" id="success">
@@ -194,8 +195,13 @@
   let selectedPay = 'card';
   let transferSlip = '';
   let paymentSettings = { methods:[], bankTransfer:{ bankName:'Kanxi Collection', accountNumber:'' } };
+  let selectedShipping = 'standard';
+  const shippingOptions = [
+    { key:'standard', label:'Standard', sub:'3-5 business days', amount:5.95 },
+    { key:'expedited', label:'Expedited', sub:'1-3 business days', amount:10.95 }
+  ];
 
-  function icons(){ if(window.lucide) lucide.createIcons(); }
+  function icons(){ if(window.scheduleLucideRefresh) scheduleLucideRefresh(); else if(window.lucide) lucide.createIcons(); }
   function price(n){ return 'MVR ' + (+n || 0).toLocaleString(); }
   function activeMethods(){
     return (paymentSettings.methods||[]).filter(m=>m.enabled!==false);
@@ -226,6 +232,26 @@
       <div class="name">${u.name || 'Customer'}</div>
       ${a ? `<div class="line">${a.line || ''}</div><div class="line">${[a.city,a.postcode].filter(Boolean).join(', ')}${a.country ? ' · '+a.country : ''}</div><div class="line">${delivery}${boat.boatName ? ' · ' + boat.boatName : ''}${boat.departureTime ? ' · ' + boat.departureTime : ''}</div>` : `<div class="line">${u.phone || ''}</div>`}
     ` : `<div class="name">Guest</div><div class="line">Sign in to continue</div>`;
+  }
+  function renderShipping(){
+    const wrap = document.getElementById('shipOptions');
+    wrap.innerHTML = shippingOptions.map(opt => `
+      <div class="ship-option ${opt.key===selectedShipping?'active':''}" onclick="selectShipping('${opt.key}')">
+        <div class="ship-left">
+          <div class="ship-radio"></div>
+          <div>
+            <div class="ship-main">${opt.label}</div>
+            <div class="ship-sub">${opt.sub}</div>
+          </div>
+        </div>
+        <div class="ship-price">$${opt.amount.toFixed(2)}</div>
+      </div>
+    `).join('');
+  }
+  function selectShipping(key){
+    selectedShipping = key;
+    renderShipping();
+    render();
   }
   function renderPayments(){
     paymentSettings = Store.getPaymentSettings();
@@ -312,7 +338,7 @@
     if(!selectedPay) hint.textContent = 'Enable at least one payment method in admin.';
     else if(transfer && !hasAccount) hint.textContent = 'Add bank account details in admin to accept transfers.';
     else if(transfer && !transferSlip) hint.textContent = 'Upload one transfer slip to place this order.';
-    else hint.textContent = 'Ready to place your order.';
+    else hint.innerHTML = 'By tapping Place Order you agree to our <a href="#" style="color:#0f3b69;font-weight:500">payment terms and policies</a>.';
   }
   function render(){
     const cart = refreshCartPrices();
@@ -322,25 +348,21 @@
         <img src="${it.img||''}" alt=""/>
         <div>
           <div class="li-name">${it.name}</div>
-          <div class="li-meta">${it.size || 'One Size'}</div>
-          <div class="li-price">${price(it.price * it.qty)}</div>
+          <div class="li-meta">Sold and shipped by ${it.brand || 'Kanxi Collection'}</div>
         </div>
-        <div class="li-qty">x${it.qty}</div>
       </div>
     `).join('') || '<p style="font-size:.9rem;color:#6b7280">Your bag is empty.</p>';
     const sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
     const tax = Math.round(sub * 0.08);
-    const total = sub + tax;
+    const shipping = (shippingOptions.find(opt=>opt.key===selectedShipping) || shippingOptions[0]).amount;
+    const total = sub + tax + shipping;
     document.getElementById('oSub').textContent = price(sub);
     document.getElementById('oTax').textContent = price(tax);
+    document.getElementById('oShip').textContent = `$${shipping.toFixed(2)}`;
     document.getElementById('oTotal').textContent = price(total);
     document.getElementById('placeTotal').textContent = price(total);
-    document.getElementById('itemCount').textContent = `Total (${qty} ${qty===1?'item':'items'})`;
-    const d1 = new Date(Date.now() + 3 * 864e5);
-    const d2 = new Date(Date.now() + 5 * 864e5);
-    const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    document.getElementById('shipSub').textContent = `Estimated delivery ${fmt(d1)}–${fmt(d2).split(' ')[1]}`;
     renderAddress();
+    renderShipping();
     renderPayments();
     updatePlaceState();
     icons();
@@ -350,21 +372,22 @@
     if(!cart.length){ showToast('Your bag is empty'); return; }
     const sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
     const tax = Math.round(sub * 0.08);
-    const total = sub + tax;
+    const shipping = (shippingOptions.find(opt=>opt.key===selectedShipping) || shippingOptions[0]).amount;
+    const total = sub + tax + shipping;
     const u = Store.currentUser();
     const a = u && ((u.addresses||[]).find(x=>x.isDefault) || (u.addresses||[])[0]);
     const order = Store.placeOrder({
       userName:u ? u.name : 'Guest',
       userPhone:u ? u.phone : '',
       items:cart.map(it=>({ productId:(it.id||'').split('_')[0], name:it.name, qty:it.qty, price:it.price, image:it.img })),
-      shipping:0,
+      shipping,
       total,
       payMethod:selectedPay,
       transferSlip:selectedPay==='transfer' ? transferSlip : '',
       bankName:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.bankName || '') : '',
       accountNumber:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || '') : '',
       address:a ? [a.line,a.city,a.atoll,a.postcode,a.country].filter(Boolean).join(', ') : 'Maldives',
-      deliveryType:a && a.deliveryType || 'standard',
+      deliveryType:selectedShipping,
       deliveryInfo:a && a.deliveryInfo || null
     });
     document.getElementById('onum').textContent = '#' + order.id;

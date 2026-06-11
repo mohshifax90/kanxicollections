@@ -39,8 +39,13 @@ function refreshCartPrices() {
   if (changed) saveCart(cart);
   return cart;
 }
+function scheduleLucideRefresh() {
+  if (!window.lucide) return;
+  cancelAnimationFrame(window._lucideRAF || 0);
+  window._lucideRAF = requestAnimationFrame(() => lucide.createIcons());
+}
 function updateCartCount() {
-  const c = refreshCartPrices().reduce((s, i) => s + i.qty, 0);
+  const c = getCart().reduce((s, i) => s + i.qty, 0);
   document.querySelectorAll('.cart-dot, .cart-count').forEach(el => {
     el.textContent = c;
     el.style.display = c > 0 ? 'flex' : 'none';

@@ -88,7 +88,7 @@
   <script>
     let discount = 0;
 
-    function icons(){ if(window.lucide) lucide.createIcons(); }
+    function icons(){ if(window.scheduleLucideRefresh) scheduleLucideRefresh(); else if(window.lucide) lucide.createIcons(); }
     function money(n){ return 'MVR ' + (+n || 0).toLocaleString(); }
     function goCheckout(e){
       if(e) e.preventDefault();

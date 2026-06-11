@@ -158,7 +158,12 @@
     let phoneFull = '', phoneForOtp = '', existingUser = null, gender = '', geo = null, otpRequestId = null;
 
     function showToast(m){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t);} t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
-    function icons(){ if(window.lucide) lucide.createIcons(); }
+    let _iconRAF = 0;
+    function icons(){
+      if(!window.lucide) return;
+      cancelAnimationFrame(_iconRAF);
+      _iconRAF = requestAnimationFrame(() => lucide.createIcons());
+    }
     function back(){ if(!$('#step-otp').classList.contains('hidden')){ showStep('phone'); } else if(!$('#step-profile').classList.contains('hidden')){ showStep('otp'); } else { location.href = redirect; } }
     function showStep(s){
       ['phone','otp','profile'].forEach(x=>$('#step-'+x).classList.toggle('hidden', x!==s));
