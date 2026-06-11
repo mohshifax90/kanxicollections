@@ -147,7 +147,7 @@
       <a class="view-shop" href="index.html">View shop</a>
     </div>
     <div class="spacer"></div>
-    <button class="icon-btn cart-wrap" onclick="location.href='cart.html'"><span class="bag-btn"></span><span class="cart-dot cart-count" style="display:none">0</span></button>
+    <button class="icon-btn cart-wrap" onclick="location.href='checkout.html'"><span class="bag-btn"></span><span class="cart-dot cart-count" style="display:none">0</span></button>
     <button class="icon-btn" title="Menu"><i data-lucide="menu"></i></button>
   </div>
 
@@ -331,7 +331,7 @@
     if ((vt!=='none') && !selVar) { showToast('Please select an option'); return; }
     addToCart({ id:id + (selVar?('_'+selVar.id):''), name:c.brand+' '+c.name, price:curPrice(), size:variantLabel, img:imgs[0] });
   }
-  function doBuyNow(){ doAddToCart(); setTimeout(()=>location.href='cart.html', 500); }
+  function doBuyNow(){ doAddToCart(); setTimeout(()=>location.href='checkout.html', 500); }
 
   /* ── related (same category) ── */
   const related = Store.cardsBySlug(c.cat).filter(x=>x.id!==id).slice(0,6);

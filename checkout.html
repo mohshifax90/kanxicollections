@@ -95,7 +95,7 @@
 <body>
 <div class="app">
   <div class="head">
-    <button class="head-cancel" onclick="location.href='cart.html'">Cancel</button>
+    <button class="head-cancel" onclick="location.href='index.html'">Cancel</button>
     <div class="head-center"><i data-lucide="lock" style="width:18px;height:18px"></i><span>Checkout</span></div>
     <div class="head-spacer"></div>
   </div>
@@ -190,8 +190,6 @@
 <script src="assets/store.js?v=4"></script>
 <script src="assets/components.js"></script>
 <script>
-  if(typeof Store!=='undefined' && !Store.currentUser()) location.href='login.html?redirect=checkout.html';
-
   let selectedPay = 'card';
   let transferSlip = '';
   let paymentSettings = { methods:[], bankTransfer:{ bankName:'Kanxi Collection', accountNumber:'' } };
