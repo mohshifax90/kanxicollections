@@ -60,11 +60,8 @@
     .name-actions .heart.saved { color:var(--red); }
     .name-actions .heart:active svg { transform:scale(1.12); }
 
-    .p-price { font-size:1.55rem; font-weight:800; margin:0.55rem 0 0.1rem; }
+    .p-price { font-size:1.55rem; font-weight:800; margin:0.55rem 0 1rem; }
     .p-price .old { font-size:1rem; font-weight:400; color:var(--gray-400); text-decoration:line-through; margin-left:0.5rem; }
-    .p-rating { display:flex; align-items:center; gap:0.35rem; font-size:0.9rem; color:var(--ink); margin-bottom:1.2rem; }
-    .p-rating .star { color:#f5a623; }
-    .p-rating .ct { color:var(--muted); }
 
     .opt { margin-bottom:1.3rem; }
     .opt-label { font-size:0.92rem; margin-bottom:0.6rem; }
@@ -89,23 +86,13 @@
     .swatch.sold { text-decoration:none; }
     .swatch.sold .swatch-lbl { text-decoration:line-through; }
 
-    .divider { height:8px; background:#f5f5f5; margin:0.4rem 0 1.2rem; }
     .deferred-section { content-visibility:auto; contain-intrinsic-size:700px; }
     .sec { padding:0 1rem; }
-    .sec h3 { font-size:0.92rem; font-weight:700; margin-bottom:0.7rem; }
-    .p-desc { font-size:0.9rem; color:var(--gray-600); line-height:1.7; }
-    .p-feats { margin:0.8rem 0 0; padding-left:1.1rem; }
-    .p-feats li { font-size:0.88rem; color:var(--gray-600); line-height:1.9; }
-    .trust { display:flex; flex-wrap:wrap; gap:0.7rem 1.2rem; padding:1.1rem 0 0; }
-    .trust div { display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; color:var(--gray-600); }
-    .trust svg { width:15px; height:15px; }
-
-    .comment { display:flex; gap:0.7rem; padding:0.8rem 0; border-bottom:1px solid var(--line); }
-    .c-av { width:32px; height:32px; border-radius:50%; background:var(--cream); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:700; color:var(--accent); }
-    .c-name { font-size:0.82rem; font-weight:700; }
-    .c-text { font-size:0.85rem; color:var(--gray-600); line-height:1.5; margin-top:0.15rem; }
-    .c-meta { font-size:0.72rem; color:var(--gray-400); margin-top:0.3rem; }
-
+    .detail-block{padding:0 1rem 1rem}
+    .detail-block h3{font-size:0.92rem;font-weight:700;margin-bottom:0.55rem}
+    .detail-copy{font-size:0.9rem;color:var(--gray-600);line-height:1.7}
+    .detail-list{margin-top:0.75rem;padding-left:1.1rem}
+    .detail-list li{font-size:0.88rem;color:var(--gray-600);line-height:1.75}
     .related h3 { font-size:1rem; font-weight:800; margin-bottom:0.9rem; }
     .h-scroll { display:flex; gap:0.8rem; overflow-x:auto; scrollbar-width:none; }
     .h-scroll::-webkit-scrollbar { display:none; }
@@ -175,7 +162,6 @@
       </div>
     </div>
     <div class="p-price" id="pPrice"></div>
-    <div class="p-rating"><span class="star">★</span> <b id="pRate">4.9</b> <span class="ct" id="pCount">· 508</span></div>
 
     <div class="opt" id="shadeOpt" style="display:none">
       <div class="opt-label"><b id="shadeLabel">Shade:</b> <span id="colorSel"></span></div>
@@ -188,35 +174,7 @@
     </div>
   </div>
 
-  <div class="divider hydrate-ready"></div>
-
-  <!-- details -->
-  <div class="sec hydrate-ready">
-    <h3>Details</h3>
-    <p class="p-desc">A beautifully crafted Kanxi piece made from premium materials. Designed for the modern individual who values timeless elegance and everyday comfort.</p>
-    <ul class="p-feats">
-      <li>Premium quality, ethically made</li>
-      <li>Signature Kanxi finishing details</li>
-      <li>Free shipping over MVR 150</li>
-      <li>30-day easy returns</li>
-    </ul>
-    <div class="trust">
-      <div><i data-lucide="truck"></i> Free shipping</div><div><i data-lucide="rotate-ccw"></i> 30-day returns</div>
-      <div><i data-lucide="shield-check"></i> Secure checkout</div><div><i data-lucide="package"></i> Ships 1–3 days</div>
-    </div>
-  </div>
-
-  <div class="divider deferred-section hydrate-ready"></div>
-
-  <!-- reviews -->
-  <div class="sec deferred-section hydrate-ready">
-    <h3>Reviews</h3>
-    <div class="comment"><div class="c-av">S</div><div><p class="c-name">sarah.m</p><p class="c-text">Absolutely love this! Quality is beautiful and fit is perfect ✨</p><p class="c-meta">2d · ♥ 24</p></div></div>
-    <div class="comment"><div class="c-av">J</div><div><p class="c-name">james.t</p><p class="c-text">Exceptional craftsmanship. Sizing runs true. Worth it.</p><p class="c-meta">5d · ♥ 18</p></div></div>
-    <div class="comment"><div class="c-av">P</div><div><p class="c-name">priya.k</p><p class="c-text">Even nicer in person. The colour is gorgeous 😍</p><p class="c-meta">1w · ♥ 31</p></div></div>
-  </div>
-
-  <div class="divider deferred-section hydrate-ready"></div>
+  <div class="detail-block hydrate-ready" id="productDetails"></div>
 
   <!-- related -->
   <div class="sec related deferred-section hydrate-ready">
@@ -247,10 +205,6 @@
   const c = Store.card(sp);
   const imgs = (c.images && c.images.length) ? c.images : [c.img];
 
-  const reviewCounts = { lo:18, hi:240 };
-  const rating = (4.6 + Math.random()*0.4).toFixed(1);
-  const reviews = 20 + Math.floor(Math.random()*230);
-
   let selVar = (sp.variants && sp.variants[0]) || null;
 
   function formatPrice(price, old){
@@ -267,9 +221,20 @@
   mainImg.src = imgs[0];
   mainImg.alt = c.name;
   document.getElementById('pName').textContent = c.name;
-  document.getElementById('pRate').textContent = rating;
-  document.getElementById('pCount').textContent = '· ' + reviews;
   renderPrice();
+  const detailWrap = document.getElementById('productDetails');
+  const detailItems = (sp.details || []).filter(Boolean);
+  if (detailWrap) {
+    if ((sp.description || '').trim() || detailItems.length) {
+      detailWrap.innerHTML = `
+        <h3>Product details</h3>
+        ${(sp.description || '').trim() ? `<p class="detail-copy">${sp.description}</p>` : ''}
+        ${detailItems.length ? `<ul class="detail-list">${detailItems.map(item=>`<li>${item}</li>`).join('')}</ul>` : ''}
+      `;
+    } else {
+      detailWrap.style.display = 'none';
+    }
+  }
   if (!c.old) document.getElementById('ribbon').style.display = 'none';
 
   /* dots + tap to cycle */

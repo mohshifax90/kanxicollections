@@ -593,7 +593,7 @@
   function editProduct(id){
     _pid = id || '';
     const firstCat=Store.list('categories')[0]||{};
-    const p=id?Store.get('products',id):{name:'',brand:'',brandId:'',categoryId:firstCat.id,subId:'',price:'',oldPrice:'',status:'active',tags:[],image:'',images:[],variants:[],variantType:firstCat.variantType||'none'};
+    const p=id?Store.get('products',id):{name:'',brand:'',brandId:'',categoryId:firstCat.id,subId:'',price:'',oldPrice:'',status:'active',tags:[],image:'',images:[],variants:[],variantType:firstCat.variantType||'none',description:'',details:[]};
     _vars=JSON.parse(JSON.stringify(p.variants||[]));
     _imgs=(p.images&&p.images.length)?p.images.slice():(p.image?[p.image]:[]);
     _vtype=p.variantType||'none';
@@ -612,9 +612,11 @@
           <button type="button" onclick="addImgUrl()" class="${btn.light} ${btn.sm}">${ic('plus','w-3.5 h-3.5')} Add</button>
         </div>
         <p class="text-[0.7rem] text-zinc-400 mt-1.5">First image is the primary. Uploads are auto-compressed.</p>`)+
+      fg('align-left','Product description',`<textarea id="p_desc" placeholder="Short product description" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink min-h-[92px]">${esc(p.description||'')}</textarea>`)+
+      fg('list','Product details',`<textarea id="p_details" placeholder="One detail per line" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink min-h-[108px]">${esc((p.details||[]).join('\n'))}</textarea><p class="text-[0.72rem] text-zinc-400 mt-1.5">These show on the product page under Product Details.</p>`)+
       `<div class="flex gap-3"><div class="flex-1">${fg('layout-grid','Category',`<select id="p_cat" onchange="onCatChange()" class="${sel}">${cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.name}</option>`).join('')}</select>`)}</div>
         <div class="flex-1">${fg('list-tree','Sub-category',`<select id="p_sub" onchange="onProductSubChange()" class="${sel}"></select>`)}</div></div>`+
-      `<div class="flex gap-3"><div class="flex-1">${fg('coins','Base price (MVR)',F.input('p_price',p.price,'','number'))}</div><div class="flex-1">${fg('tag','Product status',`<div class="px-3 py-2.5 border border-zinc-200 rounded-lg text-xs text-zinc-500 bg-zinc-50">Customer price comes from the active inventory batch.</div>`)}</div>
+      `<div class="flex gap-3"><div class="flex-1">${fg('tag','Customer price',`<div class="px-3 py-2.5 border border-zinc-200 rounded-lg text-xs text-zinc-500 bg-zinc-50">Customer price comes from the active inventory batch.</div>`)}</div>
         <div class="flex-1">${fg('eye','Status',`<select id="p_status" class="${sel}"><option value="active" ${p.status==='active'?'selected':''}>Active</option><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option></select>`)}</div></div>`+
       fg('tags','Tags',`<div id="p_tags" class="flex flex-wrap gap-2">${ts.map(t=>`<span data-id="${t.id}" onclick="this.classList.toggle('on')" class="tagchip cursor-pointer border border-zinc-300 rounded-full px-3 py-1 text-xs font-semibold ${(p.tags||[]).includes(t.id)?'on':''}">${t.name}</span>`).join('')}</div>`)+
       fg('layers','Variant Type',`<select id="p_vtype" onchange="setVType(this.value)" class="${sel}">${Store.VARIANT_TYPES.map(t=>`<option value="${t.key}" ${t.key===_vtype?'selected':''}>${t.label}</option>`).join('')}</select>`)+
@@ -624,7 +626,7 @@
           <button type="button" id="addVarBtn" onclick="addVar()" class="${btn.light} ${btn.sm}">${ic('plus','w-3.5 h-3.5')} Add option</button>
           ${_pid?`<button type="button" onclick="viewQRCodes('${_pid}')" class="${btn.light} ${btn.sm}">${ic('qr-code','w-3.5 h-3.5')} View / Print QR</button>`:''}
         </div>
-        <p class="text-[0.72rem] text-zinc-400 mt-1.5">Each option has a unique <b>SKU</b> (scan its QR in Inventory). Stock, cost &amp; selling price are set per option in <b>Inventory → Batches</b>.</p></div>`,
+        <p class="text-[0.72rem] text-zinc-400 mt-1.5">Each option saves a unique <b>SKU</b> and optional <b>barcode</b>. Stock, cost &amp; selling price are set per option in <b>Inventory → Batches</b>.</p></div>`,
       `<button onclick="closeModal()" class="${btn.light}">${ic('x','w-4 h-4')} Cancel</button><button onclick="saveProduct('${id||''}')" class="${btn.primary}">${ic('save','w-4 h-4')} Save Product</button>`);
     reloadSubs(p.subId, !id); renderProductBrands(p.brandId||'', p.brand||''); renderVars(); renderImgs();
   }
@@ -688,13 +690,21 @@
     if(optWrap) optWrap.style.display='';
     const inp='px-2 py-1.5 border border-zinc-300 rounded text-xs w-full outline-none focus:border-kink';
     const ph=_vtype==='size'?'M':_vtype==='volume'?'50ml':'Rose';
-    wrap.innerHTML=_vars.map((v,i)=>`<div class="flex gap-1.5 mb-1.5 items-center">
-      <input value="${esc(v.value)}" oninput="_vars[${i}].value=this.value" placeholder="${ph}" class="${inp}" style="max-width:120px"/>
-      ${_vtype==='shade'?`<input type="color" value="${v.color||'#cccccc'}" oninput="_vars[${i}].color=this.value" class="w-9 h-8 rounded border border-zinc-300 cursor-pointer p-0.5"/>`:''}
-      <span class="flex-1 font-mono text-[0.62rem] text-zinc-400 truncate">${v.sku||'SKU on save'}</span>
-      <button type="button" onclick="_vars.splice(${i},1);renderVars()" class="text-zinc-400 hover:text-red-600 grid place-items-center w-7">${ic('trash-2','w-4 h-4')}</button></div>`).join('')
+    wrap.innerHTML=_vars.map((v,i)=>`<div class="border border-zinc-200 rounded-lg p-2.5 mb-2 bg-zinc-50/60">
+      <div class="flex gap-1.5 items-center">
+        <input value="${esc(v.value)}" oninput="_vars[${i}].value=this.value" placeholder="${ph}" class="${inp}" style="max-width:120px"/>
+        ${_vtype==='shade'?`<input type="color" value="${v.color||'#cccccc'}" oninput="_vars[${i}].color=this.value" class="w-9 h-8 rounded border border-zinc-300 cursor-pointer p-0.5"/>`:''}
+        <span class="flex-1 font-mono text-[0.62rem] text-zinc-400 truncate">${v.sku||'SKU on save'}</span>
+        <button type="button" onclick="_vars.splice(${i},1);renderVars()" class="text-zinc-400 hover:text-red-600 grid place-items-center w-7">${ic('trash-2','w-4 h-4')}</button>
+      </div>
+      <div class="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
+        <input value="${esc(v.barcode||'')}" oninput="_vars[${i}].barcode=this.value" placeholder="Barcode" class="px-2 py-1.5 border border-zinc-300 rounded text-xs w-full outline-none focus:border-kink font-mono"/>
+        <button type="button" onclick="scanVariantBarcode(${i})" class="${btn.light} ${btn.sm} shrink-0">${ic('scan-line','w-3.5 h-3.5')} Scan barcode</button>
+      </div>
+    </div>`).join('')
       || '<p class="text-xs text-zinc-400 py-1">No options yet — click "Add option".</p>'; }
-  function addVar(){ _vars.push({id:Store.uid('v_'),value:'',color:_vtype==='shade'?'#cccccc':null}); renderVars(); }
+  function addVar(){ _vars.push({id:Store.uid('v_'),value:'',color:_vtype==='shade'?'#cccccc':null,barcode:''}); renderVars(); }
+  function scanVariantBarcode(i){ startScan(text=>{ _vars[i].barcode=(text||'').trim(); renderVars(); toast('Barcode captured'); }); }
   function saveProduct(id){
     const name=$('#p_name').value.trim(); if(!name){ alert('Product name is required'); return; }
     const subId=$('#p_sub').value; if(!subId){ alert('Select a sub-category'); return; }
@@ -705,17 +715,20 @@
     const brandId=($('#p_brand').value||'').trim();
     const opts = _vtype==='none' ? [] : _vars.filter(v=>(v.value||'').trim()).map(v=>{
       const val=v.value.trim();
-      return { id:v.id||Store.uid('v_'), value:val, color:_vtype==='shade'?(v.color||'#cccccc'):null, sku:Store.skuFor(pid,{value:val}) };
+      return { id:v.id||Store.uid('v_'), value:val, color:_vtype==='shade'?(v.color||'#cccccc'):null, sku:Store.skuFor(pid,{value:val}), barcode:(v.barcode||'').trim() };
     });
     const primary = _imgs[0] || 'https://images.unsplash.com/photo-1594938298603-c8148c4b4e7b?w=600&q=80';
+    const detailLines=$('#p_details').value.split('\n').map(s=>s.trim()).filter(Boolean);
     try {
       Store.upsert('products',{
         id:pid, name,
         brand, brandId:brand&&brandId?brandId:'',
         image:primary, images:_imgs.slice(),
         categoryId:$('#p_cat').value, subId,
-        price:+$('#p_price').value||0, oldPrice:null,
-        status:$('#p_status').value, tags:tg, variantType:_vtype, variants:opts
+        price:(id?((Store.get('products',id)||{}).price||0):0), oldPrice:null,
+        status:$('#p_status').value, tags:tg, variantType:_vtype, variants:opts,
+        description:$('#p_desc').value.trim(),
+        details:detailLines
       });
     } catch(e){ alert('Could not save — storage is full. Try fewer/smaller uploaded images.'); return; }
     closeModal(); products(); toast('Product saved');
@@ -780,7 +793,7 @@
   function syncBatchSku(){ const p=Store.get('products',$('#b_prod').value); const vid=$('#b_var').value; const v=(p&&p.variants||[]).find(x=>x.id===vid)||null; const el=$('#b_sku'); if(el&&p) el.value=Store.skuOfVariant(p,v); }
   function onBatchScan(text){ const el=$('#b_sku'); if(el)el.value=text; resolveBatchSku(text); }
   function resolveBatchSku(sku){
-    const r=Store.findBySku(sku);
+    const r=Store.findByVariantCode(sku);
     if(!r){ toast('No product matches "'+sku+'"'); return; }
     $('#b_prod').value=r.product.id;
     loadBatchVariants(r.variant?r.variant.id:null);

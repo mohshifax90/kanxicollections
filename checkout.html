@@ -130,6 +130,8 @@
     .guest-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
     .login-card{display:grid;gap:.85rem}
     .login-copy{font-size:.85rem;color:#6b7280;line-height:1.45}
+    .otp-phone-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+    .otp-phone-row b{font-size:.92rem;color:#2f2f35}
     .otp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.38rem}
     .otp-grid input{width:100%;height:54px;border:1px solid #e5e7eb;border-radius:16px;text-align:center;font-size:1.1rem;font-weight:700;outline:none;background:#fff;appearance:none;-webkit-appearance:none}
     .otp-grid input:focus{border-color:#4f5cf0;box-shadow:0 0 0 4px rgba(79,92,240,.08)}
@@ -176,11 +178,6 @@
       <div class="sum-row"><span>Shipping</span><span id="oShip">MVR 0</span></div>
       <div class="sum-row total"><span>Total</span><span id="oTotal">MVR 0</span></div>
     </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title"><h2>Shipping</h2></div>
-    <div class="ship-options" id="shipOptions"></div>
   </div>
 
   <div class="section">
@@ -264,6 +261,8 @@
   let selectedAddressId = '';
   let guestDraft = { phone:'', line:'', city:'', atoll:'', postcode:'', country:'Maldives', lat:null, lng:null };
   let checkoutLogin = { step:'phone', phone:'', phoneDigits:'', requestId:null, existingUser:null, verifiedPhone:'', profile:{ name:'', line:'', city:'', atoll:'', postcode:'', country:'Maldives', lat:null, lng:null } };
+  let checkoutOtpVerifyTimer = 0;
+  let checkoutOtpVerifying = false;
   const shippingOptions = [
     { key:'standard', label:'Standard', sub:'3-5 business days', amount:5.95 },
     { key:'expedited', label:'Expedited', sub:'1-3 business days', amount:10.95 }
@@ -379,7 +378,8 @@
     }
   }
   function guestField(icon, label, id, value, placeholder){
-    return `<div class="guest-field"><label><i data-lucide="${icon}" style="width:14px;height:14px"></i>${label}</label><input id="${id}" value="${String(value || '').replace(/"/g,'&quot;')}" placeholder="${placeholder}"></div>`;
+    const isPhone = id === 'guest_phone' || id === 'login_phone';
+    return `<div class="guest-field"><label><i data-lucide="${icon}" style="width:14px;height:14px"></i>${label}</label><input id="${id}" value="${String(value || '').replace(/"/g,'&quot;')}" placeholder="${placeholder}" ${isPhone ? 'maxlength="7" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national"' : ''}></div>`;
   }
   function setSheetButtonLoading(id, loading, text){
     const btn = document.getElementById(id);
@@ -406,12 +406,25 @@
     return data;
   }
   function phoneDigits(value){ return String(value || '').replace(/\D/g,''); }
+  function checkoutPhoneValue(value){ return phoneDigits(value).slice(0, 7); }
+  function checkoutPhoneForApi(value){ const local = checkoutPhoneValue(value); return local.length === 7 ? `960${local}` : local; }
+  function bindPhoneField(id, onChange){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const sync = () => {
+      el.value = checkoutPhoneValue(el.value);
+      if(onChange) onChange(el.value);
+    };
+    el.addEventListener('input', sync);
+    el.addEventListener('change', sync);
+    sync();
+  }
   function renderCheckoutLogin(){
     if(checkoutLogin.step === 'phone'){
       return `
         <div class="login-card">
           <div class="login-copy">Sign in with OTP to use your saved addresses and profile details during checkout.</div>
-          ${guestField('phone','Mobile number','login_phone',checkoutLogin.phone,'+960 7771234')}
+          ${guestField('phone','Mobile number','login_phone',checkoutLogin.phone,'7771234')}
           <button class="save-addr-btn" id="loginSendBtn" type="button" onclick="sendCheckoutOtp()">Send OTP</button>
         </div>
       `;
@@ -419,10 +432,11 @@
     if(checkoutLogin.step === 'otp'){
       return `
         <div class="login-card">
-          <div class="login-copy">Enter the 6-digit code sent to <b>${checkoutLogin.phone}</b>.</div>
+          <div class="login-copy">Enter the 6-digit code sent to your mobile number.</div>
+          <div class="otp-phone-row"><b>${checkoutLogin.phone}</b><button class="inline-link" type="button" onclick="editCheckoutPhone()">Edit</button></div>
           <div class="otp-code-wrap">
             <div class="otp-grid" id="checkoutOtpGrid">
-              ${Array.from({length:6}).map((_,i)=>`<input maxlength="1" inputmode="numeric" pattern="[0-9]*" ${i===0?'autocomplete="one-time-code" name="one-time-code"':''} aria-label="OTP digit ${i+1}"/>`).join('')}
+              ${Array.from({length:6}).map((_,i)=>`<input maxlength="${i===0?6:1}" inputmode="numeric" pattern="[0-9]*" ${i===0?'autocomplete="one-time-code" name="one-time-code"':''} aria-label="OTP digit ${i+1}"/>`).join('')}
             </div>
           </div>
           <button class="save-addr-btn" id="loginVerifyBtn" type="button" onclick="verifyCheckoutOtp()">Verify OTP</button>
@@ -451,11 +465,19 @@
   function mountCheckoutOtpInputs(){
     const inputs = [...document.querySelectorAll('#checkoutOtpGrid input')];
     if(!inputs.length) return;
+    const maybeAutoVerify = () => {
+      const code = inputs.map(inp => phoneDigits(inp.value)).join('').slice(0, 6);
+      clearTimeout(checkoutOtpVerifyTimer);
+      if(code.length === 6 && !checkoutOtpVerifying){
+        checkoutOtpVerifyTimer = setTimeout(() => verifyCheckoutOtp(true), 120);
+      }
+    };
     const fill = (value) => {
       const digits = phoneDigits(value).slice(0, 6).split('');
       inputs.forEach((inp, i)=>{ inp.value = digits[i] || ''; });
       if(digits.length < inputs.length) inputs[digits.length]?.focus();
       else inputs[inputs.length - 1]?.focus();
+      maybeAutoVerify();
     };
     inputs.forEach((inp, i)=>{
       inp.addEventListener('input', ()=>{
@@ -464,6 +486,7 @@
         if(digits.length > 1){ fill(digits); return; }
         inp.value = digits;
         if(inp.value && i < inputs.length - 1) inputs[i+1].focus();
+        maybeAutoVerify();
       });
       inp.addEventListener('keydown', e=>{ if(e.key === 'Backspace' && !inp.value && i > 0) inputs[i-1].focus(); });
       inp.addEventListener('paste', e=>{
@@ -526,10 +549,10 @@
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', syncGuestDraft);
       });
+      bindPhoneField('guest_phone', value => { guestDraft.phone = value; renderAddress(); updatePlaceState(); });
     }else if(addressMode === 'login'){
       if(checkoutLogin.step === 'phone'){
-        const phone = document.getElementById('login_phone');
-        if(phone) phone.addEventListener('input', ()=>{ checkoutLogin.phone = phone.value; });
+        bindPhoneField('login_phone', value => { checkoutLogin.phone = value; });
       }else if(checkoutLogin.step === 'otp'){
         mountCheckoutOtpInputs();
       }else{
@@ -543,14 +566,14 @@
   }
   async function sendCheckoutOtp(){
     const phoneValue = (document.getElementById('login_phone') || {}).value || checkoutLogin.phone;
-    const digits = phoneDigits(phoneValue);
-    if(digits.length < 6) return showToast('Enter a valid mobile number');
-    checkoutLogin.phone = phoneValue.trim();
-    checkoutLogin.phoneDigits = digits;
-    checkoutLogin.existingUser = Store.findUserByPhone(phoneValue) || Store.findUserByPhone(digits);
+    const digits = checkoutPhoneValue(phoneValue);
+    if(digits.length !== 7) return showToast('Enter a valid 7-digit mobile number');
+    checkoutLogin.phone = digits;
+    checkoutLogin.phoneDigits = checkoutPhoneForApi(digits);
+    checkoutLogin.existingUser = Store.findUserByPhone(checkoutLogin.phoneDigits) || Store.findUserByPhone(digits);
     setSheetButtonLoading('loginSendBtn', true, 'Sending...');
     try{
-      const data = await callOtpApi('/api/msgowl-send-otp', { phone_number: digits });
+      const data = await callOtpApi('/api/msgowl-send-otp', { phone_number: checkoutLogin.phoneDigits });
       checkoutLogin.requestId = data.id || checkoutLogin.requestId;
       checkoutLogin.step = 'otp';
       renderAddressSheet();
@@ -573,14 +596,22 @@
       showToast(error.message);
     }
   }
-  async function verifyCheckoutOtp(){
+  function editCheckoutPhone(){
+    checkoutLogin.step = 'phone';
+    clearTimeout(checkoutOtpVerifyTimer);
+    checkoutOtpVerifying = false;
+    renderAddressSheet();
+  }
+  async function verifyCheckoutOtp(auto){
+    if(checkoutOtpVerifying) return;
     const code = [...document.querySelectorAll('#checkoutOtpGrid input')].map(i=>i.value).join('');
-    if(code.length !== 6) return showToast('Enter the 6-digit code');
+    if(code.length !== 6) return auto ? null : showToast('Enter the 6-digit code');
+    checkoutOtpVerifying = true;
     setSheetButtonLoading('loginVerifyBtn', true, 'Verifying...');
     try{
       const data = await callOtpApi('/api/msgowl-verify-otp', { phone_number: checkoutLogin.phoneDigits, code });
       if(data.status !== true) return showToast(data.message || 'Invalid code');
-      checkoutLogin.existingUser = Store.findUserByPhone(checkoutLogin.phone) || Store.findUserByPhone(checkoutLogin.phoneDigits) || checkoutLogin.existingUser;
+      checkoutLogin.existingUser = Store.findUserByPhone(checkoutLogin.phoneDigits) || Store.findUserByPhone(checkoutLogin.phone) || checkoutLogin.existingUser;
       checkoutLogin.verifiedPhone = checkoutLogin.phone;
       if(checkoutLogin.existingUser){
         Store.login(checkoutLogin.existingUser);
@@ -598,6 +629,7 @@
     }catch(error){
       showToast(error.message);
     }finally{
+      checkoutOtpVerifying = false;
       setSheetButtonLoading('loginVerifyBtn', false);
     }
   }
@@ -642,7 +674,7 @@
     if(!checkoutLogin.profile.line.trim()) return showToast('Enter address');
     const user = Store.upsert('users', {
       name:checkoutLogin.profile.name.trim() || 'Kanxi Customer',
-      phone:checkoutLogin.verifiedPhone || checkoutLogin.phone,
+      phone:checkoutLogin.phoneDigits || checkoutPhoneForApi(checkoutLogin.verifiedPhone || checkoutLogin.phone),
       createdAt:Date.now(),
       addresses:[{
         id:Store.uid('a_'),
@@ -676,7 +708,7 @@
     const atoll = document.getElementById('guest_atoll');
     const postcode = document.getElementById('guest_postcode');
     const country = document.getElementById('guest_country');
-    if(phone) guestDraft.phone = phone.value;
+    if(phone) guestDraft.phone = checkoutPhoneValue(phone.value);
     if(line) guestDraft.line = line.value;
     if(city) guestDraft.city = city.value;
     if(atoll) guestDraft.atoll = atoll.value;

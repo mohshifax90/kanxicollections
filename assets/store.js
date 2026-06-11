@@ -60,41 +60,43 @@ const Store = (() => {
       { id:'t4', name:'Limited' }, { id:'t5', name:'Luxury' }, { id:'t6', name:'Clean Beauty' },
     ];
 
-    const V = (vals) => vals.map(v => typeof v==='string' ? { id:uid('v_'), value:v, color:null } : { id:uid('v_'), value:v.value, color:v.color||null });
-    const P = (id,name,brand,categoryId,subId,base,oldPrice,photo,tagIds,variantType,values) => ({
+    const V = (vals) => vals.map(v => typeof v==='string'
+      ? { id:uid('v_'), value:v, color:null, barcode:'' }
+      : { id:uid('v_'), value:v.value, color:v.color||null, barcode:v.barcode||'' });
+    const P = (id,name,brand,categoryId,subId,base,oldPrice,photo,tagIds,variantType,values,description='',details=[]) => ({
       id,name,brand,categoryId,subId,price:base,oldPrice:oldPrice||null,status:'active',tags:tagIds,
-      image:im(photo,600),images:[im(photo,600)],photo,variantType,variants:V(values||[])
+      image:im(photo,600),images:[im(photo,600)],photo,variantType,variants:V(values||[]),description,details
     });
 
     const products = [
       // ── Clothing (size) ──
-      P('cl-001','Tailored Linen Blazer','Kanxi Studio','c_cloth','s1',2910,3545,'photo-1594938298603-c8148c4b4e7b',['t2','t3'],'size',['XS','S','M','L','XL']),
-      P('cl-002','Silk Midi Dress','Kanxi Atelier','c_cloth','s2',3775,null,'photo-1539109136881-3be0616acf4b',['t1'],'size',['XS','S','M','L']),
-      P('cl-003','Wide Leg Trousers','Kanxi Studio','c_cloth','s3',1990,2545,'photo-1551488831-00ddcb6c6bd3',['t2'],'size',['XS','S','M','L','XL']),
-      P('cl-005','Classic Trench Coat','Kanxi Studio','c_cloth','s1',6550,7865,'photo-1572804013309-59a88b7e92f1',['t1'],'size',['S','M','L','XL']),
-      P('cl-006','Linen Co-ord Set','Kanxi Atelier','c_cloth','s2',3010,null,'photo-1469334031218-e382a71b716b',['t3'],'size',['XS','S','M','L']),
-      P('cl-010','Soft Leather Jacket','Kanxi Leather','c_cloth','s1',8940,null,'photo-1548123378-bde4eca81d2d',['t5'],'size',['S','M','L','XL']),
+      P('cl-001','Tailored Linen Blazer','Kanxi Studio','c_cloth','s1',2910,3545,'photo-1594938298603-c8148c4b4e7b',['t2','t3'],'size',['XS','S','M','L','XL'],'Sharp tailoring with a relaxed drape for polished everyday wear.',['Structured shoulders','Breathable linen blend','Fully lined finish']),
+      P('cl-002','Silk Midi Dress','Kanxi Atelier','c_cloth','s2',3775,null,'photo-1539109136881-3be0616acf4b',['t1'],'size',['XS','S','M','L'],'A fluid silk silhouette designed for soft movement and elevated evenings.',['Pure-feel satin touch','Midi length cut','Lightweight all-day comfort']),
+      P('cl-003','Wide Leg Trousers','Kanxi Studio','c_cloth','s3',1990,2545,'photo-1551488831-00ddcb6c6bd3',['t2'],'size',['XS','S','M','L','XL'],'Modern wide-leg tailoring with clean lines and an easy, flattering fall.',['High-rise waist','Soft structured fabric','Easy day-to-night styling']),
+      P('cl-005','Classic Trench Coat','Kanxi Studio','c_cloth','s1',6550,7865,'photo-1572804013309-59a88b7e92f1',['t1'],'size',['S','M','L','XL'],'A timeless trench with crisp detailing and a refined outer layer feel.',['Double-breasted front','Belted waist','Seasonless layering piece']),
+      P('cl-006','Linen Co-ord Set','Kanxi Atelier','c_cloth','s2',3010,null,'photo-1469334031218-e382a71b716b',['t3'],'size',['XS','S','M','L'],'An effortless matching set cut for comfort and understated luxury.',['Breathable linen texture','Relaxed tailored shape','Easy mix-and-match wear']),
+      P('cl-010','Soft Leather Jacket','Kanxi Leather','c_cloth','s1',8940,null,'photo-1548123378-bde4eca81d2d',['t5'],'size',['S','M','L','XL'],'Supple leather with a clean silhouette built for statement layering.',['Soft premium finish','Minimal hardware detailing','Structured modern fit']),
       // ── Skincare (volume) ──
-      P('sk-001','Vitamin C Brightening Serum','Kanxi Glow','c_skin','s4',1048,null,'photo-1620916566398-39f1143ab7be',['t3','t6'],'volume',['30ml','50ml']),
-      P('sk-004','Retinol Night Renewal Cream','Kanxi Glow','c_skin','s5',1356,null,'photo-1556228720-195a672e8a03',['t3','t6'],'volume',['50ml']),
-      P('sk-008','Daily SPF 50 Sunscreen','Kanxi Glow','c_skin','s6',586,740,'photo-1512290923902-8a9f81dc236c',['t2','t6'],'volume',['50ml']),
-      P('sk-002','Deep Hydration Face Cream','Kanxi Glow','c_skin','s5',832,1079,'photo-1608248597279-f99d160bfcbc',['t2','t6'],'volume',['50ml']),
-      P('sk-006','Hyaluronic Acid Toner','Kanxi Glow','c_skin','s4',740,null,'photo-1615397349754-cfa2066a298e',['t1','t6'],'volume',['200ml']),
+      P('sk-001','Vitamin C Brightening Serum','Kanxi Glow','c_skin','s4',1048,null,'photo-1620916566398-39f1143ab7be',['t3','t6'],'volume',['30ml','50ml'],'A daily brightening serum formulated to revive dull skin and support a clear glow.',['Vitamin C support','Light fast-absorbing texture','Suitable for daily layering']),
+      P('sk-004','Retinol Night Renewal Cream','Kanxi Glow','c_skin','s5',1356,null,'photo-1556228720-195a672e8a03',['t3','t6'],'volume',['50ml'],'A nourishing overnight cream that helps smooth texture and support renewal while you sleep.',['Night-use formula','Comforting cream finish','Targets texture and tone']),
+      P('sk-008','Daily SPF 50 Sunscreen','Kanxi Glow','c_skin','s6',586,740,'photo-1512290923902-8a9f81dc236c',['t2','t6'],'volume',['50ml'],'Lightweight broad-spectrum sun care designed for daily protection without heavy residue.',['SPF 50 protection','Invisible lightweight finish','Everyday wear friendly']),
+      P('sk-002','Deep Hydration Face Cream','Kanxi Glow','c_skin','s5',832,1079,'photo-1608248597279-f99d160bfcbc',['t2','t6'],'volume',['50ml'],'A moisture-rich cream that cushions the skin and helps seal in hydration.',['Soft cream texture','Comfort-focused hydration','Ideal for dry or tired skin']),
+      P('sk-006','Hyaluronic Acid Toner','Kanxi Glow','c_skin','s4',740,null,'photo-1615397349754-cfa2066a298e',['t1','t6'],'volume',['200ml'],'A fresh toner that replenishes hydration and preps skin for the rest of your routine.',['Hydrating prep step','Layerable watery texture','Balances and softens']),
       // ── Makeup (shade) ──
-      P('mk-001','Velvet Matte Lipstick','Kanxi Beauty','c_make','s11',690,null,'photo-1586495777744-4413f21062fa',['t3'],'shade',[{value:'Rose',color:'#C46A6A'},{value:'Plum',color:'#7D3C5A'},{value:'Coral',color:'#E5736A'},{value:'Nude',color:'#C8967A'}]),
-      P('mk-002','Luminous Silk Foundation','Kanxi Beauty','c_make','s12',1180,null,'photo-1631214540242-3cd8c4b0b3aa',['t1'],'shade',[{value:'Ivory',color:'#F0D9C0'},{value:'Beige',color:'#E0BE9A'},{value:'Sand',color:'#C99B70'},{value:'Caramel',color:'#A06B43'}]),
-      P('mk-003','Silk Powder Blush','Kanxi Beauty','c_make','s12',540,690,'photo-1599733589046-75e8d9d0e2b9',['t2'],'shade',[{value:'Peach',color:'#F0A98C'},{value:'Berry',color:'#B05070'},{value:'Mauve',color:'#C98CA0'}]),
+      P('mk-001','Velvet Matte Lipstick','Kanxi Beauty','c_make','s11',690,null,'photo-1586495777744-4413f21062fa',['t3'],'shade',[{value:'Rose',color:'#C46A6A'},{value:'Plum',color:'#7D3C5A'},{value:'Coral',color:'#E5736A'},{value:'Nude',color:'#C8967A'}],'A pigment-rich lipstick with a soft matte finish and comfortable wear.',['Velvet matte payoff','Smooth glide application','Curated wearable shades']),
+      P('mk-002','Luminous Silk Foundation','Kanxi Beauty','c_make','s12',1180,null,'photo-1631214540242-3cd8c4b0b3aa',['t1'],'shade',[{value:'Ivory',color:'#F0D9C0'},{value:'Beige',color:'#E0BE9A'},{value:'Sand',color:'#C99B70'},{value:'Caramel',color:'#A06B43'}],'A lightweight complexion base that leaves skin looking even, fresh, and luminous.',['Buildable coverage','Silky skin-like finish','Comfortable all-day wear']),
+      P('mk-003','Silk Powder Blush','Kanxi Beauty','c_make','s12',540,690,'photo-1599733589046-75e8d9d0e2b9',['t2'],'shade',[{value:'Peach',color:'#F0A98C'},{value:'Berry',color:'#B05070'},{value:'Mauve',color:'#C98CA0'}],'A soft-focus powder blush that adds natural-looking color with a refined finish.',['Blendable pigment','Silky powder texture','Soft radiant effect']),
       // ── Bags (none) ──
-      P('bg-001','Structured Leather Tote','Kanxi Leather','c_bags','s7',4934,null,'photo-1584917865442-de89df76afd3',['t1'],'none',[]),
-      P('bg-002','Mini Crossbody Bag','Kanxi Leather','c_bags','s8',2745,3238,'photo-1566150905458-1bf1fc113f0d',['t2'],'none',[]),
-      P('bg-006','Leather Bucket Bag','Kanxi Leather','c_bags','s7',3701,null,'photo-1547949003-9792a18a2601',['t3'],'none',[]),
-      P('bg-010','Leather Weekend Bag','Kanxi Leather','c_bags','s7',6940,8020,'photo-1548036328-c9fa89d128fa',['t5'],'none',[]),
+      P('bg-001','Structured Leather Tote','Kanxi Leather','c_bags','s7',4934,null,'photo-1584917865442-de89df76afd3',['t1'],'none',[],'A refined tote with room for daily essentials and a polished structured shape.',['Premium leather build','Spacious interior','Everyday carry silhouette']),
+      P('bg-002','Mini Crossbody Bag','Kanxi Leather','c_bags','s8',2745,3238,'photo-1566150905458-1bf1fc113f0d',['t2'],'none',[],'A compact crossbody made for light carry and easy all-day styling.',['Hands-free design','Compact daily size','Adjustable strap']),
+      P('bg-006','Leather Bucket Bag','Kanxi Leather','c_bags','s7',3701,null,'photo-1547949003-9792a18a2601',['t3'],'none',[],'A soft bucket profile that balances relaxed style with practical storage.',['Premium leather texture','Roomy interior','Modern relaxed shape']),
+      P('bg-010','Leather Weekend Bag','Kanxi Leather','c_bags','s7',6940,8020,'photo-1548036328-c9fa89d128fa',['t5'],'none',[],'A travel-ready carryall sized for quick escapes and elevated packing.',['Weekend-ready capacity','Structured handles','Luxury finish']),
       // ── Watches (none) ──
-      P('wt-001','Gold Minimalist Watch','Kanxi Time','c_watch','s9',7480,null,'photo-1542496658-e33a6d0d50f6',['t5'],'none',[]),
-      P('wt-004','Rose Gold Dress Watch','Kanxi Time','c_watch','s9',9565,null,'photo-1614164185128-e4ec99c436d7',['t5'],'none',[]),
-      P('wt-003','Chronograph Sport Watch','Kanxi Sport','c_watch','s10',4474,null,'photo-1587836374828-4dbafa94cf0e',['t1'],'none',[]),
-      P('wt-009','Moonphase Complication','Kanxi Time','c_watch','s9',15121,null,'photo-1466685700116-4b62c77f3c27',['t4'],'none',[]),
-      P('wt-002','Classic Silver Timepiece','Kanxi Time','c_watch','s9',5630,6478,'photo-1524592094714-0f0654e20314',['t2'],'none',[]),
+      P('wt-001','Gold Minimalist Watch','Kanxi Time','c_watch','s9',7480,null,'photo-1542496658-e33a6d0d50f6',['t5'],'none',[],'A clean gold-tone watch with a minimal face for understated daily wear.',['Minimal dial design','Polished gold-tone finish','Versatile everyday styling']),
+      P('wt-004','Rose Gold Dress Watch','Kanxi Time','c_watch','s9',9565,null,'photo-1614164185128-e4ec99c436d7',['t5'],'none',[],'An elegant dress watch with warm rose gold tones and a refined presence.',['Dress-ready case profile','Rose gold finish','Refined timeless styling']),
+      P('wt-003','Chronograph Sport Watch','Kanxi Sport','c_watch','s10',4474,null,'photo-1587836374828-4dbafa94cf0e',['t1'],'none',[],'A sporty chronograph built for bold everyday wear and functional detail.',['Sport chronograph face','Statement case design','Active lifestyle appeal']),
+      P('wt-009','Moonphase Complication','Kanxi Time','c_watch','s9',15121,null,'photo-1466685700116-4b62c77f3c27',['t4'],'none',[],'A premium statement timepiece featuring a moonphase complication and classic detailing.',['Complication dial feature','Collector-style presence','Premium finishing details']),
+      P('wt-002','Classic Silver Timepiece','Kanxi Time','c_watch','s9',5630,6478,'photo-1524592094714-0f0654e20314',['t2'],'none',[],'A classic silver watch designed for simple versatility and polished finishing.',['Silver-tone case','Timeless proportions','Clean everyday pairing']),
     ];
 
     // ── Auto SKU per variant ──
@@ -250,6 +252,16 @@ const Store = (() => {
         image:c.image||''
       }));
     }
+    db.products = (db.products||[]).map(p=>({
+      ...p,
+      description:p.description || '',
+      details:Array.isArray(p.details) ? p.details.filter(Boolean) : [],
+      variants:(p.variants||[]).map(v=>({
+        ...v,
+        barcode:v.barcode || '',
+        sku:v.sku || ((p.id && v.value) ? `KNX-${String(p.id).replace(/-/g,'').toUpperCase()}-${String(v.value).toUpperCase().replace(/[^A-Z0-9]+/g,'').slice(0,8)}` : '')
+      }))
+    }));
     if(!db.paymentSettings) db.paymentSettings = defaultPaymentSettings();
     const paymentDefaults = defaultPaymentSettings();
     const savedMethods = Array.isArray(db.paymentSettings.methods) ? db.paymentSettings.methods : [];
@@ -450,12 +462,27 @@ const Store = (() => {
     slug(s){ return (s||'').toString().toUpperCase().replace(/[^A-Z0-9]+/g,'').slice(0,8); },
     skuFor(pid, variant){ const base='KNX-'+String(pid||'').replace(/-/g,'').toUpperCase(); return (variant&&variant.value)?base+'-'+this.slug(variant.value):base; },
     skuOfVariant(p, v){ return (v&&v.sku) || this.skuFor(p.id, v); },
+    barcodeOfVariant(p, v){ return (v&&v.barcode) || ''; },
     findBySku(sku){
       sku=(sku||'').trim().toUpperCase(); if(!sku) return null;
       for(const p of this.list('products')){
         const vs=p.variants||[];
         if(vs.length){ const v=vs.find(x=>this.skuOfVariant(p,x).toUpperCase()===sku); if(v) return {product:p,variant:v}; }
         else if(this.skuFor(p.id,null).toUpperCase()===sku) return {product:p,variant:null};
+      }
+      return null;
+    },
+    findByVariantCode(code){
+      const raw=(code||'').trim();
+      if(!raw) return null;
+      const bySku=this.findBySku(raw);
+      if(bySku) return bySku;
+      for(const p of this.list('products')){
+        const vs=p.variants||[];
+        if(vs.length){
+          const v=vs.find(x=>(x.barcode||'').trim()===raw);
+          if(v) return { product:p, variant:v };
+        }
       }
       return null;
     },
