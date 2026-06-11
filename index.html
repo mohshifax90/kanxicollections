@@ -261,9 +261,10 @@
   function renderMenu(){
     const u = (typeof Store!=='undefined') ? Store.currentUser() : null;
     const initials = u && u.name ? u.name.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase() : '';
+    const menuReturn = encodeURIComponent('index.html?menu=1');
     document.getElementById('menuProfile').innerHTML = u
       ? `<div class="mp-row"><div class="mp-av">${initials||'👤'}</div><div><div class="mp-name">${u.name||'Kanxi Customer'}</div><div class="mp-sub">${u.phone||''}</div></div></div>`
-      : `<div class="mp-row"><div class="mp-av">👤</div><div><div class="mp-name">Welcome</div><div class="mp-sub">Sign in to your account</div></div></div><a class="mp-signin" href="login.html?redirect=account.html">Sign in / Register</a>`;
+      : `<div class="mp-row"><div class="mp-av">👤</div><div><div class="mp-name">Welcome</div><div class="mp-sub">Sign in to your account</div></div></div><a class="mp-signin" href="login.html?redirect=account.html&return=${menuReturn}">Sign in / Register</a>`;
     document.getElementById('menuFoot').innerHTML = u
       ? `<button class="btn-logout" onclick="doLogout()"><i data-lucide="log-out" style="width:18px;height:18px"></i> Logout</button>`
       : '';
@@ -399,6 +400,9 @@
 
   renderHomepage();
   window.addEventListener('kanxi:store-changed', renderHomepage);
+  if (new URLSearchParams(location.search).get('menu') === '1') {
+    requestAnimationFrame(() => openMenu());
+  }
 
   function toggleSave(btn) {
     const on = btn.classList.toggle('saved');

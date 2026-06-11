@@ -124,12 +124,15 @@
     .saved-card.active .saved-check::after{background:#fff}
     .profile-link{margin-top:.9rem;display:inline-flex;align-items:center;gap:.45rem;border:none;background:none;color:#5563f7;font-weight:700;cursor:pointer;padding:0}
     .guest-form{display:grid;gap:.75rem}
+    .guest-panel{display:grid;gap:.75rem;border:1px solid #ececf1;border-radius:18px;padding:.95rem;background:#fff}
+    .guest-panel-title{display:flex;align-items:center;gap:.45rem;font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#6b7280}
     .delivery-options{display:grid;gap:.6rem}
     .delivery-radio{display:flex;align-items:flex-start;gap:.8rem;border:1px solid #e5e7eb;border-radius:16px;padding:.85rem .9rem;background:#fff;cursor:pointer}
     .delivery-radio input{margin-top:.18rem;accent-color:#4f5cf0}
     .delivery-radio b{display:block;font-size:.88rem;color:#2f2f35}
     .delivery-radio span{display:block;font-size:.78rem;color:#6b7280;line-height:1.45;margin-top:.14rem}
     .delivery-extra{display:grid;gap:.75rem;padding-top:.2rem}
+    .guest-fetch{margin-top:-.15rem}
     .guest-field label{display:flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:.38rem}
     .guest-field input{width:100%;border:1px solid #e5e7eb;border-radius:14px;padding:.9rem .95rem;outline:none;background:#fff}
     .guest-field input:focus{border-color:#4f5cf0}
@@ -404,7 +407,7 @@
   }
   function guestField(icon, label, id, value, placeholder){
     const isPhone = id === 'guest_phone' || id === 'login_phone';
-    return `<div class="guest-field"><label><i data-lucide="${icon}" style="width:14px;height:14px"></i>${label}</label><input id="${id}" value="${String(value || '').replace(/"/g,'&quot;')}" placeholder="${placeholder}" ${isPhone ? 'maxlength="7" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national"' : ''}></div>`;
+    return `<div class="guest-field"><label>${label}</label><input id="${id}" value="${String(value || '').replace(/"/g,'&quot;')}" placeholder="${placeholder}" ${isPhone ? 'maxlength="7" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national"' : ''}></div>`;
   }
   function setSheetButtonLoading(id, loading, text){
     const btn = document.getElementById(id);
@@ -555,34 +558,43 @@
     const guestType = guestDraft.deliveryType || 'standard';
     const guestHtml = `
       <div class="guest-form">
-        ${guestField('user-round','Full name','guest_name',guestDraft.name,'Enter full name')}
-        ${guestField('phone','Mobile number','guest_phone',guestDraft.phone,'Enter mobile number')}
-        <div class="guest-field">
-          <label><i data-lucide="truck" style="width:14px;height:14px"></i>Delivery type</label>
+        <div class="guest-panel">
+          <div class="guest-panel-title"><span>Guest Details</span></div>
+          ${guestField('users','Full name','guest_name',guestDraft.name,'Enter full name')}
+          ${guestField('phone','Mobile number','guest_phone',guestDraft.phone,'Enter mobile number')}
+        </div>
+        <div class="guest-panel">
+          <div class="guest-panel-title"><span>Delivery Type</span></div>
           <div class="delivery-options">
             <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="standard" ${guestType==='standard'?'checked':''}><div><b>Address Delivery</b><span>Deliver to the address entered below.</span></div></label>
             <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="speed_boat" ${guestType==='speed_boat'?'checked':''}><div><b>Speed Boat</b><span>Send through speed boat service.</span></div></label>
             <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="boat" ${guestType==='boat'?'checked':''}><div><b>Boat</b><span>Send through regular boat delivery.</span></div></label>
           </div>
         </div>
-        <button class="fetch-btn" type="button" onclick="fetchGuestAddress()"><i data-lucide="locate-fixed" style="width:16px;height:16px"></i><span>Fetch address</span></button>
-        ${guestField('map-pinned','Address line','guest_line',guestDraft.line,'House / street address')}
-        <div class="guest-grid">
-          ${guestField('map','City / Island','guest_city',guestDraft.city,'City / Island')}
-          ${guestField('landmark','Atoll','guest_atoll',guestDraft.atoll,'Atoll')}
-        </div>
-        <div class="guest-grid">
-          ${guestField('mailbox','Postcode','guest_postcode',guestDraft.postcode,'Postcode')}
-          ${guestField('flag','Country','guest_country',guestDraft.country || 'Maldives','Country')}
+        <div class="guest-panel">
+          <div class="guest-panel-title"><span>Delivery Address</span></div>
+          <button class="fetch-btn guest-fetch" type="button" onclick="fetchGuestAddress()"><i data-lucide="locate-fixed" style="width:16px;height:16px"></i><span>Fetch address</span></button>
+          ${guestField('map-pinned','Address line','guest_line',guestDraft.line,'House / street address')}
+          <div class="guest-grid">
+            ${guestField('map','City / Island','guest_city',guestDraft.city,'City / Island')}
+            ${guestField('landmark','Atoll','guest_atoll',guestDraft.atoll,'Atoll')}
+          </div>
+          <div class="guest-grid">
+            ${guestField('mailbox','Postcode','guest_postcode',guestDraft.postcode,'Postcode')}
+            ${guestField('flag','Country','guest_country',guestDraft.country || 'Maldives','Country')}
+          </div>
         </div>
         ${(guestType === 'boat' || guestType === 'speed_boat') ? `
-          <div class="delivery-extra">
-            ${guestField('ship-wheel','Boat name','guest_boat_name',guestDraft.deliveryInfo.boatName,'Boat name')}
-            <div class="guest-grid">
-              ${guestField('phone','Contact number','guest_boat_contact',guestDraft.deliveryInfo.contactNumber,'Contact number')}
-              ${guestField('clock-3','Departure time','guest_boat_departure',guestDraft.deliveryInfo.departureTime,'Departure time')}
+          <div class="guest-panel">
+            <div class="guest-panel-title"><span>${guestType === 'speed_boat' ? 'Speed Boat Info' : 'Boat Info'}</span></div>
+            <div class="delivery-extra">
+              ${guestField('ship-wheel','Boat name','guest_boat_name',guestDraft.deliveryInfo.boatName,'Boat name')}
+              <div class="guest-grid">
+                ${guestField('phone','Contact number','guest_boat_contact',guestDraft.deliveryInfo.contactNumber,'Contact number')}
+                ${guestField('clock-3','Departure time','guest_boat_departure',guestDraft.deliveryInfo.departureTime,'Departure time')}
+              </div>
+              ${guestField('notebook-pen','Note','guest_boat_note',guestDraft.deliveryInfo.note,'Optional note')}
             </div>
-            ${guestField('sticky-note','Note','guest_boat_note',guestDraft.deliveryInfo.note,'Optional note')}
           </div>
         ` : ''}
         <div class="mini-note">Guest checkout uses this name, phone, and delivery details only for the current order.</div>

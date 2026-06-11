@@ -623,6 +623,7 @@ const Store = (() => {
       if(tn.includes('Bestseller')) return {text:'Bestseller',gold:true};
       if(tn.includes('Sale')) return {text:'Sale',gold:false};
       if(tn.includes('New')) return {text:'New',gold:false};
+      if(tn.length) return {text:tn[0],gold:false};
       return null; },
     statusOf(p){ const st=this.stockOf(p), tn=this.tagNames(p.tags||[]);
       if(st===0) return {text:'Out of stock',cls:'low'};
