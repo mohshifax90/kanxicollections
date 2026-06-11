@@ -184,7 +184,6 @@
     <div class="section-title"><h2>Payment</h2></div>
     <div class="ship-card" style="padding:0 1rem 1rem">
       <div class="pay-list" id="paymentList"></div>
-      <pre id="paymentDebug" style="margin-top:.85rem;padding:.8rem;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:.74rem;line-height:1.45;white-space:pre-wrap;word-break:break-word"></pre>
     </div>
     <div class="card-fields" id="cardFields" style="padding-top:.15rem">
       <div class="field"><input type="text" placeholder="Card number" maxlength="19" oninput="fmtCard(this)" value="4242 4242 4242 4242"/></div>
@@ -274,17 +273,6 @@
   function price(n){ return 'MVR ' + (+n || 0).toLocaleString(); }
   function activeMethods(){
     return (paymentSettings.methods||[]).filter(m=>m.enabled!==false);
-  }
-  function setPaymentDebug(extra){
-    const el = document.getElementById('paymentDebug');
-    if(!el) return;
-    const methods = (paymentSettings.methods || []).map(m => `${m.key}:${m.enabled!==false?'on':'off'}`).join(', ') || 'none';
-    el.textContent = [
-      `sync=${paymentSyncState}`,
-      `selected=${selectedPay || 'none'}`,
-      `methods=${methods}`,
-      extra || ''
-    ].filter(Boolean).join('\n');
   }
   function payIcon(key){
     return { card:'credit-card', paypal:'wallet', transfer:'landmark', cod:'banknote' }[key] || 'credit-card';
@@ -784,7 +772,6 @@
         : '<div class="pay-card"><div><div class="pay-name">No payment methods enabled</div><div class="pay-sub">Enable at least one in admin.</div></div></div>';
       selectedPay = '';
       syncPaymentUI();
-      setPaymentDebug('render=no-active-methods');
       return;
     }
     if(!methods.some(m=>m.key===selectedPay)) selectedPay = methods[0].key;
@@ -801,7 +788,6 @@
     document.getElementById('bankName').textContent = paymentSettings.bankTransfer && paymentSettings.bankTransfer.bankName || 'Bank transfer';
     document.getElementById('bankAccount').textContent = paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || 'Add account number in admin to enable transfers.';
     syncPaymentUI();
-    setPaymentDebug(`render=ok active=${methods.map(m=>m.key).join(',')}`);
     icons();
   }
   function selectPay(key){
@@ -964,7 +950,6 @@
   }
   window.addEventListener('kanxi:store-changed', () => {
     paymentSyncState = 'ready';
-    setPaymentDebug('event=store-changed');
     refreshCheckoutFromStore();
   });
   window.addEventListener('kanxi:store-sync', (event) => {
@@ -972,18 +957,13 @@
     if(status === 'loading') paymentSyncState = 'loading';
     if(status === 'loaded' || status === 'saved') paymentSyncState = 'ready';
     if(status === 'error') paymentSyncState = 'ready';
-    setPaymentDebug(`event=store-sync status=${status || 'unknown'}`);
     refreshCheckoutFromStore();
-  });
-  window.addEventListener('error', (event) => {
-    setPaymentDebug(`error=${event.message || 'unknown script error'}`);
   });
   syncAddressDefaults();
   render();
   if(!Store.useLocalStorage){
     Store.syncFromCloud().finally(() => {
       paymentSyncState = 'ready';
-      setPaymentDebug('sync=manual-finish');
       refreshCheckoutFromStore();
     });
   }
