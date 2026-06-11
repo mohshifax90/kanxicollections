@@ -13,7 +13,7 @@
     .ph{display:flex;align-items:center;padding:1rem;border-bottom:1px solid var(--line);}
     .back-btn{width:44px;height:44px;margin-left:-10px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;border-radius:50%;}
     .back-btn:active{background:#f0f0f0;}
-    .back-btn svg{width:25px;height:25px;color:var(--ink);}
+    .back-btn i{width:22px;height:22px;color:var(--ink);}
     .ph h1{flex:1;text-align:center;font-size:1.05rem;font-weight:800;margin-right:34px;}
     .wrap{padding:1.8rem 1.4rem;}
     .brand{text-align:center;margin-bottom:1.8rem;}
@@ -33,16 +33,22 @@
     .btn:disabled{opacity:0.5;cursor:not-allowed;}
     .btn-light{background:var(--gray-100);color:var(--ink);border:1.5px solid var(--gray-200);}
     .btn-light:hover{background:var(--gray-200);}
-    .otp-row{display:flex;gap:0.5rem;justify-content:space-between;margin-bottom:1rem;}
-    .otp-row input{width:100%;aspect-ratio:1/1.1;text-align:center;font-size:1.4rem;font-weight:800;border:1.5px solid var(--gray-200);border-radius:11px;outline:none;font-family:'Inter',sans-serif;}
-    .otp-row input:focus{border-color:var(--black);}
+    .otp-field{position:relative;margin-bottom:1rem;}
+    .otp-row{display:flex;gap:0.5rem;justify-content:space-between;}
+    .otp-row input{width:100%;aspect-ratio:1/1.1;text-align:center;font-size:1.35rem;font-weight:700;border:1.5px solid var(--gray-200);border-radius:14px;outline:none;font-family:'Inter',sans-serif;background:#fff;}
+    .otp-row input:focus{border-color:var(--black);box-shadow:0 0 0 3px rgba(26,24,20,.08);}
+    .otp-autofill{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;left:0;top:0}
     .hint{background:var(--cream);border-radius:10px;padding:0.7rem 0.9rem;font-size:0.82rem;color:var(--gray-600);margin-bottom:1.2rem;text-align:center;}
     .hint b{color:var(--black);}
     .resend{text-align:center;font-size:0.85rem;color:var(--gray-600);margin-top:1rem;}
     .resend a{color:var(--accent);font-weight:600;cursor:pointer;}
     .loc-btn{display:flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;background:var(--cream);border:1.5px solid var(--accent);color:var(--black);border-radius:11px;padding:0.85rem;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:1.1rem;font-family:'Inter',sans-serif;}
     .loc-btn:hover{background:var(--accent);color:#fff;}
-    .loc-btn .pin{font-size:1.1rem;}
+    .loc-btn i{width:16px;height:16px;}
+    .field-grid{display:grid;gap:1.1rem;}
+    .field-icon{position:relative;}
+    .field-icon i{position:absolute;left:.95rem;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--gray-600);}
+    .field-icon input,.field-icon select{padding-left:2.65rem;}
     .gender-row{display:flex;gap:0.5rem;}
     .gender-opt{flex:1;text-align:center;padding:0.8rem;border:1.5px solid var(--gray-200);border-radius:11px;font-size:0.88rem;font-weight:600;cursor:pointer;}
     .gender-opt.on{background:var(--black);color:#fff;border-color:var(--black);}
@@ -57,7 +63,7 @@
 <body>
 <div class="app">
   <div class="ph">
-    <button class="back-btn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="back-btn" onclick="back()" aria-label="Go back"><i data-lucide="chevron-left"></i></button>
     <h1 id="phTitle">Sign in</h1>
   </div>
 
@@ -73,8 +79,14 @@
       <p class="step-sub">Sign in with your mobile number. We'll send you a one-time code.</p>
       <div class="fg"><label>Mobile number</label>
         <div class="phone-row">
-          <select class="cc" id="cc"><option>+960</option><option>+91</option><option>+1</option><option>+44</option><option>+971</option></select>
-          <input id="phone" type="tel" inputmode="numeric" placeholder="777-1234" autocomplete="tel"/>
+          <div class="field-icon">
+            <i data-lucide="phone"></i>
+            <select class="cc" id="cc"><option>+960</option><option>+91</option><option>+1</option><option>+44</option><option>+971</option></select>
+          </div>
+          <div class="field-icon" style="flex:1">
+            <i data-lucide="smartphone"></i>
+            <input id="phone" type="tel" inputmode="numeric" placeholder="777-1234" autocomplete="tel"/>
+          </div>
         </div>
       </div>
       <button class="btn" onclick="sendOtp()">Send OTP</button>
@@ -86,11 +98,16 @@
       <h2 class="step-title">Verify number</h2>
       <p class="step-sub">Enter the 6-digit code sent to <b id="otpPhone"></b>.</p>
       <div class="hint">Enter the verification code sent by SMS.</div>
-      <div class="otp-row" id="otpInputs">
-        <input maxlength="6" inputmode="numeric" autocomplete="one-time-code" name="one-time-code" pattern="[0-9]*"/>
-        <input maxlength="1" inputmode="numeric" pattern="[0-9]*"/><input maxlength="1" inputmode="numeric" pattern="[0-9]*"/>
-        <input maxlength="1" inputmode="numeric" pattern="[0-9]*"/><input maxlength="1" inputmode="numeric" pattern="[0-9]*"/>
-        <input maxlength="1" inputmode="numeric" pattern="[0-9]*"/>
+      <div class="otp-field">
+        <input id="otpAutofill" class="otp-autofill" type="text" inputmode="numeric" autocomplete="one-time-code" name="one-time-code" pattern="[0-9]*"/>
+        <div class="otp-row" id="otpInputs">
+          <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 1"/>
+          <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 2"/>
+          <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 3"/>
+          <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 4"/>
+          <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 5"/>
+          <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 6"/>
+        </div>
       </div>
       <button class="btn" id="verifyBtn" onclick="verifyOtp()">Verify</button>
       <p class="resend">Didn't get it? <a onclick="resendOtp()">Resend code</a></p>
@@ -111,13 +128,21 @@
       <div class="fg"><label>Date of birth</label><input id="pf_dob" type="date"/></div>
 
       <label style="display:block;font-size:0.74rem;letter-spacing:0.05em;text-transform:uppercase;font-weight:700;color:var(--gray-600);margin-bottom:0.45rem;">Address</label>
-      <button class="loc-btn" onclick="useLocation()"><span class="pin">📍</span> <span id="locLabel">Use my current location</span></button>
-      <div class="fg"><input id="ad_line" placeholder="House / Street address"/></div>
-      <div class="phone-row" style="margin-bottom:1.1rem">
-        <input id="ad_city" placeholder="City / Island" style="padding:0.9rem 0.95rem;border:1.5px solid var(--gray-200);border-radius:11px;font-size:1rem;font-family:'Inter',sans-serif;outline:none;width:100%;"/>
-        <input id="ad_post" placeholder="Postcode" style="width:120px;flex-shrink:0;padding:0.9rem 0.95rem;border:1.5px solid var(--gray-200);border-radius:11px;font-size:1rem;font-family:'Inter',sans-serif;outline:none;"/>
+      <button class="loc-btn" onclick="useLocation()"><i data-lucide="locate-fixed"></i><span id="locLabel">Fetch current location</span></button>
+      <div class="field-grid">
+        <div class="fg field-icon"><i data-lucide="map-pinned"></i><input id="ad_line" placeholder="House / Street address"/></div>
+        <div class="phone-row" style="margin-bottom:0">
+          <div class="field-icon" style="flex:1">
+            <i data-lucide="map"></i>
+            <input id="ad_city" placeholder="City / Island" style="padding-top:0.9rem;padding-bottom:0.9rem;border:1.5px solid var(--gray-200);border-radius:11px;font-size:1rem;font-family:'Inter',sans-serif;outline:none;width:100%;"/>
+          </div>
+          <div class="field-icon" style="width:120px;flex-shrink:0">
+            <i data-lucide="mailbox"></i>
+            <input id="ad_post" placeholder="Postcode" style="width:100%;padding-top:0.9rem;padding-bottom:0.9rem;border:1.5px solid var(--gray-200);border-radius:11px;font-size:1rem;font-family:'Inter',sans-serif;outline:none;"/>
+          </div>
+        </div>
+        <div class="fg field-icon" style="margin-bottom:.1rem"><i data-lucide="flag"></i><input id="ad_country" placeholder="Country" value="Maldives"/></div>
       </div>
-      <input id="ad_country" placeholder="Country" value="Maldives" style="width:100%;padding:0.9rem 0.95rem;border:1.5px solid var(--gray-200);border-radius:11px;font-size:1rem;font-family:'Inter',sans-serif;outline:none;margin-bottom:1.2rem;"/>
 
       <button class="btn" onclick="saveProfile()">Save & Continue</button>
       <div class="skip"><a onclick="saveProfile(true)">Skip for now</a></div>
@@ -125,6 +150,7 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/supabase-config.js?v=1"></script>
 <script src="assets/store.js?v=4"></script>
@@ -139,6 +165,7 @@
   function showStep(s){
     ['phone','otp','profile'].forEach(x=>$('#step-'+x).classList.toggle('hide', x!==s));
     $('#phTitle').textContent = s==='phone'?'Sign in':s==='otp'?'Verify':'Your profile';
+    if(window.lucide) lucide.createIcons();
   }
 
   function setButtonLoading(btn, loading, text){
@@ -166,6 +193,7 @@
 
   function clearOtpInputs(){
     otpInputs.forEach(inp=>inp.value='');
+    if($('#otpAutofill')) $('#otpAutofill').value = '';
     otpInputs[0]?.focus();
   }
 
@@ -173,6 +201,7 @@
     const digits = String(value || '').replace(/\D/g,'').slice(0, 6).split('');
     otpInputs.forEach((inp, i)=>{ inp.value = digits[i] || ''; });
     if(digits.length < otpInputs.length) otpInputs[digits.length]?.focus();
+    else otpInputs[otpInputs.length - 1]?.focus();
   }
 
   /* STEP 1 */
@@ -220,6 +249,7 @@
 
   /* OTP input UX */
   const otpInputs = [...document.querySelectorAll('#otpInputs input')];
+  const otpAutofill = $('#otpAutofill');
   otpInputs.forEach((inp,i)=>{
     inp.addEventListener('input',()=>{
       const digits = inp.value.replace(/\D/g,'');
@@ -241,6 +271,10 @@
       }
     });
   });
+  if(otpAutofill){
+    otpAutofill.addEventListener('input', ()=>fillOtpInputs(otpAutofill.value));
+    otpAutofill.addEventListener('change', ()=>fillOtpInputs(otpAutofill.value));
+  }
 
   /* STEP 2 */
   async function verifyOtp(){
@@ -266,10 +300,10 @@
 
   async function useLocation(){
     if(!navigator.geolocation) return showToast('Geolocation not supported');
-    $('#locLabel').textContent = 'Locating…';
+    $('#locLabel').textContent = 'Locating...';
     navigator.geolocation.getCurrentPosition(async pos=>{
       geo = { lat:pos.coords.latitude, lng:pos.coords.longitude };
-      $('#locLabel').textContent = '📍 Located — filling address…';
+      $('#locLabel').textContent = 'Location found - filling address...';
       try{
         const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${geo.lat}&lon=${geo.lng}&zoom=18&addressdetails=1`,{headers:{'Accept':'application/json'}});
         const d = await r.json(); const a = d.address || {};
@@ -277,15 +311,15 @@
         $('#ad_city').value = a.city||a.town||a.village||a.county||'';
         $('#ad_post').value = a.postcode||'';
         $('#ad_country').value = a.country||'Maldives';
-        $('#locLabel').textContent = '✅ Location added';
+        $('#locLabel').textContent = 'Location added';
         showToast('Address auto-filled from location');
       }catch(e){
         $('#ad_line').value = `Near ${geo.lat.toFixed(4)}, ${geo.lng.toFixed(4)}`;
-        $('#locLabel').textContent = '📍 Coordinates saved';
+        $('#locLabel').textContent = 'Coordinates saved';
         showToast('Saved coordinates — please complete address');
       }
     }, err=>{
-      $('#locLabel').textContent = 'Use my current location';
+      $('#locLabel').textContent = 'Fetch current location';
       showToast(err.code===1?'Location permission denied':'Could not get location');
     }, {enableHighAccuracy:true, timeout:10000});
   }
@@ -306,6 +340,7 @@
     showToast(existingUser ? 'Account updated ✓' : 'Account created 🎉');
     setTimeout(()=>location.href=redirect, 700);
   }
+  if(window.lucide) lucide.createIcons();
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
