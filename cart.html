@@ -4,180 +4,188 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kanxi Collection — Shopping Bag</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            ink: '#111827',
+            muted: '#6b7280',
+            line: '#e5e7eb',
+            panel: '#ffffff',
+            page: '#f3f4f6',
+            soft: '#f8fafc',
+            brand: '#4f5cf0',
+            brandDark: '#4250ec'
+          },
+          boxShadow: {
+            shell: '0 0 40px rgba(17,24,39,.08)',
+            card: '0 10px 26px rgba(17,24,39,.04)'
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f3f4f6;--panel:#fff;--soft:#f8fafc;--blue:#4f5cf0;--blue-dark:#4250ec}
-    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
-    a{text-decoration:none;color:inherit}
-    button,input{font:inherit}
-    .app{max-width:480px;margin:0 auto;background:var(--panel);min-height:100vh;padding-bottom:150px;box-shadow:0 0 40px rgba(17,24,39,.08)}
-    .head{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:.75rem;padding:.95rem 1rem;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
-    .icon-btn{width:42px;height:42px;border:none;background:none;border-radius:999px;display:grid;place-items:center;color:var(--ink);cursor:pointer}
-    .icon-btn:active{background:#f3f4f6}
-    .title-wrap{flex:1}
-    .title{font-size:1.02rem;font-weight:800}
-    .subtitle{font-size:.82rem;color:var(--muted);margin-top:.1rem}
-    .list{padding:1rem}
-    .item{display:grid;grid-template-columns:112px 1fr;gap:1rem;padding:1rem;margin-bottom:1rem;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 10px 26px rgba(17,24,39,.04)}
-    .item:last-child{margin-bottom:0}
-    .item img{width:112px;height:112px;border-radius:20px;object-fit:cover;background:var(--soft)}
-    .brand{font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:#94a3b8;font-weight:700}
-    .name{font-size:.94rem;font-weight:500;line-height:1.35;margin-top:.24rem}
-    .meta{font-size:.8rem;color:var(--muted);margin-top:.3rem}
-    .price{font-size:1rem;font-weight:700;margin-top:.7rem}
-    .actions{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin-top:1rem}
-    .qty{display:inline-flex;align-items:center;gap:.2rem;padding:.22rem;border:1px solid var(--line);border-radius:999px;background:#f8fafc}
-    .qty button{width:34px;height:34px;border:none;background:#fff;border-radius:999px;display:grid;place-items:center;cursor:pointer;color:var(--ink);box-shadow:0 1px 2px rgba(17,24,39,.08)}
-    .qty button i{width:15px;height:15px}
-    .qty span{min-width:22px;text-align:center;font-size:.84rem;font-weight:600}
-    .remove{border:none;background:none;color:var(--muted);display:inline-flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.8rem;font-weight:600}
-    .summary{padding:0 1rem 1rem}
-    .summary-card{border:1px solid var(--line);border-radius:24px;padding:1rem;background:#fff}
-    .sum-row{display:flex;align-items:center;justify-content:space-between;font-size:.92rem;padding:.35rem 0;color:var(--muted)}
-    .sum-row.total{margin-top:.55rem;padding-top:.8rem;border-top:1px solid var(--line);font-size:1.05rem;font-weight:800;color:var(--ink)}
-    .promo{display:flex;gap:.6rem;margin-bottom:1rem}
-    .promo input{flex:1;padding:.9rem 1rem;border:1px solid var(--line);border-radius:14px;outline:none}
-    .promo button{padding:.9rem 1rem;border:none;border-radius:14px;background:#111827;color:#fff;font-weight:700;cursor:pointer}
-    .bar{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--line);padding:.9rem 1rem 1rem;z-index:60}
-    .bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
-    .bar-label{font-size:.76rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-    .bar-total{font-size:1.18rem;font-weight:800}
-    .checkout{display:flex;align-items:center;justify-content:center;gap:.55rem;width:100%;border:none;border-radius:18px;background:var(--blue);color:#fff;padding:1rem;font-size:1rem;font-weight:800;cursor:pointer}
-    .checkout:hover{background:var(--blue-dark)}
-    .empty{display:none;padding:5rem 2rem;text-align:center}
-    .empty i{width:52px;height:52px;color:#94a3b8}
-    .empty h2{font-size:1.35rem;font-weight:800;margin:1rem 0 .5rem}
-    .empty p{font-size:.92rem;color:var(--muted);line-height:1.5;margin-bottom:1.3rem}
-    .empty a{display:inline-flex;align-items:center;gap:.5rem;padding:.95rem 1.25rem;border-radius:16px;background:var(--blue);color:#fff;font-weight:800}
+    body { font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
     .toast{position:fixed;bottom:6rem;left:50%;transform:translateX(-50%) translateY(2rem);background:#111827;color:#fff;padding:.8rem 1.2rem;border-radius:12px;font-size:.84rem;z-index:100;opacity:0;transition:.25s}
     .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
-    @media (min-width:520px){body{padding:1.4rem 0}.app{border-radius:28px;min-height:auto}.bar{border-radius:0 0 28px 28px}}
   </style>
 </head>
-<body>
-<div class="app">
-  <div class="head">
-    <button class="icon-btn" onclick="location.href='index.html'" aria-label="Back"><i data-lucide="chevron-left"></i></button>
-    <div class="title-wrap">
-      <div class="title">Shopping bag</div>
-      <div class="subtitle" id="bagCount">0 items</div>
-    </div>
-    <button class="icon-btn" onclick="location.href='checkout.html'" aria-label="Checkout"><i data-lucide="shopping-bag"></i></button>
-  </div>
-
-  <div id="cartContent"></div>
-
-  <div id="emptyState" class="empty">
-    <i data-lucide="shopping-bag"></i>
-    <h2>Your bag is empty</h2>
-    <p>Add a few pieces you love and they’ll wait here for checkout.</p>
-    <a href="index.html"><i data-lucide="arrow-right"></i><span>Start shopping</span></a>
-  </div>
-</div>
-
-<div class="bar" id="checkoutBar" style="display:none">
-  <div class="bar-top">
-    <div>
-      <div class="bar-label">Order total</div>
-      <div class="bar-total" id="barTotal">MVR 0</div>
-    </div>
-  </div>
-  <button class="checkout" onclick="goCheckout(event)"><i data-lucide="shield-check"></i><span>Checkout</span></button>
-</div>
-
-<script src="https://unpkg.com/lucide@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/supabase-config.js?v=1"></script>
-<script src="assets/store.js?v=4"></script>
-<script src="assets/components.js"></script>
-<script>
-  let discount = 0;
-
-  function icons(){ if(window.lucide) lucide.createIcons(); }
-  function money(n){ return 'MVR ' + (+n || 0).toLocaleString(); }
-  function goCheckout(e){
-    if(e) e.preventDefault();
-    if(!refreshCartPrices().length){ showToast('Your bag is empty'); return; }
-    if(typeof Store !== 'undefined' && !Store.currentUser()){
-      showToast('Please sign in to continue');
-      setTimeout(()=>location.href='login.html?redirect=checkout.html', 700);
-      return;
-    }
-    location.href='checkout.html';
-  }
-  function render(){
-    const cart = refreshCartPrices();
-    const content = document.getElementById('cartContent');
-    const empty = document.getElementById('emptyState');
-    const bar = document.getElementById('checkoutBar');
-    const count = cart.reduce((s,i)=>s+i.qty,0);
-    document.getElementById('bagCount').textContent = `${count} ${count===1?'item':'items'}`;
-
-    if(!cart.length){
-      content.innerHTML = '';
-      empty.style.display = 'block';
-      bar.style.display = 'none';
-      icons();
-      return;
-    }
-
-    empty.style.display = 'none';
-    bar.style.display = 'block';
-
-    const items = cart.map((it, idx)=>`
-      <div class="item">
-        <img src="${it.img||''}" alt=""/>
-        <div>
-          <div class="brand">${it.brand || 'Kanxi Collection'}</div>
-          <div class="name">${it.name}</div>
-          <div class="meta">${it.size ? 'Option: '+it.size : 'One Size'}</div>
-          <div class="price">${money(it.price * it.qty)}</div>
-          <div class="actions">
-            <div class="qty">
-              <button onclick="chg(${idx},-1)" aria-label="Decrease"><i data-lucide="minus"></i></button>
-              <span>${it.qty}</span>
-              <button onclick="chg(${idx},1)" aria-label="Increase"><i data-lucide="plus"></i></button>
-            </div>
-            <button class="remove" onclick="rm(${idx})"><i data-lucide="trash-2"></i><span>Remove</span></button>
-          </div>
-        </div>
+<body class="bg-page text-ink">
+  <div class="mx-auto min-h-screen max-w-[480px] bg-panel pb-36 shadow-shell md:my-6 md:rounded-[28px]">
+    <header class="sticky top-0 z-40 flex items-center gap-3 border-b border-line bg-white/95 px-4 py-4 backdrop-blur">
+      <button class="grid h-11 w-11 place-items-center rounded-full text-ink transition active:bg-slate-100" onclick="location.href='index.html'" aria-label="Back">
+        <i data-lucide="chevron-left" class="h-5 w-5"></i>
+      </button>
+      <div class="min-w-0 flex-1">
+        <div class="text-[1.02rem] font-semibold tracking-[-0.01em]">Shopping bag</div>
+        <div class="mt-0.5 text-sm text-muted" id="bagCount">0 items</div>
       </div>
-    `).join('');
+      <button class="grid h-11 w-11 place-items-center rounded-full text-ink transition active:bg-slate-100" onclick="location.href='checkout.html'" aria-label="Checkout">
+        <i data-lucide="shopping-bag" class="h-5 w-5"></i>
+      </button>
+    </header>
 
-    const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
-    const shipping = 0;
-    const tax = Math.round(subtotal * 0.08);
-    const total = subtotal - discount + shipping + tax;
+    <main id="cartContent"></main>
 
-    content.innerHTML = `
-      <div class="list">${items}</div>
-      <div class="summary">
-        <div class="summary-card">
-          <div class="promo">
-            <input id="promo" type="text" placeholder="Promo code (try KANXI10)"/>
-            <button onclick="applyPromo()">Apply</button>
+    <section id="emptyState" class="hidden px-8 py-24 text-center">
+      <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-soft text-slate-400">
+        <i data-lucide="shopping-bag" class="h-7 w-7"></i>
+      </div>
+      <h2 class="mt-4 text-[1.35rem] font-semibold tracking-[-0.01em]">Your bag is empty</h2>
+      <p class="mx-auto mt-2 max-w-xs text-[0.92rem] leading-6 text-muted">Add a few pieces you love and they’ll wait here for checkout.</p>
+      <a href="index.html" class="mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand px-5 py-4 text-sm font-semibold text-white shadow-sm">
+        <i data-lucide="arrow-right" class="h-4 w-4"></i>
+        <span>Start shopping</span>
+      </a>
+    </section>
+  </div>
+
+  <div id="checkoutBar" class="fixed inset-x-0 bottom-0 z-50 mx-auto hidden w-full max-w-[480px] border-t border-line bg-white px-4 pb-4 pt-4 md:rounded-b-[28px]">
+    <div class="mb-3 flex items-center justify-between">
+      <div>
+        <div class="text-[0.72rem] font-medium uppercase tracking-[0.16em] text-muted">Order total</div>
+        <div class="mt-1 text-[1.18rem] font-semibold tracking-[-0.01em]" id="barTotal">MVR 0</div>
+      </div>
+    </div>
+    <button class="flex w-full items-center justify-center gap-2 rounded-[18px] bg-brand px-4 py-4 text-base font-semibold text-white transition hover:bg-brandDark" onclick="goCheckout(event)">
+      <i data-lucide="shield-check" class="h-5 w-5"></i>
+      <span>Checkout</span>
+    </button>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/supabase-config.js?v=1"></script>
+  <script src="assets/store.js?v=4"></script>
+  <script src="assets/components.js"></script>
+  <script>
+    let discount = 0;
+
+    function icons(){ if(window.lucide) lucide.createIcons(); }
+    function money(n){ return 'MVR ' + (+n || 0).toLocaleString(); }
+    function goCheckout(e){
+      if(e) e.preventDefault();
+      if(!refreshCartPrices().length){ showToast('Your bag is empty'); return; }
+      if(typeof Store !== 'undefined' && !Store.currentUser()){
+        showToast('Please sign in to continue');
+        setTimeout(()=>location.href='login.html?redirect=checkout.html', 700);
+        return;
+      }
+      location.href='checkout.html';
+    }
+
+    function render(){
+      const cart = refreshCartPrices();
+      const content = document.getElementById('cartContent');
+      const empty = document.getElementById('emptyState');
+      const bar = document.getElementById('checkoutBar');
+      const count = cart.reduce((s,i)=>s+i.qty,0);
+      document.getElementById('bagCount').textContent = `${count} ${count===1?'item':'items'}`;
+
+      if(!cart.length){
+        content.innerHTML = '';
+        empty.classList.remove('hidden');
+        bar.classList.add('hidden');
+        icons();
+        return;
+      }
+
+      empty.classList.add('hidden');
+      bar.classList.remove('hidden');
+
+      const items = cart.map((it, idx)=>`
+        <article class="grid grid-cols-[112px_minmax(0,1fr)] gap-4 rounded-[24px] border border-line bg-white p-4 shadow-card">
+          <img src="${it.img||''}" alt="${it.name || ''}" class="h-28 w-28 rounded-[20px] bg-soft object-cover"/>
+          <div class="min-w-0">
+            <div class="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-400">${it.brand || 'Kanxi Collection'}</div>
+            <div class="mt-1 text-[0.96rem] font-medium leading-6 text-ink">${it.name}</div>
+            <div class="mt-1.5 text-[0.82rem] text-muted">${it.size ? 'Option: '+it.size : 'One Size'}</div>
+            <div class="mt-3 text-base font-semibold text-ink">${money(it.price * it.qty)}</div>
+            <div class="mt-4 flex items-center justify-between gap-3">
+              <div class="inline-flex items-center gap-1 rounded-full border border-line bg-soft p-1">
+                <button class="grid h-9 w-9 place-items-center rounded-full bg-white text-ink shadow-sm transition active:scale-95" onclick="chg(${idx},-1)" aria-label="Decrease">
+                  <i data-lucide="minus" class="h-4 w-4"></i>
+                </button>
+                <span class="min-w-[26px] text-center text-sm font-medium text-ink">${it.qty}</span>
+                <button class="grid h-9 w-9 place-items-center rounded-full bg-white text-ink shadow-sm transition active:scale-95" onclick="chg(${idx},1)" aria-label="Increase">
+                  <i data-lucide="plus" class="h-4 w-4"></i>
+                </button>
+              </div>
+              <button class="inline-flex items-center gap-1.5 text-[0.82rem] font-medium text-muted transition hover:text-ink" onclick="rm(${idx})">
+                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                <span>Remove</span>
+              </button>
+            </div>
           </div>
-          <div class="sum-row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
-          ${discount ? `<div class="sum-row"><span>Discount</span><span style="color:#0f9f62;font-weight:700">- ${money(discount)}</span></div>` : ''}
-          <div class="sum-row"><span>Shipping</span><span style="color:#0f9f62;font-weight:700">Free</span></div>
-          <div class="sum-row"><span>Tax (8%)</span><span>${money(tax)}</span></div>
-          <div class="sum-row total"><span>Total</span><span>${money(total)}</span></div>
-        </div>
-      </div>`;
+        </article>
+      `).join('');
 
-    document.getElementById('barTotal').textContent = money(total);
-    icons();
-  }
-  function chg(i,d){ const c=getCart(); c[i].qty=Math.max(1,c[i].qty+d); saveCart(c); render(); }
-  function rm(i){ const c=getCart(); c.splice(i,1); saveCart(c); render(); }
-  function applyPromo(){
-    const v=(document.getElementById('promo')?.value || '').toUpperCase().trim();
-    if(v==='KANXI10'){ discount=Math.round(refreshCartPrices().reduce((s,i)=>s+i.price*i.qty,0)*0.1); showToast('10% off applied'); render(); }
-    else showToast('Invalid code');
-  }
-  render();
-</script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
+      const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
+      const shipping = 0;
+      const tax = Math.round(subtotal * 0.08);
+      const total = subtotal - discount + shipping + tax;
+
+      content.innerHTML = `
+        <div class="space-y-4 p-4">${items}</div>
+        <div class="px-4 pb-6">
+          <section class="rounded-[24px] border border-line bg-white p-4">
+            <div class="mb-4 flex gap-2.5">
+              <input id="promo" type="text" placeholder="Promo code (try KANXI10)" class="min-w-0 flex-1 rounded-2xl border border-line px-4 py-3.5 text-[0.95rem] outline-none transition focus:border-slate-400"/>
+              <button onclick="applyPromo()" class="rounded-2xl bg-ink px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800">Apply</button>
+            </div>
+            <div class="space-y-2 text-[0.92rem] text-muted">
+              <div class="flex items-center justify-between"><span>Subtotal</span><span>${money(subtotal)}</span></div>
+              ${discount ? `<div class="flex items-center justify-between"><span>Discount</span><span class="font-semibold text-emerald-600">- ${money(discount)}</span></div>` : ''}
+              <div class="flex items-center justify-between"><span>Shipping</span><span class="font-semibold text-emerald-600">Free</span></div>
+              <div class="flex items-center justify-between"><span>Tax (8%)</span><span>${money(tax)}</span></div>
+            </div>
+            <div class="mt-4 flex items-center justify-between border-t border-line pt-4 text-[1.05rem] font-semibold text-ink">
+              <span>Total</span>
+              <span>${money(total)}</span>
+            </div>
+          </section>
+        </div>`;
+
+      document.getElementById('barTotal').textContent = money(total);
+      icons();
+    }
+
+    function chg(i,d){ const c=getCart(); c[i].qty=Math.max(1,c[i].qty+d); saveCart(c); render(); }
+    function rm(i){ const c=getCart(); c.splice(i,1); saveCart(c); render(); }
+    function applyPromo(){
+      const v=(document.getElementById('promo')?.value || '').toUpperCase().trim();
+      if(v==='KANXI10'){ discount=Math.round(refreshCartPrices().reduce((s,i)=>s+i.price*i.qty,0)*0.1); showToast('10% off applied'); render(); }
+      else showToast('Invalid code');
+    }
+    render();
+  </script>
+  <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>
