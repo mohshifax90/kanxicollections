@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kanxi Collection — Shop</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <meta name="description" content="Shop Kanxi Collection for fashion, beauty, skincare, accessories, and lifestyle products in the Maldives. Discover new arrivals and bestsellers.">
+  <link rel="canonical" href="https://kanxicollection.com/">
+  <link rel="preload" as="image" href="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=640&q=72&auto=format&fit=crop&fm=webp" fetchpriority="high">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -17,7 +17,7 @@
       --ink: #1a1814; --muted: #8b8b8b; --line: #efefef;
     }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Inter', sans-serif; color: var(--ink); background: #e9e9e9; -webkit-font-smoothing: antialiased; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #e9e9e9; -webkit-font-smoothing: antialiased; }
     a { text-decoration: none; color: inherit; }
     ::selection { background: var(--accent); color: #fff; }
 
@@ -71,7 +71,7 @@
     .collection-card:last-child { width: 78%; }
     .collection-card img { width: 100%; height: 100%; object-fit: cover; }
     .collection-card .ov { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 45%); }
-    .collection-card .ctitle { position: absolute; bottom: 1.2rem; left: 1.2rem; right: 1.2rem; color: #fff; font-family: 'Inter', sans-serif; font-size: 1.7rem; font-weight: 400; line-height: 1.1; }
+    .collection-card .ctitle { position: absolute; bottom: 1.2rem; left: 1.2rem; right: 1.2rem; color: #fff; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.7rem; font-weight: 400; line-height: 1.1; }
 
     /* ── SHOP BY BRAND ── */
     .brand-card { flex-shrink:0; width:96px; display:flex; flex-direction:column; align-items:center; gap:0.5rem; cursor:pointer; text-decoration:none; }
@@ -129,7 +129,7 @@
 <div class="app">
 
   <!-- ── SHOP HEADER ── -->
-  <div class="shop-head">
+  <header class="shop-head">
     <button class="icon-btn" title="Back" onclick="history.back()">‹</button>
     <div class="shop-avatar">
       <svg viewBox="415 270 325 375" xmlns="http://www.w3.org/2000/svg">
@@ -149,7 +149,7 @@
       <span class="cart-dot cart-count" style="display:none">0</span>
     </button>
     <button class="icon-btn" title="Menu" onclick="openMenu()">☰</button>
-  </div>
+  </header>
 
   <!-- ── PROFILE / HAMBURGER MENU ── -->
   <div class="menu-bg" id="menuBg" onclick="closeMenu()"></div>
@@ -163,6 +163,7 @@
     <div class="menu-foot" id="menuFoot"></div>
   </div>
 
+  <main id="mainContent">
   <!-- ── SEARCH ── -->
   <div class="search-row">
     <div class="search-box">
@@ -177,23 +178,40 @@
   </div>
 
   <!-- ── HOMEPAGE SECTIONS (CMS-driven) ── -->
-  <div id="homeSections"></div>
+  <div id="homeSections">
+    <div class="section">
+      <div class="section-head"><h2>Collections</h2></div>
+      <div class="h-scroll">
+        <a class="collection-card" href="shop.html?tag=t1">
+          <picture>
+            <source type="image/avif" srcset="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=480&q=68&auto=format&fit=crop&fm=avif 480w, https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=68&auto=format&fit=crop&fm=avif 800w, https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1200&q=68&auto=format&fit=crop&fm=avif 1200w" sizes="(max-width: 520px) 86vw, 360px">
+            <source type="image/webp" srcset="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=480&q=72&auto=format&fit=crop&fm=webp 480w, https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=72&auto=format&fit=crop&fm=webp 800w, https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1200&q=72&auto=format&fit=crop&fm=webp 1200w" sizes="(max-width: 520px) 86vw, 360px">
+            <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=640&q=72&auto=format&fit=crop&fm=webp" alt="New Season" width="640" height="704" loading="eager" fetchpriority="high" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center">
+          </picture>
+          <div class="ov"></div>
+          <div class="ctitle">New<br/>Season</div>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <!-- ── MORE FROM THIS SHOP ── -->
-  <div class="section">
+  <div class="section deferred-section">
     <div class="section-head"><h2>More from this shop</h2><span class="see-all">See all</span></div>
     <div class="grid-2" id="moreGrid"></div>
   </div>
 
   <!-- ── FOOTER ── -->
-  <div class="shop-footer">
+  </main>
+
+  <footer class="shop-footer">
     <div class="flinks">
       <a href="#">About</a><a href="#">Shipping</a><a href="#">Returns</a>
       <a href="#">Help</a><a href="#">Privacy</a><a href="#">Contact</a>
       <a href="admin.html">Admin</a>
     </div>
     <p class="copy">© 2026 Kanxi Collection · Malé, Maldives</p>
-  </div>
+  </footer>
 
 </div>
 
@@ -245,7 +263,7 @@
   .btn-logout:hover{background:#c0392b;color:#fff;}
   .menu-close{position:absolute;top:1rem;left:-44px;width:36px;height:36px;border-radius:50%;background:#fff;border:none;font-size:1.1rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
 </style>
-<script src="https://unpkg.com/lucide@latest"></script>
+<script src="assets/icons.js"></script>
 <script>
   function openCats(){ document.getElementById('catBg').classList.add('show'); document.getElementById('catSheet').classList.add('show'); }
   function closeCats(){ document.getElementById('catBg').classList.remove('show'); document.getElementById('catSheet').classList.remove('show'); }
@@ -275,11 +293,23 @@
 <script src="assets/components.js"></script>
 <script>
   /* ── PRODUCTS — live from admin Store ── */
-  const products = Store.storeProducts().map(p => Store.card(p));
-
   let productImgIndex = 0;
+  const deferWork = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1200 }) : setTimeout(fn, 1));
+  function unsplashSized(url, width, format='webp'){
+    if(!url || url.indexOf('images.unsplash.com/') === -1) return url;
+    const clean = url.split('?')[0];
+    return `${clean}?w=${width}&q=72&auto=format&fit=crop&fm=${format}`;
+  }
+  function responsiveAttrs(url, sizes, width, height, eager){
+    if(url.indexOf('images.unsplash.com/') === -1){
+      return `src="${url}" width="${width}" height="${height}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'} decoding="async" sizes="${sizes}"`;
+    }
+    const src = unsplashSized(url, width > 600 ? 800 : 480, 'webp');
+    const srcset = [320, 480, 640, 800, 1200].map(w => `${unsplashSized(url, w, 'webp')} ${w}w`).join(', ');
+    return `src="${src}" srcset="${srcset}" sizes="${sizes}" width="${width}" height="${height}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'} decoding="async"`;
+  }
   function cardHTML(p) {
-    const imgAttr = imgAttrs('product', productImgIndex++);
+    const imgAttr = imgAttrs('product', productImgIndex++, p.img);
     const old = p.old ? `<span class="old">MVR ${p.old.toLocaleString()}</span>` : '';
     const badge = p.badge ? `<span class="pcard-badge ${p.bgold?'gold':''}">${p.badge}</span>` : '';
     return `<div class="pcard">
@@ -306,16 +336,12 @@
   const section = (title, inner, seeAll) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAll?`<a class="see-all" href="${seeAll}">See all</a>`:''}</div>${inner}</div>`;
   const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   const prodGrid = arr => `<div class="grid-2">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
-  function imgAttrs(kind, index){
+  function imgAttrs(kind, index, url=''){
     if(kind==='collection'){
-      return index===0
-        ? `loading="eager" fetchpriority="high" decoding="sync"`
-        : `loading="lazy" fetchpriority="low" decoding="async"`;
+      return responsiveAttrs(url, '(max-width: 520px) 86vw, 360px', 640, 704, index===0);
     }
-    if(kind==='brand') return `loading="lazy" fetchpriority="low" decoding="async"`;
-    return index < 2
-      ? `loading="eager" fetchpriority="high" decoding="async"`
-      : `loading="lazy" fetchpriority="low" decoding="async"`;
+    if(kind==='brand') return responsiveAttrs(url, '80px', 80, 80, false);
+    return responsiveAttrs(url, '(max-width: 520px) 46vw, 220px', 320, 320, false);
   }
 
   function hpLinkMeta(linkType, linkValue){
@@ -357,7 +383,7 @@
     const img = c.image || meta.image || '';
     const fallback = meta.label || (tag.find(t=>t.id===c.tagId)||{}).name || '';
     return `<a class="collection-card" href="${meta.href}">
-      <img src="${img}" alt="${c.caption||fallback}" ${imgAttrs('collection', i)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
+      <img alt="${c.caption||fallback}" ${imgAttrs('collection', i, img)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
       <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
   }).join('')}</div>`;
 
@@ -365,21 +391,24 @@
   const brandList = Store.allBrands();
   const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map((b, i)=>`
     <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">
-      <div class="brand-logo">${b.logo?`<img src="${b.logo}" alt="${b.name}" ${imgAttrs('brand', i)}/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
+      <div class="brand-logo">${b.logo?`<img alt="${b.name}" ${imgAttrs('brand', i, b.logo)}/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
       <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
     : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
 
-  // 3) Best Sellers (by sales)  4) Offers
-  const best = Store.bestSellers(hp.bestsellers.limit||8);
-  const offers = Store.offers(hp.offers.limit||12);
-
   document.getElementById('homeSections').innerHTML =
     section(hp.collections.title, collHTML) +
-    section(hp.brands.title, brandHTML) +
-    `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
-    (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodGrid(offers))}</div>` : '');
+    section(hp.brands.title, brandHTML);
 
-  document.getElementById('moreGrid').innerHTML = products.map(cardHTML).join('');
+  deferWork(() => {
+    const best = Store.bestSellers(hp.bestsellers.limit||8);
+    const offers = Store.offers(hp.offers.limit||12);
+    document.getElementById('homeSections').insertAdjacentHTML('beforeend',
+      `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
+      (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodGrid(offers))}</div>` : '')
+    );
+    const more = Store.storeProducts().slice(0, 8).map(p => Store.card(p));
+    document.getElementById('moreGrid').innerHTML = more.map(cardHTML).join('');
+  });
 
   function toggleSave(btn) {
     const on = btn.classList.toggle('saved');

@@ -60,3 +60,9 @@ function showToast(msg) {
   window._toastT = setTimeout(() => t.classList.remove('show'), 2600);
 }
 document.addEventListener('DOMContentLoaded', updateCartCount);
+window.addEventListener('kanxi:store-changed', () => {
+  if (window.__kanxiCloudReloaded) return;
+  if (/admin\.html$/i.test(location.pathname)) return;
+  window.__kanxiCloudReloaded = true;
+  setTimeout(() => location.reload(), 60);
+});

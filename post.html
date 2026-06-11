@@ -4,13 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kanxi Collection — Product</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     :root { --black:#1a1814; --white:#fff; --gray-100:#f8f5f1; --gray-200:#ede8e0; --gray-400:#b0a898; --gray-600:#6e6860; --accent:#b89b7a; --cream:#f5ede0; --ink:#1a1814; --muted:#8b8b8b; --line:#efefef; --red:#e0413b; --shop-blue:#4f5cf8; }
-    body { font-family:'Inter',sans-serif; color:var(--ink); background:#e9e9e9; -webkit-font-smoothing:antialiased; }
+    body { font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:#e9e9e9; -webkit-font-smoothing:antialiased; }
     a { text-decoration:none; color:inherit; }
     .app { max-width:480px; margin:0 auto; background:#fff; min-height:100vh; box-shadow:0 0 40px rgba(0,0,0,0.08); padding-bottom:80px; }
     body.pending .hydrate-ready { visibility:hidden; }
@@ -237,7 +234,7 @@
   <button class="btn-buy" onclick="doBuyNow()">Buy now</button>
 </div>
 
-<script src="https://unpkg.com/lucide@latest"></script>
+<script src="assets/icons.js"></script>
 <script src="assets/supabase-config.js?v=1"></script>
 <script src="assets/store.js?v=4"></script>
 <script src="assets/components.js"></script>

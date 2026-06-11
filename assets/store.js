@@ -4,12 +4,16 @@
 ═══════════════════════════════════════════ */
 const Store = (() => {
   const KEY = 'kanxi_db';
+  const CLOUD_CACHE_KEY = 'kanxi_cloud_cache';
   const VERSION = 3;
   const CLOUD_EVENT = 'kanxi:store-changed';
   const CLOUD_STATUS_EVENT = 'kanxi:store-sync';
-  const USE_LOCAL = location.protocol === 'file:' || ['localhost','127.0.0.1','::1'].includes(location.hostname);
+  const IS_FILE = location.protocol === 'file:';
+  const IS_LOCALHOST = ['localhost','127.0.0.1','::1'].includes(location.hostname);
+  const USE_LOCAL = IS_FILE || IS_LOCALHOST;
+  const CAN_SYNC_CLOUD = !IS_FILE;
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
-  const im = (photo, w=600) => `https://images.unsplash.com/${photo}?w=${w}&q=80`;
+  const im = (photo, w=600, format='webp') => `https://images.unsplash.com/${photo}?w=${w}&q=72&auto=format&fit=crop&fm=${format}`;
   let saveTimer = null;
   let lastCloudHash = '';
   let cloudDb = null;
@@ -263,87 +267,91 @@ const Store = (() => {
     return db;
   }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
-  function cloudClient(){
-    const cfg=cloudConfig();
-    if(!window.supabase || !cfg.url || !cfg.publishableKey) return null;
-    if(!window._kanxiSupabaseClient) window._kanxiSupabaseClient = window.supabase.createClient(cfg.url, cfg.publishableKey);
-    return window._kanxiSupabaseClient;
-  }
+  function readCloudCache(){ try{ return JSON.parse(localStorage.getItem(CLOUD_CACHE_KEY)||'null'); }catch(_){ return null; } }
+  function writeCloudCache(db){ try{ localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db)); }catch(_){} }
   function emitSync(status, detail={}){ window.dispatchEvent(new CustomEvent(CLOUD_STATUS_EVENT,{detail:{status,...detail}})); }
   function cloudRow(){ const cfg=cloudConfig(); return { table:cfg.table||'kanxi_site_data', id:cfg.rowId||'main' }; }
-  function cloudRest(method, query='', body){
+  async function cloudFetch(method, query='', body){
     const cfg=cloudConfig(), row=cloudRow();
     if(!cfg.url || !cfg.publishableKey) throw new Error('Missing Supabase config');
-    const xhr = new XMLHttpRequest();
-    xhr.open(method, `${cfg.url}/rest/v1/${row.table}${query}`, false);
-    xhr.setRequestHeader('apikey', cfg.publishableKey);
-    xhr.setRequestHeader('Authorization', `Bearer ${cfg.publishableKey}`);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    if(method==='POST') xhr.setRequestHeader('Prefer', 'resolution=merge-duplicates,return=minimal');
-    xhr.send(body ? JSON.stringify(body) : null);
-    if(xhr.status < 200 || xhr.status >= 300) throw new Error(xhr.responseText || `Supabase ${method} failed`);
-    return xhr.responseText ? JSON.parse(xhr.responseText) : null;
+    const res = await fetch(`${cfg.url}/rest/v1/${row.table}${query}`, {
+      method,
+      headers:{
+        apikey: cfg.publishableKey,
+        Authorization: `Bearer ${cfg.publishableKey}`,
+        'Content-Type': 'application/json',
+        ...(method==='POST' ? { Prefer:'resolution=merge-duplicates,return=minimal' } : {})
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const text = await res.text();
+    if(!res.ok) throw new Error(text || `Supabase ${method} failed`);
+    return text ? JSON.parse(text) : null;
   }
-  function saveCloudNow(db){
+  async function saveCloudNow(db){
     const row=cloudRow();
     const clean=normalize(db);
     cloudDb = clean;
     lastCloudHash = JSON.stringify(clean);
+    writeCloudCache(clean);
     emitSync('saving');
     try{
-      cloudRest('POST', '', { id:row.id, data:clean, updated_at:new Date().toISOString() });
+      await cloudFetch('POST', '', { id:row.id, data:clean, updated_at:new Date().toISOString() });
       emitSync('saved');
     }catch(e){
       console.warn('Kanxi Supabase save failed:', e.message);
       emitSync('error',{message:e.message});
     }
   }
+  let cloudSyncQueued = false;
+  function scheduleCloudSync(force=false){
+    if(!CAN_SYNC_CLOUD || (cloudSyncQueued && !force)) return;
+    cloudSyncQueued = true;
+    const run = () => syncFromCloud().finally(()=>{ cloudSyncQueued = false; });
+    if(window.requestIdleCallback && !force) requestIdleCallback(run, { timeout: 1500 });
+    else setTimeout(run, 1);
+  }
   function loadCloud(force=false){
     if(cloudLoaded && !force) return cloudDb;
-    const row=cloudRow();
-    emitSync('loading');
-    try{
-      const rows = cloudRest('GET', `?id=eq.${encodeURIComponent(row.id)}&select=data,updated_at&limit=1`);
-      cloudDb = normalize(rows && rows[0] && rows[0].data);
-      cloudLoaded = true;
-      lastCloudHash = JSON.stringify(cloudDb);
-      if(!rows || !rows.length) saveCloudNow(cloudDb);
-      emitSync('loaded');
-      return cloudDb;
-    }catch(e){
-      console.warn('Kanxi Supabase load failed:', e.message);
-      cloudDb = normalize(cloudDb || seed());
-      cloudLoaded = true;
-      emitSync('error',{message:e.message});
-      return cloudDb;
-    }
+    const cached = normalize(readCloudCache() || cloudDb || seed());
+    cloudDb = cached;
+    cloudLoaded = true;
+    lastCloudHash = JSON.stringify(cached);
+    emitSync('loaded', { cached:true });
+    scheduleCloudSync(force);
+    return cloudDb;
   }
   function load(){
     if(USE_LOCAL){
       const db=normalize(readLocal());
       writeLocal(db);
+      if(CAN_SYNC_CLOUD) scheduleCloudSync();
       return db;
     }
     return loadCloud();
   }
   async function pushCloud(db){
     if(USE_LOCAL) return;
-    const client=cloudClient(); if(!client){ saveCloudNow(db); return; }
     const row=cloudRow(), raw=JSON.stringify(db);
     if(raw===lastCloudHash) return;
     emitSync('saving');
-    const { error } = await client.from(row.table).upsert({
-      id: row.id,
-      data: db,
-      updated_at: new Date().toISOString()
-    }, { onConflict:'id' });
-    if(error){ console.warn('Kanxi Supabase save failed:', error.message); emitSync('error',{message:error.message}); return; }
+    writeCloudCache(db);
+    try{
+      await cloudFetch('POST', '', {
+        id: row.id,
+        data: db,
+        updated_at: new Date().toISOString()
+      });
+    }catch(error){
+      console.warn('Kanxi Supabase save failed:', error.message);
+      emitSync('error',{message:error.message});
+      return;
+    }
     lastCloudHash = raw;
     emitSync('saved');
   }
   function queueCloudSave(db){
     if(USE_LOCAL) return;
-    if(!cloudClient()) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>pushCloud(db), 400);
   }
@@ -351,20 +359,49 @@ const Store = (() => {
     const clean=normalize(db);
     if(USE_LOCAL){ writeLocal(clean); return; }
     cloudDb = clean;
-    saveCloudNow(clean);
+    writeCloudCache(clean);
+    lastCloudHash = JSON.stringify(clean);
+    queueCloudSave(clean);
   }
   async function syncFromCloud(){
-    if(USE_LOCAL) return { ok:true, local:true };
-    const client=cloudClient(); if(!client) return { ok:false, reason:'missing-client' };
+    if(!CAN_SYNC_CLOUD) return { ok:true, local:true };
     const row=cloudRow();
     emitSync('loading');
-    const { data, error } = await client.from(row.table).select('data,updated_at').eq('id', row.id).maybeSingle();
-    if(error){ console.warn('Kanxi Supabase load failed:', error.message); emitSync('error',{message:error.message}); return { ok:false, error }; }
-    if(!data || !data.data){ await pushCloud(load()); return { ok:true, seeded:true }; }
-    const db=normalize(data.data), cloudRaw=JSON.stringify(db), localRaw=JSON.stringify(load());
+    let data;
+    try{
+      const rows = await cloudFetch('GET', `?id=eq.${encodeURIComponent(row.id)}&select=data,updated_at&limit=1`);
+      data = rows && rows[0];
+    }catch(error){
+      console.warn('Kanxi Supabase load failed:', error.message);
+      emitSync('error',{message:error.message});
+      return { ok:false, error };
+    }
+    if(!data || !data.data){
+      if(!USE_LOCAL){
+        await pushCloud(load());
+        return { ok:true, seeded:true };
+      }
+      emitSync('loaded', { empty:true });
+      return { ok:true, empty:true };
+    }
+    const localDb = USE_LOCAL ? normalize(readLocal()) : load();
+    if(USE_LOCAL) writeLocal(localDb);
+    const db=normalize(data.data), cloudRaw=JSON.stringify(db), localRaw=JSON.stringify(localDb);
     lastCloudHash = cloudRaw;
     if(cloudRaw!==localRaw){
       cloudDb = db;
+      writeCloudCache(db);
+      if(USE_LOCAL) writeLocal(db);
+      try{
+        const session = JSON.parse(sessionStorage.getItem('kanxi_session')||'null') || window._kanxiSession || null;
+        if(session){
+          const nextUser = (db.users||[]).find(u => (session.id && u.id===session.id) || (session.phone && String(u.phone||'').replace(/\D/g,'')===String(session.phone||'').replace(/\D/g,'')));
+          if(nextUser){
+            window._kanxiSession = nextUser;
+            sessionStorage.setItem('kanxi_session', JSON.stringify(nextUser));
+          }
+        }
+      }catch(_){}
       window.dispatchEvent(new CustomEvent(CLOUD_EVENT,{detail:{source:'supabase'}}));
     }
     emitSync('loaded');

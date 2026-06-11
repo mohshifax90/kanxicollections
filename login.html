@@ -27,11 +27,8 @@
       }
     };
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
-    body { font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+    body { font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing:antialiased; }
     .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);background:#1a1814;color:#fff;padding:.8rem 1.4rem;border-radius:10px;font-size:.85rem;z-index:999;opacity:0;transition:all .3s;border-left:3px solid #b89b7a}
     .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
   </style>
@@ -48,7 +45,7 @@
     <div class="px-[1.4rem] pb-10 pt-7">
       <div class="mb-7 text-center">
         <svg viewBox="415 270 325 375" xmlns="http://www.w3.org/2000/svg" class="mx-auto mb-2 h-16"><g transform="translate(0,1254) scale(0.1,-0.1)" stroke="none"><path fill="#1a1814" d="M4477 9643 c-17 -16 -1 -20 91 -26 183 -11 246 -49 285 -171 l22 -71 0 -1290 c0 -1377 1 -1360 -48 -1448 -23 -42 -81 -80 -137 -93 -19 -4 -75 -10 -124 -13 -58 -4 -91 -10 -94 -18 -3 -10 109 -13 537 -13 307 0 542 4 545 9 8 13 -19 21 -73 21 -73 0 -151 27 -186 65 -17 18 -40 57 -51 86 -18 52 -19 95 -22 1334 -2 856 1 1306 8 1360 6 46 21 102 36 132 21 44 34 56 80 79 37 18 78 28 129 33 42 3 76 11 78 16 2 11 -1065 20 -1076 8z"/><g transform="translate(6350,7900) scale(0.78) translate(-6350,-7900)"><path fill="#b89b7a" d="M6540 9635 c0 -11 11 -15 38 -15 47 0 103 -28 121 -61 21 -38 7 -89 -43 -156 -59 -79 -554 -594 -1010 -1050 l-371 -373 81 0 81 0 234 -246 c129 -135 234 -249 234 -252 0 -4 -26 -59 -57 -122 -170 -343 -170 -724 -1 -1065 61 -123 121 -204 227 -310 175 -174 377 -281 656 -346 121 -29 425 -37 568 -15 264 40 518 170 666 340 55 63 106 135 106 148 0 20 -27 5 -49 -27 -33 -49 -157 -165 -227 -212 -266 -181 -601 -236 -926 -154 -385 97 -665 363 -807 765 -78 220 -90 520 -31 752 11 42 22 79 23 81 6 6 225 -220 714 -739 l73 -78 325 0 c196 0 325 4 325 9 0 6 -21 12 -47 16 -139 17 -227 50 -322 119 -60 45 -558 558 -885 913 l-49 53 29 42 c47 70 164 181 249 236 269 176 642 210 967 88 253 -95 464 -300 514 -498 9 -38 21 -68 26 -68 10 0 6 176 -8 362 l-6 77 -47 30 c-169 108 -391 183 -624 212 -123 15 -406 6 -502 -15 -251 -56 -463 -165 -644 -331 l-44 -40 -76 82 c-42 45 -146 157 -231 248 -85 91 -156 172 -158 178 -1 7 271 285 605 618 465 464 626 619 687 659 125 84 213 117 339 129 37 3 69 11 70 16 1 7 -137 11 -395 13 -350 2 -398 0 -398 -13z"/></g></g></svg>
-        <div class="font-display text-[1.1rem] font-bold uppercase tracking-[0.3em]">Kanxi</div>
+        <div class="text-[1.1rem] font-bold uppercase tracking-[0.3em]" style="font-family:Georgia, 'Times New Roman', serif">Kanxi</div>
         <div class="text-[0.6rem] uppercase tracking-[0.28em] text-muted">— Collection —</div>
       </div>
 
@@ -147,8 +144,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/icons.js"></script>
   <script src="assets/supabase-config.js?v=1"></script>
   <script src="assets/store.js?v=4"></script>
   <script>
