@@ -60,13 +60,8 @@ function showToast(msg) {
   window._toastT = setTimeout(() => t.classList.remove('show'), 2600);
 }
 document.addEventListener('DOMContentLoaded', updateCartCount);
-function shouldAutoReloadOnStoreChange() {
-  const page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
-  return /^(index|shop|post)\.html$/.test(page) || location.pathname === '/' || location.pathname === '';
-}
 window.addEventListener('kanxi:store-changed', () => {
-  if (window.__kanxiCloudReloaded) return;
-  if (!shouldAutoReloadOnStoreChange()) return;
-  window.__kanxiCloudReloaded = true;
-  setTimeout(() => location.reload(), 60);
+  refreshCartPrices();
+  updateCartCount();
+  scheduleLucideRefresh();
 });

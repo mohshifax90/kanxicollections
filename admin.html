@@ -123,15 +123,18 @@
   .tagchip.on{background:#1a1814;color:#fff;border-color:#1a1814;}
 </style>
 
-<!-- ── QR SCAN OVERLAY ── -->
+<!-- ── QR / BARCODE SCAN OVERLAY ── -->
 <div id="scanOverlay" class="hidden fixed inset-0 bg-black/80 z-[60] flex-col items-center justify-center p-4">
   <p class="text-white font-semibold mb-3">Point camera at the variant QR / barcode</p>
-  <div id="qr-reader" class="w-full max-w-sm rounded-xl overflow-hidden bg-black"></div>
+  <div class="w-full max-w-sm rounded-xl overflow-hidden bg-black border border-white/10">
+    <video id="scanPreview" class="w-full aspect-[3/4] object-cover bg-black" muted playsinline></video>
+  </div>
+  <p id="scanStatus" class="mt-3 text-center text-sm text-white/70">Starting camera…</p>
   <button onclick="stopScan()" class="mt-4 px-5 py-2.5 rounded-lg bg-white text-kink font-semibold">Cancel</button>
 </div>
 
 <script src="https://unpkg.com/lucide@latest"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/@zxing/browser@latest"></script>
 <script src="assets/supabase-config.js?v=1"></script>
 <script src="assets/store.js?v=7"></script>
 <script>
@@ -164,18 +167,74 @@
   /* ── QR image (display) ── */
   const qrImg = (data,size=140)=>`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=6&data=${encodeURIComponent(data)}`;
 
-  /* ── QR scanner (camera) ── */
-  let _scanTarget=null;
-  function startScan(cb){
-    if(typeof Html5Qrcode==='undefined'){ toast('Scanner library not loaded'); return; }
+  /* ── ZXing scanner (camera) ── */
+  let _scanTarget=null, _scanReader=null, _scanControls=null;
+  function setScanStatus(text){ const el=document.getElementById('scanStatus'); if(el) el.textContent=text; }
+  async function startScan(cb){
+    if(!window.ZXingBrowser || !window.ZXingBrowser.BrowserMultiFormatReader){ toast('Scanner library not loaded'); return; }
     _scanTarget=cb||null;
-    document.getElementById('scanOverlay').classList.remove('hidden');
-    document.getElementById('scanOverlay').classList.add('flex');
-    window._qr=new Html5Qrcode('qr-reader');
-    window._qr.start({facingMode:'environment'},{fps:10,qrbox:220},(text)=>{ const t=text; stopScan(); if(_scanTarget)_scanTarget(t); }, ()=>{})
-      .catch(e=>{ toast('Camera unavailable — type SKU manually'); stopScan(); });
+    const overlay=document.getElementById('scanOverlay');
+    const preview=document.getElementById('scanPreview');
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    setScanStatus('Starting camera…');
+    try{
+      if(_scanControls && typeof _scanControls.stop==='function'){
+        try{ _scanControls.stop(); }catch(_e){}
+      }
+      if(_scanReader && typeof _scanReader.reset==='function'){
+        try{ _scanReader.reset(); }catch(_e){}
+      }
+      _scanReader = new ZXingBrowser.BrowserMultiFormatReader();
+      const constraints = { video:{ facingMode:{ ideal:'environment' } } };
+      _scanControls = await _scanReader.decodeFromConstraints(constraints, preview, (result, error, controls) => {
+        if(controls) _scanControls = controls;
+        if(result && result.getText){
+          const text = String(result.getText() || '').trim();
+          if(text){
+            setScanStatus('Code detected');
+            const done = _scanTarget;
+            stopScan();
+            if(done) done(text);
+            return;
+          }
+        }
+        if(error && error.name && error.name !== 'NotFoundException'){
+          setScanStatus('Trying to read barcode…');
+        }
+      });
+      setScanStatus('Point camera at SKU QR or barcode');
+    }catch(e){
+      setScanStatus('Camera unavailable');
+      toast('Camera unavailable — type SKU manually');
+      stopScan();
+    }
   }
-  function stopScan(){ const o=document.getElementById('scanOverlay'); if(window._qr){ window._qr.stop().then(()=>window._qr.clear()).catch(()=>{}); window._qr=null; } o.classList.add('hidden'); o.classList.remove('flex'); }
+  function stopScan(){
+    const overlay=document.getElementById('scanOverlay');
+    const preview=document.getElementById('scanPreview');
+    if(_scanControls && typeof _scanControls.stop==='function'){
+      try{ _scanControls.stop(); }catch(_e){}
+    }
+    if(_scanReader && typeof _scanReader.reset==='function'){
+      try{ _scanReader.reset(); }catch(_e){}
+    }
+    _scanControls=null;
+    _scanReader=null;
+    if(preview){
+      try{
+        if(preview.srcObject){
+          preview.srcObject.getTracks().forEach(track=>track.stop());
+        }
+      }catch(_e){}
+      preview.srcObject=null;
+      preview.removeAttribute('src');
+      preview.load?.();
+    }
+    setScanStatus('Starting camera…');
+    overlay.classList.add('hidden');
+    overlay.classList.remove('flex');
+  }
 
   /* ── view/print variant QR codes for a product ── */
   function viewQRCodes(pid){
