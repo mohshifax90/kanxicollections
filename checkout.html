@@ -185,7 +185,7 @@
     <div class="ship-card" style="padding:0 1rem 1rem">
       <div class="pay-list" id="paymentList"></div>
     </div>
-    <div class="card-fields show" id="cardFields" style="padding-top:.15rem">
+    <div class="card-fields" id="cardFields" style="padding-top:.15rem">
       <div class="field"><input type="text" placeholder="Card number" maxlength="19" oninput="fmtCard(this)" value="4242 4242 4242 4242"/></div>
       <div class="frow">
         <div class="field"><input type="text" placeholder="MM / YY" maxlength="7" oninput="fmtExp(this)" value="12 / 28"/></div>
@@ -253,7 +253,7 @@
 <script src="assets/store.js?v=7"></script>
 <script src="assets/components.js"></script>
 <script>
-  let selectedPay = 'card';
+  let selectedPay = '';
   let transferSlip = '';
   let paymentSettings = { methods:[], bankTransfer:{ bankName:'Kanxi Collection', accountNumber:'' } };
   let paymentSyncState = Store.useLocalStorage ? 'ready' : 'loading';
