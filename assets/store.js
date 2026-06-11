@@ -26,6 +26,7 @@ const Store = (() => {
   const im = () => BLANK_IMAGE;
   let saveTimer = null;
   let lastCloudHash = '';
+  let pendingCloudHash = '';
   let cloudDb = null;
   let cloudLoaded = false;
   let cloudBootTimer = null;
@@ -319,15 +320,18 @@ const Store = (() => {
   function cloudRow(){ const cfg=cloudConfig(); return { table:cfg.table||'kanxi_site_data', id:cfg.rowId||'main' }; }
   async function saveCloudNow(db){
     const row=cloudRow();
-    const clean=normalize(db);
+    const clean=normalize(db), raw=JSON.stringify(clean);
     cloudDb = clean;
-    lastCloudHash = JSON.stringify(clean);
     writeCloudCache(clean);
     emitSync('saving');
+    pendingCloudHash = raw;
     try{
       await cloudFetch('POST', '', { id:row.id, data:clean, updated_at:new Date().toISOString() });
+      lastCloudHash = raw;
+      pendingCloudHash = '';
       emitSync('saved');
     }catch(e){
+      pendingCloudHash = '';
       console.warn('Kanxi Supabase save failed:', e.message);
       emitSync('error',{message:e.message});
     }
@@ -432,9 +436,10 @@ const Store = (() => {
   async function pushCloud(db){
     if(USE_LOCAL) return;
     const row=cloudRow(), raw=JSON.stringify(db);
-    if(raw===lastCloudHash) return;
+    if(raw===lastCloudHash && raw!==pendingCloudHash) return;
     emitSync('saving');
     writeCloudCache(db);
+    pendingCloudHash = raw;
     try{
       await cloudFetch('POST', '', {
         id: row.id,
@@ -442,11 +447,13 @@ const Store = (() => {
         updated_at: new Date().toISOString()
       });
     }catch(error){
+      pendingCloudHash = '';
       console.warn('Kanxi Supabase save failed:', error.message);
       emitSync('error',{message:error.message});
       return;
     }
     lastCloudHash = raw;
+    pendingCloudHash = '';
     emitSync('saved');
   }
   function queueCloudSave(db){
@@ -459,7 +466,6 @@ const Store = (() => {
     if(USE_LOCAL){ writeLocal(clean); return; }
     cloudDb = clean;
     writeCloudCache(clean, 'full');
-    lastCloudHash = JSON.stringify(clean);
     queueCloudSave(clean);
   }
   function saveNow(db){
@@ -470,7 +476,6 @@ const Store = (() => {
     }
     cloudDb = clean;
     writeCloudCache(clean);
-    lastCloudHash = JSON.stringify(clean);
     return saveCloudNow(clean).then(()=>clean);
   }
   async function syncFromCloud(){
@@ -496,7 +501,11 @@ const Store = (() => {
     }
     const localDb = USE_LOCAL ? normalize(readLocal()) : load();
     if(USE_LOCAL) writeLocal(localDb);
-    const db=normalize(data.data), cloudRaw=JSON.stringify(db), localRaw=JSON.stringify(localDb);
+    const db=normalize(data.data), cloudRaw=JSON.stringify(db), localRaw=JSON.stringify(localDb), liveRaw=JSON.stringify(cloudDb||localDb);
+    if(pendingCloudHash && cloudRaw!==pendingCloudHash && liveRaw===pendingCloudHash){
+      emitSync('loaded', { pending:true });
+      return { ok:true, pending:true };
+    }
     lastCloudHash = cloudRaw;
     if(cloudRaw!==localRaw){
       cloudDb = db;
@@ -598,6 +607,20 @@ const Store = (() => {
     stockOf(p){ const id=typeof p==='string'?p:p.id; return this.batchesOf(id).reduce((s,b)=>s+(+b.stock||0),0); },
     stockOfVariant(pid,vid){ return this.batchesOf(pid).filter(b=>b.variantId===vid).reduce((s,b)=>s+(+b.stock||0),0); },
     priceOf(p){
+      const variants = p.variants || [];
+      if(variants.length){
+        const activePrices = variants
+          .map(v => this.activeBatchOf(p.id, v.id))
+          .filter(Boolean)
+          .map(b => +b.sellingPrice)
+          .filter(n => n > 0);
+        if(activePrices.length) return Math.min(...activePrices);
+        const anyVariantPrices = this.batchesOf(p.id)
+          .filter(b => b.variantId)
+          .map(b => +b.sellingPrice)
+          .filter(n => n > 0);
+        if(anyVariantPrices.length) return Math.min(...anyVariantPrices);
+      }
       const active=this.activeBatchOf(p.id, null);
       if(active && +active.sellingPrice>0) return +active.sellingPrice;
       const any=this.batchesOf(p.id).map(b=>+b.sellingPrice).filter(n=>n>0);

@@ -221,21 +221,26 @@
   const currentSub = subId ? Store.get('subcategories', subId) : null;
 
   /* base items + page copy depending on mode (tag / brand / category) */
-  let baseItems, meta;
-  if (tagId) {
-    const t = Store.list('tags').find(x=>x.id===tagId) || {name:'Collection'};
-    baseItems = Store.productsByTag(tagId);
-    meta = { title:t.name, desc:`Shop the ${t.name} edit — handpicked pieces from across the Kanxi Collection.` };
-  } else if (brandQ) {
-    baseItems = Store.productsByBrand(brandQ);
-    meta = { title:brandQ, desc:`Explore ${brandQ} — curated styles available at Kanxi Collection.` };
-  } else if (currentCategory && currentSub && currentSub.categoryId===currentCategory.id) {
-    baseItems = Store.cardsBySub(currentSub.id);
-    meta = { title:currentSub.name, desc:`Shop ${currentSub.name} from ${currentCategory.name} — curated pieces available at Kanxi Collection.` };
-  } else {
-    baseItems = Store.cardsBySlug(cat);
-    meta = cats[cat] || { title:(Store.categoryBySlug(cat)||{}).name || 'Shop', desc:'Discover the Kanxi Collection edit — curated quality, timeless style.' };
+  let baseItems = [], meta = null, SIZES = [], COLORS = [];
+  function refreshBaseItems(){
+    if (tagId) {
+      const t = Store.list('tags').find(x=>x.id===tagId) || {name:'Collection'};
+      baseItems = Store.productsByTag(tagId);
+      meta = { title:t.name, desc:`Shop the ${t.name} edit — handpicked pieces from across the Kanxi Collection.` };
+    } else if (brandQ) {
+      baseItems = Store.productsByBrand(brandQ);
+      meta = { title:brandQ, desc:`Explore ${brandQ} — curated styles available at Kanxi Collection.` };
+    } else if (currentCategory && currentSub && currentSub.categoryId===currentCategory.id) {
+      baseItems = Store.cardsBySub(currentSub.id);
+      meta = { title:currentSub.name, desc:`Shop ${currentSub.name} from ${currentCategory.name} — curated pieces available at Kanxi Collection.` };
+    } else {
+      baseItems = Store.cardsBySlug(cat);
+      meta = cats[cat] || { title:(Store.categoryBySlug(cat)||{}).name || 'Shop', desc:'Discover the Kanxi Collection edit — curated quality, timeless style.' };
+    }
+    SIZES = [...new Set(baseItems.flatMap(p=>p.sizes))];
+    COLORS = [...new Set(baseItems.flatMap(p=>p.colors))];
   }
+  refreshBaseItems();
   const activeKey = tagId||brandQ ? '' : (subId || cat);
 
   document.title = 'Kanxi — ' + meta.title;
@@ -256,8 +261,6 @@
 
   /* ── FILTER + SORT STATE ── */
   var state = { sort:'suggested', price:null, onSale:false, inStock:false, sizes:[], colors:[] };
-  const SIZES = [...new Set(baseItems.flatMap(p=>p.sizes))];
-  const COLORS = [...new Set(baseItems.flatMap(p=>p.colors))];
   const PRICE_BANDS = [['Under MVR 1,000',0,1000],['MVR 1,000 – 3,000',1000,3000],['MVR 3,000 – 6,000',3000,6000],['Over MVR 6,000',6000,1e9]];
 
   function applyFilters(){
@@ -337,6 +340,10 @@
   function closeSheet(){ document.getElementById('sheetBg').classList.remove('show'); document.getElementById('sheet').classList.remove('show'); }
 
   renderGrid();
+  window.addEventListener('kanxi:store-changed', () => {
+    refreshBaseItems();
+    renderGrid();
+  });
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
