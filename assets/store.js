@@ -586,6 +586,7 @@ const Store = (() => {
   const api = {
     ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, uid, im, BLANK_IMAGE,
     useLocalStorage: USE_LOCAL,
+    phoneKey(value){ return String(value || '').replace(/\D/g,''); },
     all(){ return load(); },
     reset(){ const db=normalize(seed()); save(db); return db; },
     syncFromCloud,
@@ -822,7 +823,10 @@ const Store = (() => {
         try{ sessionStorage.removeItem('kanxi_session'); }catch(_){}
       }
     },
-    findUserByPhone(phone){ return (load().users||[]).find(u=>u.phone.replace(/\D/g,'')===phone.replace(/\D/g,'')); },
+    findUserByPhone(phone){
+      const key = this.phoneKey(phone);
+      return (load().users||[]).find(u=>this.phoneKey(u.phone)===key);
+    },
   };
   return api;
 })();

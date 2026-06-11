@@ -196,6 +196,7 @@
     label:t=>`<label class="block text-xs font-bold tracking-wide uppercase text-kgray mb-1.5">${t}</label>`,
     fg:(label,inner)=>`<div class="mb-4">${F.label(label)}${inner}</div>`,
   };
+  const phoneKey = value => Store.phoneKey ? Store.phoneKey(value) : String(value || '').replace(/\D/g,'');
   const btn = { primary:'inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-kink text-white hover:bg-kacc transition',
                 light:'inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold bg-zinc-100 text-kink border border-zinc-200 hover:bg-zinc-200 transition',
                 sm:'!px-3 !py-1.5 text-xs', danger:'!bg-red-50 text-red-600 hover:!bg-red-600 hover:text-white transition' };
@@ -939,12 +940,12 @@
     content.innerHTML = card('Users', `<span class="text-sm text-zinc-500">${us.length} registered</span>`,
       `<table class="w-full">${TH(['Name','Mobile','Gender','DOB','Addr','Orders','Joined',''])}<tbody>
       ${us.map(u=>`<tr class="hover:bg-zinc-50">${td('<b>'+(u.name||'<span class=text-zinc-400>No name</span>')+'</b>')}${td(u.phone,'font-mono text-xs')}${td(u.gender||'—')}${td(u.dob||'—')}
-        ${td((u.addresses||[]).length)}${td(Store.list('orders').filter(o=>o.userPhone===u.phone).length)}${td(u.createdAt?timeAgo(u.createdAt):'—','text-zinc-400')}
+        ${td((u.addresses||[]).length)}${td(Store.list('orders').filter(o=>phoneKey(o.userPhone)===phoneKey(u.phone)).length)}${td(u.createdAt?timeAgo(u.createdAt):'—','text-zinc-400')}
         ${td(`<button onclick="userDetail('${u.id}')" class="${btn.light} ${btn.sm}">${ic('eye','w-3.5 h-3.5')} View</button>`)}</tr>`).join('')||empty(8)}
       </tbody></table>`);
   }
   function userDetail(id){
-    const u=Store.get('users',id), os=Store.list('orders').filter(o=>o.userPhone===u.phone);
+    const u=Store.get('users',id), os=Store.list('orders').filter(o=>phoneKey(o.userPhone)===phoneKey(u.phone));
     openModal(u.name||'User',
       `<div class="flex gap-3 mb-3">${F.fg('Full name',`<div class="text-sm">${u.name||'—'}</div>`)}${F.fg('Mobile',`<div class="text-sm font-mono">${u.phone}</div>`)}</div>
       <div class="flex gap-3 mb-3">${F.fg('Gender',`<div class="text-sm">${u.gender||'—'}</div>`)}${F.fg('Date of birth',`<div class="text-sm">${u.dob||'—'}</div>`)}</div>

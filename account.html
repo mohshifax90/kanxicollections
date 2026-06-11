@@ -113,6 +113,7 @@
   const $ = s => document.querySelector(s);
   const MVR = n => 'MVR ' + (+n).toLocaleString();
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const phoneKey = value => Store.phoneKey ? Store.phoneKey(value) : String(value || '').replace(/\D/g,'');
   let u = Store.currentUser();
   let editingAddressId = null;
   let geoDraft = null;
@@ -130,7 +131,7 @@
   function syncUser(){
     const session = Store.currentUser();
     const users = Store.list('users');
-    u = users.find(x => session && x.id===session.id) || users.find(x => session && x.phone===session.phone) || session;
+    u = users.find(x => session && x.id===session.id) || users.find(x => session && phoneKey(x.phone)===phoneKey(session.phone)) || session;
     if(!u) location.href = 'login.html?redirect=account.html';
     Store.login(u);
   }
@@ -371,7 +372,8 @@
     showToast('Address saved');
   }
   function renderOrders(){
-    const orders = Store.list('orders').filter(o=>o.userPhone===u.phone).slice().reverse();
+    const currentPhone = phoneKey(u.phone);
+    const orders = Store.list('orders').filter(o=>phoneKey(o.userPhone)===currentPhone).slice().reverse();
     if(!orders.length){
       $('#panel-orders').innerHTML = `<div class="empty"><div style="font-size:2rem;margin-bottom:.5rem">📦</div>No orders yet.<br/><a href="index.html" style="color:#4f5cf0;font-weight:700">Start shopping</a></div>`;
       return;
@@ -419,6 +421,17 @@
   renderOffers();
   showTab((new URLSearchParams(location.search).get('tab') || 'details'));
   icons();
+  window.addEventListener('kanxi:store-changed', ()=>{ syncUser(); renderHero(); renderDetails(); renderOrders(); renderOffers(); showTab((new URLSearchParams(location.search).get('tab') || 'details')); });
+  if(!Store.useLocalStorage){
+    Store.syncFromCloud().finally(()=>{
+      syncUser();
+      renderHero();
+      renderDetails();
+      renderOrders();
+      renderOffers();
+      showTab((new URLSearchParams(location.search).get('tab') || 'details'));
+    });
+  }
 </script>
 </body>
 </html>
