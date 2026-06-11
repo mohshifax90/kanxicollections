@@ -124,6 +124,12 @@
     .saved-card.active .saved-check::after{background:#fff}
     .profile-link{margin-top:.9rem;display:inline-flex;align-items:center;gap:.45rem;border:none;background:none;color:#5563f7;font-weight:700;cursor:pointer;padding:0}
     .guest-form{display:grid;gap:.75rem}
+    .delivery-options{display:grid;gap:.6rem}
+    .delivery-radio{display:flex;align-items:flex-start;gap:.8rem;border:1px solid #e5e7eb;border-radius:16px;padding:.85rem .9rem;background:#fff;cursor:pointer}
+    .delivery-radio input{margin-top:.18rem;accent-color:#4f5cf0}
+    .delivery-radio b{display:block;font-size:.88rem;color:#2f2f35}
+    .delivery-radio span{display:block;font-size:.78rem;color:#6b7280;line-height:1.45;margin-top:.14rem}
+    .delivery-extra{display:grid;gap:.75rem;padding-top:.2rem}
     .guest-field label{display:flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:.38rem}
     .guest-field input{width:100%;border:1px solid #e5e7eb;border-radius:14px;padding:.9rem .95rem;outline:none;background:#fff}
     .guest-field input:focus{border-color:#4f5cf0}
@@ -260,7 +266,19 @@
   let selectedShipping = 'standard';
   let addressMode = 'saved';
   let selectedAddressId = '';
-  let guestDraft = { phone:'', line:'', city:'', atoll:'', postcode:'', country:'Maldives', lat:null, lng:null };
+  let guestDraft = {
+    name:'',
+    phone:'',
+    line:'',
+    city:'',
+    atoll:'',
+    postcode:'',
+    country:'Maldives',
+    lat:null,
+    lng:null,
+    deliveryType:'standard',
+    deliveryInfo:{ boatName:'', contactNumber:'', departureTime:'', note:'' }
+  };
   let checkoutLogin = { step:'phone', phone:'', phoneDigits:'', requestId:null, existingUser:null, verifiedPhone:'', profile:{ name:'', line:'', city:'', atoll:'', postcode:'', country:'Maldives', lat:null, lng:null } };
   let checkoutOtpVerifyTimer = 0;
   let checkoutOtpVerifying = false;
@@ -308,9 +326,15 @@
         atoll:guestDraft.atoll.trim(),
         postcode:guestDraft.postcode.trim(),
         country:(guestDraft.country || 'Maldives').trim(),
+        name:guestDraft.name.trim(),
         phone:guestDraft.phone.trim(),
-        deliveryType:'standard',
-        deliveryInfo:{ boatName:'', contactNumber:'', departureTime:'', note:'' },
+        deliveryType:guestDraft.deliveryType || 'standard',
+        deliveryInfo:{
+          boatName:(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName || '').trim(),
+          contactNumber:(guestDraft.deliveryInfo && guestDraft.deliveryInfo.contactNumber || '').trim(),
+          departureTime:(guestDraft.deliveryInfo && guestDraft.deliveryInfo.departureTime || '').trim(),
+          note:(guestDraft.deliveryInfo && guestDraft.deliveryInfo.note || '').trim()
+        },
         lat:guestDraft.lat,
         lng:guestDraft.lng
       };
@@ -333,9 +357,9 @@
     const boat = a && a.deliveryInfo || {};
     if(addressMode === 'guest'){
       el.innerHTML = `
-        <div class="name">Guest checkout</div>
+        <div class="name">${guestDraft.name.trim() || 'Guest Checkout'}</div>
         <div class="line">${guestDraft.phone.trim() || 'Add mobile number'}</div>
-        ${a && a.line ? `<div class="line">${a.line || ''}</div><div class="line">${[a.city,a.postcode].filter(Boolean).join(', ')}${a.country ? ' · '+a.country : ''}</div>` : `<div class="line">Tap to add address</div>`}
+        ${a && a.line ? `<div class="line">${a.line || ''}</div><div class="line">${[a.city,a.postcode].filter(Boolean).join(', ')}${a.country ? ' · '+a.country : ''}</div><div class="line">${delivery}${boat.boatName ? ' · ' + boat.boatName : ''}${boat.departureTime ? ' · ' + boat.departureTime : ''}</div>` : `<div class="line">Tap to add address</div>`}
       `;
       return;
     }
@@ -343,7 +367,7 @@
     el.innerHTML = u ? `
       <div class="name">${u.name || 'Customer'}</div>
       ${a ? `<div class="line">${a.line || ''}</div><div class="line">${[a.city,a.postcode].filter(Boolean).join(', ')}${a.country ? ' · '+a.country : ''}</div><div class="line">${delivery}${boat.boatName ? ' · ' + boat.boatName : ''}${boat.departureTime ? ' · ' + boat.departureTime : ''}</div>` : `<div class="line">${u.phone || ''}</div>`}
-    ` : `<div class="name">Guest checkout</div><div class="line">Tap to add mobile number and address</div>`;
+    ` : `<div class="name">Select address</div><div class="line">Tap to add mobile number and address</div>`;
   }
   function openAddressSheet(){
     renderAddressSheet();
@@ -508,7 +532,7 @@
     const modes = [
       !u ? { key:'login', label:'Login' } : null,
       u && list.length ? { key:'saved', label:'Saved address' } : null,
-      { key:'guest', label:'Guest checkout' }
+      { key:'guest', label:'Guest Checkout' }
     ].filter(Boolean);
     if(!modes.some(m=>m.key===addressMode)) addressMode = modes[0] ? modes[0].key : 'guest';
     document.getElementById('addrModes').innerHTML = modes.map(m=>`<button class="mode-btn ${addressMode===m.key?'active':''}" type="button" onclick="setAddressMode('${m.key}')">${m.label}</button>`).join('');
@@ -528,9 +552,19 @@
       </div>
       <button class="profile-link" type="button" onclick="location.href='account.html?tab=details'"><i data-lucide="square-pen" style="width:15px;height:15px"></i><span>Manage in profile</span></button>
     ` : `<div class="mini-note">No saved addresses yet. Use guest checkout below, or add one in your profile.</div>${u ? `<button class="profile-link" type="button" onclick="location.href='account.html?tab=details'"><i data-lucide="plus" style="width:15px;height:15px"></i><span>Add in profile</span></button>` : ''}`;
+    const guestType = guestDraft.deliveryType || 'standard';
     const guestHtml = `
       <div class="guest-form">
+        ${guestField('user-round','Full name','guest_name',guestDraft.name,'Enter full name')}
         ${guestField('phone','Mobile number','guest_phone',guestDraft.phone,'Enter mobile number')}
+        <div class="guest-field">
+          <label><i data-lucide="truck" style="width:14px;height:14px"></i>Delivery type</label>
+          <div class="delivery-options">
+            <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="standard" ${guestType==='standard'?'checked':''}><div><b>Address Delivery</b><span>Deliver to the address entered below.</span></div></label>
+            <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="speed_boat" ${guestType==='speed_boat'?'checked':''}><div><b>Speed Boat</b><span>Send through speed boat service.</span></div></label>
+            <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="boat" ${guestType==='boat'?'checked':''}><div><b>Boat</b><span>Send through regular boat delivery.</span></div></label>
+          </div>
+        </div>
         <button class="fetch-btn" type="button" onclick="fetchGuestAddress()"><i data-lucide="locate-fixed" style="width:16px;height:16px"></i><span>Fetch address</span></button>
         ${guestField('map-pinned','Address line','guest_line',guestDraft.line,'House / street address')}
         <div class="guest-grid">
@@ -541,14 +575,32 @@
           ${guestField('mailbox','Postcode','guest_postcode',guestDraft.postcode,'Postcode')}
           ${guestField('flag','Country','guest_country',guestDraft.country || 'Maldives','Country')}
         </div>
-        <div class="mini-note">Guest checkout uses this phone and address only for the current order.</div>
+        ${(guestType === 'boat' || guestType === 'speed_boat') ? `
+          <div class="delivery-extra">
+            ${guestField('ship-wheel','Boat name','guest_boat_name',guestDraft.deliveryInfo.boatName,'Boat name')}
+            <div class="guest-grid">
+              ${guestField('phone','Contact number','guest_boat_contact',guestDraft.deliveryInfo.contactNumber,'Contact number')}
+              ${guestField('clock-3','Departure time','guest_boat_departure',guestDraft.deliveryInfo.departureTime,'Departure time')}
+            </div>
+            ${guestField('sticky-note','Note','guest_boat_note',guestDraft.deliveryInfo.note,'Optional note')}
+          </div>
+        ` : ''}
+        <div class="mini-note">Guest checkout uses this name, phone, and delivery details only for the current order.</div>
       </div>
     `;
     document.getElementById('addrSheetBody').innerHTML = addressMode === 'guest' ? guestHtml : addressMode === 'login' ? renderCheckoutLogin() : savedHtml;
     if(addressMode === 'guest'){
-      ['guest_phone','guest_line','guest_city','guest_atoll','guest_postcode','guest_country'].forEach(id=>{
+      ['guest_name','guest_phone','guest_line','guest_city','guest_atoll','guest_postcode','guest_country','guest_boat_name','guest_boat_contact','guest_boat_departure','guest_boat_note'].forEach(id=>{
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', syncGuestDraft);
+      });
+      document.querySelectorAll('input[name="guest_delivery_type"]').forEach(el=>{
+        el.addEventListener('change', () => {
+          guestDraft.deliveryType = el.value;
+          renderAddressSheet();
+          renderAddress();
+          updatePlaceState();
+        });
       });
       bindPhoneField('guest_phone', value => { guestDraft.phone = value; renderAddress(); updatePlaceState(); });
     }else if(addressMode === 'login'){
@@ -704,17 +756,31 @@
   }
   function syncGuestDraft(){
     const phone = document.getElementById('guest_phone');
+    const name = document.getElementById('guest_name');
     const line = document.getElementById('guest_line');
     const city = document.getElementById('guest_city');
     const atoll = document.getElementById('guest_atoll');
     const postcode = document.getElementById('guest_postcode');
     const country = document.getElementById('guest_country');
+    const boatName = document.getElementById('guest_boat_name');
+    const boatContact = document.getElementById('guest_boat_contact');
+    const boatDeparture = document.getElementById('guest_boat_departure');
+    const boatNote = document.getElementById('guest_boat_note');
+    const type = document.querySelector('input[name="guest_delivery_type"]:checked');
+    if(name) guestDraft.name = name.value;
     if(phone) guestDraft.phone = checkoutPhoneValue(phone.value);
     if(line) guestDraft.line = line.value;
     if(city) guestDraft.city = city.value;
     if(atoll) guestDraft.atoll = atoll.value;
     if(postcode) guestDraft.postcode = postcode.value;
     if(country) guestDraft.country = country.value;
+    if(type) guestDraft.deliveryType = type.value;
+    guestDraft.deliveryInfo = {
+      boatName: boatName ? boatName.value : (guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName || ''),
+      contactNumber: boatContact ? boatContact.value : (guestDraft.deliveryInfo && guestDraft.deliveryInfo.contactNumber || ''),
+      departureTime: boatDeparture ? boatDeparture.value : (guestDraft.deliveryInfo && guestDraft.deliveryInfo.departureTime || ''),
+      note: boatNote ? boatNote.value : (guestDraft.deliveryInfo && guestDraft.deliveryInfo.note || '')
+    };
     renderAddress();
     updatePlaceState();
   }
@@ -859,7 +925,8 @@
     const hasAccount = !!(paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber);
     const addr = selectedAddressData();
     const savedReady = addressMode !== 'saved' || !!selectedSavedAddress();
-    const guestReady = addressMode !== 'guest' || (!!guestDraft.phone.trim() && !!guestDraft.line.trim());
+    const guestDeliveryReady = addressMode !== 'guest' || !['boat','speed_boat'].includes(guestDraft.deliveryType || 'standard') || !!(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim());
+    const guestReady = addressMode !== 'guest' || (!!guestDraft.name.trim() && !!guestDraft.phone.trim() && !!guestDraft.line.trim() && guestDeliveryReady);
     const payReady = !!selectedPay && (!transfer || (transferSlip && hasAccount));
     const ready = paymentSyncState !== 'loading' && addressMode !== 'login' && savedReady && guestReady && !!addr && payReady;
     btn.disabled = !ready;
@@ -867,8 +934,10 @@
     else if(!selectedPay) hint.textContent = 'Enable at least one payment method in admin.';
     else if(addressMode === 'login') hint.textContent = 'Log in or choose guest checkout to continue.';
     else if(addressMode === 'saved' && !selectedSavedAddress()) hint.textContent = 'Select a saved delivery address to continue.';
+    else if(addressMode === 'guest' && !guestDraft.name.trim()) hint.textContent = 'Add full name for guest checkout.';
     else if(addressMode === 'guest' && !guestDraft.phone.trim()) hint.textContent = 'Add mobile number for guest checkout.';
     else if(addressMode === 'guest' && !guestDraft.line.trim()) hint.textContent = 'Add address for guest checkout.';
+    else if(addressMode === 'guest' && ['boat','speed_boat'].includes(guestDraft.deliveryType || 'standard') && !(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim())) hint.textContent = 'Add boat name to continue.';
     else if(!addr) hint.textContent = 'Select a delivery address to continue.';
     else if(transfer && !hasAccount) hint.textContent = 'Add bank account details in admin to accept transfers.';
     else if(transfer && !transferSlip) hint.textContent = 'Upload one transfer slip to place this order.';
@@ -924,13 +993,15 @@
     const a = selectedAddressData();
     if(addressMode === 'guest'){
       syncGuestDraft();
+      if(!guestDraft.name.trim()) return showToast('Enter full name');
       if(!guestDraft.phone.trim()) return showToast('Enter mobile number');
       if(!guestDraft.line.trim()) return showToast('Enter address');
+      if(['boat','speed_boat'].includes(guestDraft.deliveryType || 'standard') && !(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim())) return showToast('Enter boat name');
     } else if(!a){
       return showToast('Select delivery address');
     }
     const order = Store.placeOrder({
-      userName:addressMode === 'guest' ? 'Guest' : (u ? u.name : 'Guest'),
+      userName:addressMode === 'guest' ? (guestDraft.name.trim() || 'Guest') : (u ? u.name : 'Guest'),
       userPhone:addressMode === 'guest' ? guestDraft.phone.trim() : (u ? u.phone : ''),
       items:cart.map(it=>({ productId:(it.id||'').split('_')[0], name:it.name, qty:it.qty, price:it.price, image:it.img })),
       shipping,
@@ -940,8 +1011,8 @@
       bankName:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.bankName || '') : '',
       accountNumber:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || '') : '',
       address:a ? [a.line,a.city,a.atoll,a.postcode,a.country].filter(Boolean).join(', ') : 'Maldives',
-      deliveryType:addressMode === 'guest' ? selectedShipping : (a.deliveryType || selectedShipping),
-      deliveryInfo:a && a.deliveryInfo || null
+      deliveryType:addressMode === 'guest' ? (guestDraft.deliveryType || 'standard') : (a.deliveryType || selectedShipping),
+      deliveryInfo:addressMode === 'guest' ? (guestDraft.deliveryInfo || null) : (a && a.deliveryInfo || null)
     });
     document.getElementById('onum').textContent = '#' + order.id;
     document.getElementById('success').classList.add('show');

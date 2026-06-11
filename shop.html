@@ -18,7 +18,7 @@
 
     /* header */
     .shop-head { position:sticky; top:0; z-index:50; background:#fff; display:flex; align-items:center; gap:0.7rem; padding:0.8rem 1rem; border-bottom:1px solid var(--line); }
-    .icon-btn { background:none; border:none; cursor:pointer; font-size:1.3rem; color:var(--ink); display:flex; align-items:center; }
+    .icon-btn { background:none; border:none; cursor:pointer; font-size:1.3rem; color:var(--ink); display:flex; align-items:center; justify-content:center; }
     .back-btn { width:44px; height:44px; margin-left:-10px; display:flex; align-items:center; justify-content:center; background:none; border:none; cursor:pointer; border-radius:50%; -webkit-tap-highlight-color:transparent; transition:background 0.15s; flex-shrink:0; }
     .back-btn:active { background:#f0f0f0; }
     .back-btn svg { width:25px; height:25px; color:var(--ink); }
@@ -32,8 +32,10 @@
     .heart-btn svg { width:26px; height:26px; fill:var(--black); transition:fill 0.2s, transform 0.15s; display:block; }
     .heart-btn:hover svg { fill:var(--accent); transform:scale(1.08); }
     .heart-btn.saved svg { fill:#e0413b; }
-    .bag-btn { width:28px; height:28px; background:url('assets/bag.png') center/contain no-repeat; transition:transform 0.15s; position:relative; }
-    .bag-btn:hover { transform:scale(1.08); background-image:url('assets/bag-gold.png'); }
+    .bag-btn { width:28px; height:28px; background:url('assets/bag-main.svg') center/contain no-repeat; transition:transform 0.15s; position:relative; }
+    .bag-btn:hover { transform:scale(1.08); }
+    .menu-btn { width:28px; height:28px; padding:0; }
+    .menu-btn svg { width:28px; height:28px; stroke-width:2.1; display:block; }
     .cart-wrap { position:relative; }
     .cart-dot { position:absolute; top:-6px; right:-7px; background:var(--accent); color:#fff; font-size:0.58rem; font-weight:700; border-radius:50%; min-width:15px; height:15px; display:flex; align-items:center; justify-content:center; padding:0 3px; }
 
@@ -144,7 +146,7 @@
     <div class="spacer"></div>
     <button class="icon-btn heart-btn" title="Wishlist" onclick="this.classList.toggle('saved')"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
     <button class="icon-btn cart-wrap" title="Checkout" onclick="location.href='checkout.html'"><span class="bag-btn"></span><span class="cart-dot cart-count" style="display:none">0</span></button>
-    <button class="icon-btn" title="Menu">☰</button>
+    <button class="icon-btn menu-btn" title="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
   </div>
 
   <!-- title -->

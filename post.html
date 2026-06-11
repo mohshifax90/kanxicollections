@@ -25,6 +25,8 @@
     .ph { position:sticky; top:0; z-index:50; background:#fff; display:flex; align-items:center; gap:0.75rem; padding:0.8rem 1rem; border-bottom:1px solid var(--line); }
     .icon-btn { background:none; border:none; cursor:pointer; color:var(--ink); display:flex; align-items:center; justify-content:center; line-height:1; width:28px; height:28px; padding:0; }
     .icon-btn svg { width:24px; height:24px; stroke-width:2.2; }
+    .menu-btn { width:26px; height:26px; }
+    .menu-btn svg { width:26px; height:26px; stroke-width:2.1; }
     .ph-avatar { width:30px; height:30px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid var(--gray-200); flex-shrink:0; }
     .ph-avatar svg { height:21px; }
     .ph-meta { display:flex; flex-direction:column; line-height:1.15; }
@@ -33,8 +35,8 @@
     .view-shop { font-size:0.82rem; color:var(--shop-blue); font-weight:500; margin-top:0.15rem; }
     .spacer { flex:1; }
     .cart-wrap { position:relative; }
-    .bag-btn { width:26px; height:26px; background:url('assets/bag.png') center/contain no-repeat; transition:transform 0.15s; }
-    .bag-btn:hover { transform:scale(1.08); background-image:url('assets/bag-gold.png'); }
+    .bag-btn { width:26px; height:26px; background:url('assets/bag-main.svg') center/contain no-repeat; transition:transform 0.15s; }
+    .bag-btn:hover { transform:scale(1.08); }
     .cart-dot { position:absolute; top:-6px; right:-7px; background:var(--accent); color:#fff; font-size:0.56rem; font-weight:700; border-radius:50%; min-width:14px; height:14px; display:flex; align-items:center; justify-content:center; padding:0 3px; }
 
     /* gallery */
@@ -132,7 +134,7 @@
     </div>
     <div class="spacer"></div>
     <button class="icon-btn cart-wrap" onclick="location.href='checkout.html'"><span class="bag-btn"></span><span class="cart-dot cart-count" style="display:none">0</span></button>
-    <button class="icon-btn" title="Menu"><i data-lucide="menu"></i></button>
+    <button class="icon-btn menu-btn" title="Menu"><i data-lucide="menu"></i></button>
   </div>
 
   <!-- gallery -->
