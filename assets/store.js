@@ -513,6 +513,17 @@ const Store = (() => {
     lastCloudHash = JSON.stringify(clean);
     queueCloudSave(clean);
   }
+  function saveNow(db){
+    const clean = normalize(db);
+    if(USE_LOCAL){
+      writeLocal(clean);
+      return Promise.resolve(clean);
+    }
+    cloudDb = clean;
+    writeCloudCache(clean, 'full');
+    lastCloudHash = JSON.stringify(clean);
+    return saveCloudNow(clean).then(()=>clean);
+  }
   async function syncFromCloud(){
     if(!CAN_SYNC_CLOUD) return { ok:true, local:true };
     const row=cloudRow();
@@ -717,7 +728,7 @@ const Store = (() => {
           accountNumber: settings && settings.bankTransfer && settings.bankTransfer.accountNumber || ''
         }
       };
-      save(db);
+      saveNow(db).catch(error=>console.warn('Kanxi payment settings save failed:', error.message));
       return db.paymentSettings;
     },
     imageForTag(tagId){ const p=this.storeProducts().find(p=>(p.tags||[]).includes(tagId)); return p?p.image:''; },
@@ -773,10 +784,11 @@ const Store = (() => {
         accountNumber:order.accountNumber||'',
         verifiedAt:null
       });
-      save(db); return order; },
+      saveNow(db).catch(error=>console.warn('Kanxi order save failed:', error.message));
+      return order; },
 
-    advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'].includes(o.status))o.payStatus='Paid'; save(db); return o; },
-    setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st; if(['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'].includes(st))o.payStatus='Paid'; save(db);} return o; },
+    advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'].includes(o.status))o.payStatus='Paid'; saveNow(db).catch(error=>console.warn('Kanxi order advance save failed:', error.message)); return o; },
+    setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st; if(['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'].includes(st))o.payStatus='Paid'; saveNow(db).catch(error=>console.warn('Kanxi order status save failed:', error.message));} return o; },
     setPaymentStatus(id,status){
       const db=load(), p=db.payments.find(x=>x.id===id);
       if(!p) return null;
@@ -787,7 +799,7 @@ const Store = (() => {
         o.payStatus=status;
         if(status==='Paid' && ['Pending Payment','Pending Slip Verification'].includes(o.status)) o.status='Paid';
       }
-      save(db);
+      saveNow(db).catch(error=>console.warn('Kanxi payment status save failed:', error.message));
       return p;
     },
 
