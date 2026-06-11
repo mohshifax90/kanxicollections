@@ -128,6 +128,12 @@
     .guest-field input{width:100%;border:1px solid #e5e7eb;border-radius:14px;padding:.9rem .95rem;outline:none;background:#fff}
     .guest-field input:focus{border-color:#4f5cf0}
     .guest-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+    .login-card{display:grid;gap:.85rem}
+    .login-copy{font-size:.85rem;color:#6b7280;line-height:1.45}
+    .otp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.45rem}
+    .otp-grid input{height:52px;border:1px solid #e5e7eb;border-radius:14px;text-align:center;font-size:1.08rem;font-weight:700;outline:none}
+    .otp-grid input:focus{border-color:#4f5cf0}
+    .inline-link{border:none;background:none;color:#5563f7;font-weight:700;cursor:pointer;padding:0}
     .fetch-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid #e5e7eb;border-radius:14px;background:#fff;color:#2f2f35;padding:.86rem .95rem;font-weight:700;cursor:pointer}
     .sheet-actions{display:flex;gap:.7rem;margin-top:1rem}
     .sheet-actions .save-addr-btn,.sheet-actions .cancel-addr-btn{flex:1;border:none;border-radius:14px;padding:.95rem 1rem;font-size:.92rem;font-weight:800;cursor:pointer}
@@ -256,6 +262,7 @@
   let addressMode = 'saved';
   let selectedAddressId = '';
   let guestDraft = { phone:'', line:'', city:'', atoll:'', postcode:'', country:'Maldives', lat:null, lng:null };
+  let checkoutLogin = { step:'phone', phone:'', phoneDigits:'', requestId:null, existingUser:null, verifiedPhone:'', profile:{ name:'', line:'', city:'', atoll:'', postcode:'', country:'Maldives', lat:null, lng:null } };
   const shippingOptions = [
     { key:'standard', label:'Standard', sub:'3-5 business days', amount:5.95 },
     { key:'expedited', label:'Expedited', sub:'1-3 business days', amount:10.95 }
@@ -363,20 +370,126 @@
   function syncAddressDefaults(){
     const list = savedAddresses();
     if(list.length && !list.some(a=>a.id===selectedAddressId)) selectedAddressId = (list.find(a=>a.isDefault) || list[0]).id;
-    if(!list.length) addressMode = 'guest';
-    if(activeUser() && addressMode !== 'guest' && !list.length) addressMode = 'guest';
+    if(activeUser()){
+      if(addressMode === 'login') addressMode = list.length ? 'saved' : 'guest';
+      if(addressMode === 'saved' && !list.length) addressMode = 'guest';
+    }else if(addressMode === 'saved'){
+      addressMode = 'login';
+    }
   }
   function guestField(icon, label, id, value, placeholder){
     return `<div class="guest-field"><label><i data-lucide="${icon}" style="width:14px;height:14px"></i>${label}</label><input id="${id}" value="${String(value || '').replace(/"/g,'&quot;')}" placeholder="${placeholder}"></div>`;
+  }
+  function setSheetButtonLoading(id, loading, text){
+    const btn = document.getElementById(id);
+    if(!btn) return;
+    if(loading){
+      btn.dataset.label = btn.textContent;
+      btn.textContent = text || 'Please wait...';
+      btn.disabled = true;
+      btn.style.opacity = '.65';
+    }else{
+      btn.textContent = btn.dataset.label || btn.textContent;
+      btn.disabled = false;
+      btn.style.opacity = '';
+    }
+  }
+  async function callOtpApi(path, payload){
+    const res = await fetch(path, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify(payload)
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error || data.message || 'OTP request failed');
+    return data;
+  }
+  function phoneDigits(value){ return String(value || '').replace(/\D/g,''); }
+  function renderCheckoutLogin(){
+    if(checkoutLogin.step === 'phone'){
+      return `
+        <div class="login-card">
+          <div class="login-copy">Sign in with OTP to use your saved addresses and profile details during checkout.</div>
+          ${guestField('phone','Mobile number','login_phone',checkoutLogin.phone,'+960 7771234')}
+          <button class="save-addr-btn" id="loginSendBtn" type="button" onclick="sendCheckoutOtp()">Send OTP</button>
+        </div>
+      `;
+    }
+    if(checkoutLogin.step === 'otp'){
+      return `
+        <div class="login-card">
+          <div class="login-copy">Enter the 6-digit code sent to <b>${checkoutLogin.phone}</b>.</div>
+          <input id="checkoutOtpAutofill" type="text" inputmode="numeric" autocomplete="one-time-code" class="hidden"/>
+          <div class="otp-grid" id="checkoutOtpGrid">
+            ${Array.from({length:6}).map((_,i)=>`<input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit ${i+1}"/>`).join('')}
+          </div>
+          <button class="save-addr-btn" id="loginVerifyBtn" type="button" onclick="verifyCheckoutOtp()">Verify OTP</button>
+          <div class="mini-note">Didn’t get it? <button class="inline-link" type="button" onclick="resendCheckoutOtp()">Resend code</button></div>
+        </div>
+      `;
+    }
+    return `
+      <div class="login-card">
+        <div class="login-copy">Number verified. Add your address to finish signing in for checkout.</div>
+        ${guestField('users','Full name','checkout_name',checkoutLogin.profile.name,'Your name')}
+        <button class="fetch-btn" type="button" onclick="fetchCheckoutProfileAddress()"><i data-lucide="locate-fixed" style="width:16px;height:16px"></i><span>Fetch address</span></button>
+        ${guestField('map-pinned','Address line','checkout_line',checkoutLogin.profile.line,'House / street address')}
+        <div class="guest-grid">
+          ${guestField('map','City / Island','checkout_city',checkoutLogin.profile.city,'City / Island')}
+          ${guestField('landmark','Atoll','checkout_atoll',checkoutLogin.profile.atoll,'Atoll')}
+        </div>
+        <div class="guest-grid">
+          ${guestField('mailbox','Postcode','checkout_postcode',checkoutLogin.profile.postcode,'Postcode')}
+          ${guestField('flag','Country','checkout_country',checkoutLogin.profile.country || 'Maldives','Country')}
+        </div>
+        <button class="save-addr-btn" id="loginAddressBtn" type="button" onclick="saveCheckoutLoginProfile()">Continue</button>
+      </div>
+    `;
+  }
+  function mountCheckoutOtpInputs(){
+    const inputs = [...document.querySelectorAll('#checkoutOtpGrid input')];
+    const autofill = document.getElementById('checkoutOtpAutofill');
+    if(!inputs.length) return;
+    const fill = (value) => {
+      const digits = phoneDigits(value).slice(0, 6).split('');
+      inputs.forEach((inp, i)=>{ inp.value = digits[i] || ''; });
+      if(digits.length < inputs.length) inputs[digits.length]?.focus();
+      else inputs[inputs.length - 1]?.focus();
+    };
+    inputs.forEach((inp, i)=>{
+      inp.addEventListener('input', ()=>{
+        const digits = phoneDigits(inp.value);
+        if(!digits){ inp.value=''; return; }
+        if(digits.length > 1){ fill(digits); return; }
+        inp.value = digits;
+        if(inp.value && i < inputs.length - 1) inputs[i+1].focus();
+      });
+      inp.addEventListener('keydown', e=>{ if(e.key === 'Backspace' && !inp.value && i > 0) inputs[i-1].focus(); });
+      inp.addEventListener('paste', e=>{
+        const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+        const digits = phoneDigits(pasted);
+        if(digits.length > 1){
+          e.preventDefault();
+          fill(digits);
+        }
+      });
+    });
+    if(autofill){
+      autofill.addEventListener('input', ()=>fill(autofill.value));
+      autofill.addEventListener('change', ()=>fill(autofill.value));
+      autofill.focus();
+    }
   }
   function renderAddressSheet(){
     syncAddressDefaults();
     const u = activeUser();
     const list = savedAddresses();
     const modes = [
-      list.length ? { key:'saved', label:'Saved address' } : null,
+      !u ? { key:'login', label:'Login' } : null,
+      u && list.length ? { key:'saved', label:'Saved address' } : null,
       { key:'guest', label:'Guest checkout' }
     ].filter(Boolean);
+    if(!modes.some(m=>m.key===addressMode)) addressMode = modes[0] ? modes[0].key : 'guest';
     document.getElementById('addrModes').innerHTML = modes.map(m=>`<button class="mode-btn ${addressMode===m.key?'active':''}" type="button" onclick="setAddressMode('${m.key}')">${m.label}</button>`).join('');
     const savedHtml = list.length ? `
       <div class="saved-list">
@@ -410,14 +523,154 @@
         <div class="mini-note">Guest checkout uses this phone and address only for the current order.</div>
       </div>
     `;
-    document.getElementById('addrSheetBody').innerHTML = addressMode === 'guest' ? guestHtml : savedHtml;
+    document.getElementById('addrSheetBody').innerHTML = addressMode === 'guest' ? guestHtml : addressMode === 'login' ? renderCheckoutLogin() : savedHtml;
     if(addressMode === 'guest'){
       ['guest_phone','guest_line','guest_city','guest_atoll','guest_postcode','guest_country'].forEach(id=>{
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', syncGuestDraft);
       });
+    }else if(addressMode === 'login'){
+      if(checkoutLogin.step === 'phone'){
+        const phone = document.getElementById('login_phone');
+        if(phone) phone.addEventListener('input', ()=>{ checkoutLogin.phone = phone.value; });
+      }else if(checkoutLogin.step === 'otp'){
+        mountCheckoutOtpInputs();
+      }else{
+        ['checkout_name','checkout_line','checkout_city','checkout_atoll','checkout_postcode','checkout_country'].forEach(id=>{
+          const el = document.getElementById(id);
+          if(el) el.addEventListener('input', syncCheckoutLoginProfile);
+        });
+      }
     }
     icons();
+  }
+  async function sendCheckoutOtp(){
+    const phoneValue = (document.getElementById('login_phone') || {}).value || checkoutLogin.phone;
+    const digits = phoneDigits(phoneValue);
+    if(digits.length < 6) return showToast('Enter a valid mobile number');
+    checkoutLogin.phone = phoneValue.trim();
+    checkoutLogin.phoneDigits = digits;
+    checkoutLogin.existingUser = Store.findUserByPhone(phoneValue) || Store.findUserByPhone(digits);
+    setSheetButtonLoading('loginSendBtn', true, 'Sending...');
+    try{
+      const data = await callOtpApi('/api/msgowl-send-otp', { phone_number: digits });
+      checkoutLogin.requestId = data.id || checkoutLogin.requestId;
+      checkoutLogin.step = 'otp';
+      renderAddressSheet();
+      showToast('OTP sent');
+    }catch(error){
+      showToast(error.message);
+    }finally{
+      setSheetButtonLoading('loginSendBtn', false);
+    }
+  }
+  async function resendCheckoutOtp(){
+    if(!checkoutLogin.phoneDigits) return sendCheckoutOtp();
+    try{
+      const payload = checkoutLogin.requestId ? { phone_number: checkoutLogin.phoneDigits, id: checkoutLogin.requestId } : { phone_number: checkoutLogin.phoneDigits };
+      const data = await callOtpApi(checkoutLogin.requestId ? '/api/msgowl-resend-otp' : '/api/msgowl-send-otp', payload);
+      checkoutLogin.requestId = data.id || checkoutLogin.requestId;
+      renderAddressSheet();
+      showToast('OTP resent');
+    }catch(error){
+      showToast(error.message);
+    }
+  }
+  async function verifyCheckoutOtp(){
+    const code = [...document.querySelectorAll('#checkoutOtpGrid input')].map(i=>i.value).join('');
+    if(code.length !== 6) return showToast('Enter the 6-digit code');
+    setSheetButtonLoading('loginVerifyBtn', true, 'Verifying...');
+    try{
+      const data = await callOtpApi('/api/msgowl-verify-otp', { phone_number: checkoutLogin.phoneDigits, code });
+      if(data.status !== true) return showToast(data.message || 'Invalid code');
+      checkoutLogin.existingUser = Store.findUserByPhone(checkoutLogin.phone) || Store.findUserByPhone(checkoutLogin.phoneDigits) || checkoutLogin.existingUser;
+      checkoutLogin.verifiedPhone = checkoutLogin.phone;
+      if(checkoutLogin.existingUser){
+        Store.login(checkoutLogin.existingUser);
+        addressMode = 'saved';
+        syncAddressDefaults();
+        renderAddressSheet();
+        renderAddress();
+        updatePlaceState();
+        showToast('Logged in successfully');
+      }else{
+        checkoutLogin.step = 'profile';
+        renderAddressSheet();
+        showToast('Number verified');
+      }
+    }catch(error){
+      showToast(error.message);
+    }finally{
+      setSheetButtonLoading('loginVerifyBtn', false);
+    }
+  }
+  function syncCheckoutLoginProfile(){
+    const map = {
+      name:'checkout_name',
+      line:'checkout_line',
+      city:'checkout_city',
+      atoll:'checkout_atoll',
+      postcode:'checkout_postcode',
+      country:'checkout_country'
+    };
+    Object.keys(map).forEach(key=>{
+      const el = document.getElementById(map[key]);
+      if(el) checkoutLogin.profile[key] = el.value;
+    });
+  }
+  async function fetchCheckoutProfileAddress(){
+    if(!navigator.geolocation) return showToast('Geolocation not supported');
+    showToast('Locating...');
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      checkoutLogin.profile.lat = pos.coords.latitude;
+      checkoutLogin.profile.lng = pos.coords.longitude;
+      try{
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${checkoutLogin.profile.lat}&lon=${checkoutLogin.profile.lng}&zoom=18&addressdetails=1`, { headers:{ Accept:'application/json' } });
+        const d = await r.json();
+        const a = d.address || {};
+        checkoutLogin.profile.line = [a.house_number, a.road || a.neighbourhood || a.suburb].filter(Boolean).join(' ') || d.display_name?.split(',').slice(0,2).join(', ') || checkoutLogin.profile.line;
+        checkoutLogin.profile.city = a.city || a.town || a.village || a.county || checkoutLogin.profile.city;
+        checkoutLogin.profile.atoll = a.state || a.region || checkoutLogin.profile.atoll;
+        checkoutLogin.profile.postcode = a.postcode || checkoutLogin.profile.postcode;
+        checkoutLogin.profile.country = a.country || checkoutLogin.profile.country || 'Maldives';
+      }catch(_){
+        checkoutLogin.profile.line = checkoutLogin.profile.line || `Near ${checkoutLogin.profile.lat.toFixed(4)}, ${checkoutLogin.profile.lng.toFixed(4)}`;
+      }
+      renderAddressSheet();
+      showToast('Address auto-filled');
+    }, ()=>showToast('Could not get location'), { enableHighAccuracy:true, timeout:10000 });
+  }
+  function saveCheckoutLoginProfile(){
+    syncCheckoutLoginProfile();
+    if(!checkoutLogin.profile.line.trim()) return showToast('Enter address');
+    const user = Store.upsert('users', {
+      name:checkoutLogin.profile.name.trim() || 'Kanxi Customer',
+      phone:checkoutLogin.verifiedPhone || checkoutLogin.phone,
+      createdAt:Date.now(),
+      addresses:[{
+        id:Store.uid('a_'),
+        label:'Home',
+        line:checkoutLogin.profile.line.trim(),
+        city:checkoutLogin.profile.city.trim(),
+        atoll:checkoutLogin.profile.atoll.trim(),
+        postcode:checkoutLogin.profile.postcode.trim(),
+        country:(checkoutLogin.profile.country || 'Maldives').trim(),
+        lat:checkoutLogin.profile.lat,
+        lng:checkoutLogin.profile.lng,
+        isDefault:true,
+        deliveryType:'standard',
+        deliveryInfo:{ boatName:'', contactNumber:'', departureTime:'', note:'' }
+      }]
+    });
+    Store.login(user);
+    checkoutLogin.existingUser = user;
+    checkoutLogin.step = 'phone';
+    addressMode = 'saved';
+    syncAddressDefaults();
+    renderAddressSheet();
+    renderAddress();
+    updatePlaceState();
+    showToast('Logged in successfully');
   }
   function syncGuestDraft(){
     const phone = document.getElementById('guest_phone');
@@ -573,9 +826,10 @@
     const hasAccount = !!(paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber);
     const addr = selectedAddressData();
     const guestReady = addressMode !== 'guest' || (!!guestDraft.phone.trim() && !!guestDraft.line.trim());
-    const ready = selectedPay && guestReady && !!addr && (!transfer || (transferSlip && hasAccount));
+    const ready = selectedPay && addressMode !== 'login' && guestReady && !!addr && (!transfer || (transferSlip && hasAccount));
     btn.disabled = !ready;
     if(!selectedPay) hint.textContent = 'Enable at least one payment method in admin.';
+    else if(addressMode === 'login') hint.textContent = 'Log in or choose guest checkout to continue.';
     else if(addressMode === 'guest' && !guestDraft.phone.trim()) hint.textContent = 'Add mobile number for guest checkout.';
     else if(addressMode === 'guest' && !guestDraft.line.trim()) hint.textContent = 'Add address for guest checkout.';
     else if(!addr) hint.textContent = 'Select a delivery address to continue.';
