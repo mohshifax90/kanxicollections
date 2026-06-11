@@ -4,13 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Kanxi Collection — Product</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     :root { --black:#1a1814; --white:#fff; --gray-100:#f8f5f1; --gray-200:#ede8e0; --gray-400:#b0a898; --gray-600:#6e6860; --accent:#b89b7a; --cream:#f5ede0; --ink:#1a1814; --muted:#8b8b8b; --line:#efefef; --red:#e0413b; --shop-blue:#4f5cf8; }
     body { font-family:'Inter',sans-serif; color:var(--ink); background:#e9e9e9; -webkit-font-smoothing:antialiased; }
     a { text-decoration:none; color:inherit; }
     .app { max-width:480px; margin:0 auto; background:#fff; min-height:100vh; box-shadow:0 0 40px rgba(0,0,0,0.08); padding-bottom:80px; }
+    body.pending .hydrate-ready { visibility:hidden; }
+    .loading-shell { display:none; padding:1rem; }
+    body.pending .loading-shell { display:block; }
+    .skeleton { background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); background-size:400% 100%; animation:shimmer 1.2s ease infinite; border-radius:14px; }
+    .sk-img { aspect-ratio:1/1.15; }
+    .sk-line { height:16px; margin-top:12px; }
+    .sk-line.big { height:24px; width:78%; }
+    .sk-line.mid { width:58%; }
+    .sk-line.small { width:34%; }
+    @keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
 
     /* header */
     .ph { position:sticky; top:0; z-index:50; background:#fff; display:flex; align-items:center; gap:0.75rem; padding:0.8rem 1rem; border-bottom:1px solid var(--line); }
@@ -81,6 +93,7 @@
     .swatch.sold .swatch-lbl { text-decoration:line-through; }
 
     .divider { height:8px; background:#f5f5f5; margin:0.4rem 0 1.2rem; }
+    .deferred-section { content-visibility:auto; contain-intrinsic-size:700px; }
     .sec { padding:0 1rem; }
     .sec h3 { font-size:0.92rem; font-weight:700; margin-bottom:0.7rem; }
     .p-desc { font-size:0.9rem; color:var(--gray-600); line-height:1.7; }
@@ -139,8 +152,15 @@
   </div>
 
   <!-- gallery -->
-  <div class="gallery">
-    <div class="gmain"><img id="mainImg" src="" alt=""/></div>
+  <div class="loading-shell">
+    <div class="skeleton sk-img"></div>
+    <div class="skeleton sk-line big"></div>
+    <div class="skeleton sk-line mid"></div>
+    <div class="skeleton sk-line small"></div>
+  </div>
+
+  <div class="gallery hydrate-ready">
+    <div class="gmain"><img id="mainImg" src="" alt="" fetchpriority="high" decoding="sync"/></div>
     <div class="deal-ribbon" id="ribbon">
       <span class="left">🔥 Hot Deal</span>
       <span class="right">Limited offer</span>
@@ -149,7 +169,7 @@
   </div>
 
   <!-- info -->
-  <div class="info">
+  <div class="info hydrate-ready">
     <div class="name-row">
       <h1 class="p-name" id="pName">Product</h1>
       <div class="name-actions">
@@ -171,10 +191,10 @@
     </div>
   </div>
 
-  <div class="divider"></div>
+  <div class="divider hydrate-ready"></div>
 
   <!-- details -->
-  <div class="sec">
+  <div class="sec hydrate-ready">
     <h3>Details</h3>
     <p class="p-desc">A beautifully crafted Kanxi piece made from premium materials. Designed for the modern individual who values timeless elegance and everyday comfort.</p>
     <ul class="p-feats">
@@ -189,25 +209,25 @@
     </div>
   </div>
 
-  <div class="divider"></div>
+  <div class="divider deferred-section hydrate-ready"></div>
 
   <!-- reviews -->
-  <div class="sec">
+  <div class="sec deferred-section hydrate-ready">
     <h3>Reviews</h3>
     <div class="comment"><div class="c-av">S</div><div><p class="c-name">sarah.m</p><p class="c-text">Absolutely love this! Quality is beautiful and fit is perfect ✨</p><p class="c-meta">2d · ♥ 24</p></div></div>
     <div class="comment"><div class="c-av">J</div><div><p class="c-name">james.t</p><p class="c-text">Exceptional craftsmanship. Sizing runs true. Worth it.</p><p class="c-meta">5d · ♥ 18</p></div></div>
     <div class="comment"><div class="c-av">P</div><div><p class="c-name">priya.k</p><p class="c-text">Even nicer in person. The colour is gorgeous 😍</p><p class="c-meta">1w · ♥ 31</p></div></div>
   </div>
 
-  <div class="divider"></div>
+  <div class="divider deferred-section hydrate-ready"></div>
 
   <!-- related -->
-  <div class="sec related">
+  <div class="sec related deferred-section hydrate-ready">
     <h3>More like this</h3>
     <div class="h-scroll" id="related"></div>
   </div>
 
-  <p class="protect">Buyer Protection Program</p>
+  <p class="protect hydrate-ready">Buyer Protection Program</p>
 
 </div>
 
@@ -217,12 +237,12 @@
   <button class="btn-buy" onclick="doBuyNow()">Buy now</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="assets/supabase-config.js?v=1"></script>
 <script src="assets/store.js?v=4"></script>
 <script src="assets/components.js"></script>
 <script>
+  document.body.classList.add('pending');
   function goBack(){ if (history.length > 1 && document.referrer && new URL(document.referrer).origin === location.origin) history.back(); else location.href = 'index.html'; }
 
   const id = new URLSearchParams(location.search).get('id');
@@ -246,7 +266,9 @@
   }
 
   /* ── header / gallery ── */
-  document.getElementById('mainImg').src = imgs[0];
+  const mainImg = document.getElementById('mainImg');
+  mainImg.src = imgs[0];
+  mainImg.alt = c.name;
   document.getElementById('pName').textContent = c.name;
   document.getElementById('pRate').textContent = rating;
   document.getElementById('pCount').textContent = '· ' + reviews;
@@ -259,7 +281,7 @@
   if (imgs.length > 1) {
     document.querySelector('.gmain').addEventListener('click', () => {
       gi = (gi+1) % imgs.length;
-      document.getElementById('mainImg').src = imgs[gi];
+      mainImg.src = imgs[gi];
       document.querySelectorAll('.gdot').forEach((d,i)=>d.classList.toggle('active', i===gi));
     });
   }
@@ -276,7 +298,7 @@
       const st = Store.stockOfVariant(sp.id, v.id);
       const preview = imgs[i] || imgs[0];
       return `<div class="swatch ${i===0?'active':''} ${st===0?'sold':''}" onclick="pickVar('${v.id}',this)">
-        <div class="swatch-img">${preview?`<img src="${preview}" alt="${v.value}"/>`:`<div class="swatch-color" style="background:${v.color||'#ddd'}"></div>`}</div>
+        <div class="swatch-img">${preview?`<img src="${preview}" alt="${v.value}" loading="lazy" decoding="async"/>`:`<div class="swatch-color" style="background:${v.color||'#ddd'}"></div>`}</div>
         <div class="swatch-lbl">${v.value}</div></div>`;
     }).join('');
   } else if (vt === 'size' || vt === 'volume') {
@@ -313,11 +335,12 @@
 
   /* ── related (same category) ── */
   const related = Store.cardsBySlug(c.cat).filter(x=>x.id!==id).slice(0,6);
-  document.getElementById('related').innerHTML = related.map(r=>
+  document.getElementById('related').innerHTML = related.map((r, i)=>
     `<a class="rcard" href="post.html?id=${r.id}">
-      <div class="rcard-img"><img src="${r.img}" alt=""/></div>
+      <div class="rcard-img"><img src="${r.img}" alt="${r.name}" ${i < 2 ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" fetchpriority="low" decoding="async"'} /></div>
       <p class="rcard-name">${r.brand} ${r.name}</p>
       <p class="rcard-price">MVR ${r.price.toLocaleString()}</p></a>`).join('');
+  document.body.classList.remove('pending');
   if (window.lucide) lucide.createIcons();
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
