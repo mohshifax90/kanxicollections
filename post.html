@@ -210,11 +210,7 @@
   function goBack(){ if (history.length > 1 && document.referrer && new URL(document.referrer).origin === location.origin) history.back(); else location.href = 'index.html'; }
 
   const id = new URLSearchParams(location.search).get('id');
-  const sp = Store.get('products', id) || Store.storeProducts()[0];
-  const c = Store.card(sp);
-  const imgs = (c.images && c.images.length) ? c.images : [c.img];
-
-  let selVar = (sp.variants && sp.variants[0]) || null;
+  let sp = null, c = null, imgs = [], selVar = null;
 
   function formatPrice(price, old){
     return 'MVR ' + Number(price || 0).toLocaleString() + (old ? `<span class="old">MVR ${Number(old).toLocaleString()}</span>` : '');
@@ -225,64 +221,84 @@
     document.getElementById('pPrice').innerHTML = formatPrice(vp || c.price, c.old);
   }
 
-  /* ── header / gallery ── */
-  const mainImg = document.getElementById('mainImg');
-  mainImg.src = imgs[0];
-  mainImg.alt = c.name;
-  document.getElementById('pName').textContent = c.name;
-  renderPrice();
-  const detailWrap = document.getElementById('productDetails');
-  const detailItems = (sp.details || []).filter(Boolean);
-  if (detailWrap) {
-    if ((sp.description || '').trim() || detailItems.length) {
-      detailWrap.innerHTML = `
-        <h3>Product details</h3>
-        ${(sp.description || '').trim() ? `<p class="detail-copy">${sp.description}</p>` : ''}
-        ${detailItems.length ? `<ul class="detail-list">${detailItems.map(item=>`<li>${item}</li>`).join('')}</ul>` : ''}
-      `;
-    } else {
-      detailWrap.style.display = 'none';
-    }
-  }
-  if (!c.old) document.getElementById('ribbon').style.display = 'none';
-
-  /* dots + tap to cycle */
-  document.getElementById('dots').innerHTML = imgs.map((_,i)=>`<span class="gdot ${i===0?'active':''}"></span>`).join('');
   let gi = 0;
-  if (imgs.length > 1) {
-    document.querySelector('.gmain').addEventListener('click', () => {
-      gi = (gi+1) % imgs.length;
-      mainImg.src = imgs[gi];
-      document.querySelectorAll('.gdot').forEach((d,i)=>d.classList.toggle('active', i===gi));
-    });
-  }
+  function renderProductPage(){
+    sp = Store.get('products', id) || Store.storeProducts()[0] || null;
+    if(!sp) return false;
+    c = Store.card(sp);
+    imgs = (c.images && c.images.length) ? c.images : [c.img];
+    selVar = (sp.variants && sp.variants[0]) || null;
+    gi = 0;
 
-  /* ── VARIANT SELECTOR (by type) ── */
-  const vt = sp.variantType || 'none';
-  const opts = sp.variants || [];
+    const mainImg = document.getElementById('mainImg');
+    mainImg.src = imgs[0];
+    mainImg.alt = c.name;
+    document.getElementById('pName').textContent = c.name;
+    renderPrice();
+    const detailWrap = document.getElementById('productDetails');
+    const detailItems = (sp.details || []).filter(Boolean);
+    if (detailWrap) {
+      if ((sp.description || '').trim() || detailItems.length) {
+        detailWrap.style.display = '';
+        detailWrap.innerHTML = `
+          <h3>Product details</h3>
+          ${(sp.description || '').trim() ? `<p class="detail-copy">${sp.description}</p>` : ''}
+          ${detailItems.length ? `<ul class="detail-list">${detailItems.map(item=>`<li>${item}</li>`).join('')}</ul>` : ''}
+        `;
+      } else {
+        detailWrap.style.display = 'none';
+        detailWrap.innerHTML = '';
+      }
+    }
+    document.getElementById('ribbon').style.display = c.old ? '' : 'none';
 
-  if (vt === 'shade') {
-    const block = document.getElementById('shadeOpt'); block.style.display='';
-    document.getElementById('shadeLabel').textContent = 'Shade:';
-    document.getElementById('colorSel').textContent = selVar ? selVar.value : '';
-    document.getElementById('swatches').innerHTML = opts.map((v,i)=>{
-      const st = Store.stockOfVariant(sp.id, v.id);
-      const preview = imgs[i] || imgs[0];
-      return `<div class="swatch ${i===0?'active':''} ${st===0?'sold':''}" onclick="pickVar('${v.id}',this)">
-        <div class="swatch-img">${preview?`<img src="${preview}" alt="${v.value}" loading="lazy" decoding="async"/>`:`<div class="swatch-color" style="background:${v.color||'#ddd'}"></div>`}</div>
-        <div class="swatch-lbl">${v.value}</div></div>`;
-    }).join('');
-  } else if (vt === 'size' || vt === 'volume') {
-    const block = document.getElementById('sizeOpt'); block.style.display='';
-    document.getElementById('sizeLabel').textContent = (vt==='size'?'Size:':'Volume:');
-    document.getElementById('sizeSel').textContent = selVar ? selVar.value : '';
-    document.getElementById('sizes').innerHTML = opts.map((v,i)=>{
-      const st = Store.stockOfVariant(sp.id, v.id);
-      return `<div class="size ${i===0?'active':''} ${st===0?'sold':''}" onclick="pickVar('${v.id}',this)">${v.value}</div>`;
-    }).join('');
+    document.getElementById('dots').innerHTML = imgs.map((_,i)=>`<span class="gdot ${i===0?'active':''}"></span>`).join('');
+
+    const vt = sp.variantType || 'none';
+    const opts = sp.variants || [];
+    const shadeOpt = document.getElementById('shadeOpt');
+    const sizeOpt = document.getElementById('sizeOpt');
+    shadeOpt.style.display = 'none';
+    sizeOpt.style.display = 'none';
+    document.getElementById('swatches').innerHTML = '';
+    document.getElementById('sizes').innerHTML = '';
+
+    if (vt === 'shade') {
+      shadeOpt.style.display='';
+      document.getElementById('shadeLabel').textContent = 'Shade:';
+      document.getElementById('colorSel').textContent = selVar ? selVar.value : '';
+      document.getElementById('swatches').innerHTML = opts.map((v,i)=>{
+        const st = Store.stockOfVariant(sp.id, v.id);
+        const preview = imgs[i] || imgs[0];
+        return `<div class="swatch ${i===0?'active':''} ${st===0?'sold':''}" onclick="pickVar('${v.id}',this)">
+          <div class="swatch-img">${preview?`<img src="${preview}" alt="${v.value}" loading="lazy" decoding="async"/>`:`<div class="swatch-color" style="background:${v.color||'#ddd'}"></div>`}</div>
+          <div class="swatch-lbl">${v.value}</div></div>`;
+      }).join('');
+    } else if (vt === 'size' || vt === 'volume') {
+      sizeOpt.style.display='';
+      document.getElementById('sizeLabel').textContent = (vt==='size'?'Size:':'Volume:');
+      document.getElementById('sizeSel').textContent = selVar ? selVar.value : '';
+      document.getElementById('sizes').innerHTML = opts.map((v,i)=>{
+        const st = Store.stockOfVariant(sp.id, v.id);
+        return `<div class="size ${i===0?'active':''} ${st===0?'sold':''}" onclick="pickVar('${v.id}',this)">${v.value}</div>`;
+      }).join('');
+    }
+
+    const related = Store.cardsBySlug(c.cat).filter(x=>x.id!==id).slice(0,6);
+    document.getElementById('related').innerHTML = related.map((r, i)=>
+      `<a class="rcard" href="post.html?id=${r.id}">
+        <div class="rcard-img"><img src="${r.img}" alt="${r.name}" ${i < 2 ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" fetchpriority="low" decoding="async"'} /></div>
+        <p class="rcard-name">${r.brand} ${r.name}</p>
+        <p class="rcard-price">MVR ${r.price.toLocaleString()}</p></a>`).join('');
+
+    document.body.classList.remove('pending');
+    if (window.lucide) lucide.createIcons();
+    return true;
   }
 
   function pickVar(vid, el){
+    const opts = sp.variants || [];
+    const vt = sp.variantType || 'none';
     selVar = opts.find(v=>v.id===vid);
     el.parentElement.querySelectorAll('.swatch,.size').forEach(x=>x.classList.remove('active'));
     el.classList.add('active');
@@ -296,23 +312,27 @@
   function shareIt(){ showToast('Link copied to share'); }
 
   /* ── cart ── */
-  function curPrice(){ return (selVar && Store.priceOfVariant(sp.id, selVar.id)) || c.price; }
+  function curPrice(){ return (selVar && Store.priceOfVariant(sp.id, selVar.id)) || (c && c.price) || 0; }
   function doAddToCart(){
+    if(!sp || !c) return;
+    const vt = sp.variantType || 'none';
     const variantLabel = selVar ? (Store.variantTypeLabel(vt)+': '+selVar.value) : 'One Size';
     if ((vt!=='none') && !selVar) { showToast('Please select an option'); return; }
     addToCart({ id:id + (selVar?('_'+selVar.id):''), name:c.brand+' '+c.name, price:curPrice(), size:variantLabel, img:imgs[0] });
   }
   function doBuyNow(){ doAddToCart(); setTimeout(()=>location.href='checkout.html', 500); }
-
-  /* ── related (same category) ── */
-  const related = Store.cardsBySlug(c.cat).filter(x=>x.id!==id).slice(0,6);
-  document.getElementById('related').innerHTML = related.map((r, i)=>
-    `<a class="rcard" href="post.html?id=${r.id}">
-      <div class="rcard-img"><img src="${r.img}" alt="${r.name}" ${i < 2 ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" fetchpriority="low" decoding="async"'} /></div>
-      <p class="rcard-name">${r.brand} ${r.name}</p>
-      <p class="rcard-price">MVR ${r.price.toLocaleString()}</p></a>`).join('');
-  document.body.classList.remove('pending');
-  if (window.lucide) lucide.createIcons();
+  document.querySelector('.gmain').addEventListener('click', () => {
+    if (imgs.length > 1) {
+      gi = (gi+1) % imgs.length;
+      const mainImg = document.getElementById('mainImg');
+      mainImg.src = imgs[gi];
+      document.querySelectorAll('.gdot').forEach((d,i)=>d.classList.toggle('active', i===gi));
+    }
+  });
+  if (!renderProductPage() && !Store.useLocalStorage) {
+    Store.syncFromCloud().finally(() => renderProductPage());
+  }
+  window.addEventListener('kanxi:store-changed', () => { renderProductPage(); });
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
