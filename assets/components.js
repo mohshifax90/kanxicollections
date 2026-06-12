@@ -13,7 +13,7 @@ function itemStockLimit(product) {
   if (!(window.Store && product && product.id)) return null;
   const rawId = String(product.id || '');
   const [productId, variantId] = rawId.split('_');
-  return variantId ? Store.stockOfVariant(productId, variantId) : Store.stockOf(productId);
+  return variantId ? Store.availableStockOfVariant(productId, variantId) : Store.availableStockOf(productId);
 }
 function addToCart(product) {
   const cart = getCart();

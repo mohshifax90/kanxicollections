@@ -926,7 +926,7 @@
     if(delta > 0 && window.Store){
       const rawId = String(item.id || '');
       const [productId, variantId] = rawId.split('_');
-      const stock = variantId ? Store.stockOfVariant(productId, variantId) : Store.stockOf(productId);
+      const stock = variantId ? Store.availableStockOfVariant(productId, variantId) : Store.availableStockOf(productId);
       if(nextQty > stock){
         showToast(stock <= 0 ? 'This variant is out of stock' : (stock === 1 ? 'Only 1 left in stock' : `Only ${stock} left in stock`));
         return;

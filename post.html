@@ -235,8 +235,8 @@
   }
   function activeVariantStock(){
     if(!sp) return 0;
-    if(selVar) return Store.stockOfVariant(sp.id, selVar.id);
-    return Store.stockOf(sp.id);
+    if(selVar) return Store.availableStockOfVariant(sp.id, selVar.id);
+    return Store.availableStockOf(sp.id);
   }
   function renderSelectionState(){
     const vt = sp.variantType || 'none';
@@ -264,7 +264,7 @@
     if(!sp) return false;
     c = Store.card(sp);
     imgs = (c.images && c.images.length) ? c.images : [c.img];
-    selVar = (sp.variants || []).find(v => Store.stockOfVariant(sp.id, v.id) > 0) || (sp.variants && sp.variants[0]) || null;
+    selVar = (sp.variants || []).find(v => Store.availableStockOfVariant(sp.id, v.id) > 0) || (sp.variants && sp.variants[0]) || null;
     gi = 0;
 
     const mainImg = document.getElementById('mainImg');
@@ -304,7 +304,7 @@
       shadeOpt.style.display='';
       document.getElementById('shadeLabel').textContent = 'Shade:';
       document.getElementById('swatches').innerHTML = opts.map((v,i)=>{
-        const st = Store.stockOfVariant(sp.id, v.id);
+        const st = Store.availableStockOfVariant(sp.id, v.id);
         const preview = imgs[i] || imgs[0];
         const isActive = selVar && selVar.id === v.id;
         return `<div class="swatch ${isActive?'active':''} ${st===0?'sold':''} ${st>0 && st<=3?'low':''}" onclick="pickVar('${v.id}',this)">
@@ -316,7 +316,7 @@
       sizeOpt.style.display='';
       document.getElementById('sizeLabel').textContent = (vt==='size'?'Size:':'Volume:');
       document.getElementById('sizes').innerHTML = opts.map((v,i)=>{
-        const st = Store.stockOfVariant(sp.id, v.id);
+        const st = Store.availableStockOfVariant(sp.id, v.id);
         const isActive = selVar && selVar.id === v.id;
         return `<div class="size ${isActive?'active':''} ${st===0?'sold':''} ${st>0 && st<=3?'low':''}" onclick="pickVar('${v.id}',this)">${v.value}<small class="size-meta">${stockTextFor(st)}</small></div>`;
       }).join('');
@@ -340,7 +340,7 @@
     const vt = sp.variantType || 'none';
     const next = opts.find(v=>v.id===vid);
     if(!next) return;
-    const stock = Store.stockOfVariant(sp.id, next.id);
+    const stock = Store.availableStockOfVariant(sp.id, next.id);
     if(stock <= 0){
       showToast('This variant is out of stock');
       return;

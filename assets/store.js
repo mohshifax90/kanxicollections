@@ -637,6 +637,15 @@ const Store = (() => {
         .sort((a,b)=>(+a.date||0)-(+b.date||0));
       return batches.find(b=>(+b.stock||0)>0) || batches[0] || null;
     },
+    availableStockOf(p){
+      const id=typeof p==='string'?p:p.id;
+      const active=this.activeBatchOf(id, null);
+      return Math.max(0, +(active&&active.stock||0));
+    },
+    availableStockOfVariant(pid,vid){
+      const active=this.activeBatchOf(pid, vid);
+      return Math.max(0, +(active&&active.stock||0));
+    },
     stockOf(p){ const id=typeof p==='string'?p:p.id; return this.batchesOf(id).reduce((s,b)=>s+(+b.stock||0),0); },
     stockOfVariant(pid,vid){ return this.batchesOf(pid).filter(b=>b.variantId===vid).reduce((s,b)=>s+(+b.stock||0),0); },
     priceOf(p){
