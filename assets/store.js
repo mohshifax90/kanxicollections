@@ -13,8 +13,9 @@ const Store = (() => {
   const USE_LOCAL = IS_FILE || IS_LOCALHOST;
   const CAN_SYNC_CLOUD = !IS_FILE;
   const IS_ADMIN_PAGE = /admin\.html$/i.test(location.pathname);
-  const DEFER_CLOUD_BOOT = !IS_LOCALHOST && !IS_ADMIN_PAGE;
+  const DEFER_CLOUD_BOOT = false;
   const REALTIME_ENABLED = CAN_SYNC_CLOUD && !IS_LOCALHOST;
+  const USE_CLOUD_CACHE = USE_LOCAL;
   const SUPABASE_JS_SRC = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
   const BLANK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Crect width='600' height='600' fill='%23f4f4f5'/%3E%3Cpath d='M185 374l77-96 54 64 33-40 66 72H185z' fill='%23d4d4d8'/%3E%3Ccircle cx='238' cy='223' r='36' fill='%23e4e4e7'/%3E%3C/svg%3E";
@@ -297,8 +298,14 @@ const Store = (() => {
     return db;
   }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
-  function readCloudCache(){ try{ return JSON.parse(localStorage.getItem(CLOUD_CACHE_KEY)||'null'); }catch(_){ return null; } }
-  function writeCloudCache(db){ try{ localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db)); }catch(_){} }
+  function readCloudCache(){
+    if(!USE_CLOUD_CACHE) return null;
+    try{ return JSON.parse(localStorage.getItem(CLOUD_CACHE_KEY)||'null'); }catch(_){ return null; }
+  }
+  function writeCloudCache(db){
+    if(!USE_CLOUD_CACHE) return;
+    try{ localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db)); }catch(_){}
+  }
   function emitSync(status, detail={}){ window.dispatchEvent(new CustomEvent(CLOUD_STATUS_EVENT,{detail:{status,...detail}})); }
   async function cloudFetch(method, query='', body){
     const cfg=cloudConfig(), row=cloudRow();
@@ -414,7 +421,7 @@ const Store = (() => {
   }
   function loadCloud(force=false){
     if(cloudLoaded && !force) return cloudDb;
-    const cached = normalize(readCloudCache() || cloudDb || seed());
+    const cached = normalize(cloudDb || readCloudCache() || seed());
     cloudDb = cached;
     cloudLoaded = true;
     lastCloudHash = JSON.stringify(cached);
@@ -527,17 +534,7 @@ const Store = (() => {
     return { ok:true };
   }
 
-  const api = {
-    ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, uid, im, BLANK_IMAGE,
-    useLocalStorage: USE_LOCAL,
-    phoneKey(value){ return String(value || '').replace(/\D/g,''); },
-    all(){ return load(); },
-    reset(){ const db=normalize(seed()); save(db); return db; },
-    syncFromCloud,
-    list(c){ return load()[c]||[]; },
-    get(c,id){ return (load()[c]||[]).find(x=>x.id===id); },
-    upsert(c,item){
-      const db=load();
+  function upsertInto(db, c, item){
       if(!db[c]) db[c]=[];
       let idx = item && item.id ? db[c].findIndex(x=>x.id===item.id) : -1;
       if(c==='users' && idx===-1 && item && item.phone){
@@ -554,7 +551,28 @@ const Store = (() => {
         db[c][idx]={...db[c][idx],...item};
         item = db[c][idx];
       }
+      return item;
+  }
+
+  const api = {
+    ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, uid, im, BLANK_IMAGE,
+    useLocalStorage: USE_LOCAL,
+    phoneKey(value){ return String(value || '').replace(/\D/g,''); },
+    all(){ return load(); },
+    reset(){ const db=normalize(seed()); save(db); return db; },
+    syncFromCloud,
+    list(c){ return load()[c]||[]; },
+    get(c,id){ return (load()[c]||[]).find(x=>x.id===id); },
+    upsert(c,item){
+      const db=load();
+      item = upsertInto(db, c, item);
       save(db);
+      return item;
+    },
+    async upsertNow(c,item){
+      const db=load();
+      item = upsertInto(db, c, item);
+      await saveNow(db);
       return item;
     },
     remove(c,id){ const db=load(); db[c]=(db[c]||[]).filter(x=>x.id!==id); if(c==='products') db.batches=(db.batches||[]).filter(b=>b.productId!==id); save(db); },
@@ -674,9 +692,9 @@ const Store = (() => {
 
     /* ── homepage CMS ── */
     getHomepage(){ return load().homepage || defaultHomepage(); },
-    saveHomepage(hp){ const db=load(); db.homepage=hp; save(db); },
+    async saveHomepage(hp){ const db=load(); db.homepage=hp; await saveNow(db); return db.homepage; },
     getPaymentSettings(){ return load().paymentSettings || defaultPaymentSettings(); },
-    savePaymentSettings(settings){
+    async savePaymentSettings(settings){
       const db=load();
       db.paymentSettings = {
         methods: PAYMENT_METHODS.map(def=>{
@@ -688,7 +706,7 @@ const Store = (() => {
           accountNumber: settings && settings.bankTransfer && settings.bankTransfer.accountNumber || ''
         }
       };
-      saveNow(db).catch(error=>console.warn('Kanxi payment settings save failed:', error.message));
+      await saveNow(db);
       return db.paymentSettings;
     },
     imageForTag(tagId){ const p=this.storeProducts().find(p=>(p.tags||[]).includes(tagId)); return p?p.image:''; },

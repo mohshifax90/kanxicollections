@@ -475,7 +475,7 @@
   const CC_ASPECT = 4/4.4; // homepage collection-card aspect
   function onCCImage(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust homepage image',aspect:CC_ASPECT,outW:560,q:0.75,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); r.readAsDataURL(f); input.value=''; }
   function adjustCCImage(i){ const src=_hp.collections.cards[i]&&_hp.collections.cards[i].image; if(!src)return; openImageAdjust({src,title:'Adjust homepage image',aspect:CC_ASPECT,outW:560,q:0.75,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); }
-  function saveHP(){ try{ Store.saveHomepage(_hp); toast('Homepage saved ✓'); }catch(e){ alert('Could not save — storage full. Use smaller images.'); } }
+  async function saveHP(){ try{ await Store.saveHomepage(_hp); toast('Homepage saved ✓'); }catch(e){ alert('Could not save — storage full. Use smaller images.'); } }
 
   /* ════════ DASHBOARD ════════ */
   function dashboard(){
@@ -544,9 +544,9 @@
   function pickCatIcon(n){ _catIcon=n; document.querySelectorAll('#catIconGrid .cat-ico-btn').forEach(b=>{ const on=b.dataset.icon===n;
     b.classList.toggle('border-kink',on); b.classList.toggle('bg-kink',on); b.classList.toggle('text-white',on);
     b.classList.toggle('border-zinc-200',!on); b.classList.toggle('text-zinc-600',!on); }); }
-  function saveCat(id){ const name=$('#c_name').value.trim(); if(!name)return alert('Name required');
+  async function saveCat(id){ const name=$('#c_name').value.trim(); if(!name)return alert('Name required');
     const brands=_brands.filter(b=>(b.name||'').trim()).map(b=>({id:b.id||Store.uid('br_'),name:b.name.trim(),logo:b.logo||''}));
-    Store.upsert('categories',{id:id||undefined,name,slug:$('#c_slug').value.trim()||name.toLowerCase().replace(/\s+/g,'-'),icon:_catIcon,variantType:$('#c_vtype').value,active:$('#c_active').value==='true',brands});
+    await Store.upsertNow('categories',{id:id||undefined,name,slug:$('#c_slug').value.trim()||name.toLowerCase().replace(/\s+/g,'-'),icon:_catIcon,variantType:$('#c_vtype').value,active:$('#c_active').value==='true',brands});
     closeModal(); categories(); toast('Category saved'); }
 
   /* ════════ SUB-CATEGORIES ════════ */
@@ -606,9 +606,9 @@
     img.onerror=()=>cb(src); img.src=src;
   }
   function onBrandLogo(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>compressLogoImage(e.target.result,240,d=>{ _brands[i].logo=d; renderBrands(); }); r.readAsDataURL(f); input.value=''; }
-  function saveSub(id){
+  async function saveSub(id){
     const name=$('#s_name').value.trim(); if(!name)return alert('Name required');
-    try{ Store.upsert('subcategories',{id:id||undefined,name,categoryId:$('#s_cat').value,image:_subImage}); }
+    try{ await Store.upsertNow('subcategories',{id:id||undefined,name,categoryId:$('#s_cat').value,image:_subImage}); }
     catch(e){ alert('Could not save — storage full. Use smaller images.'); return; }
     closeModal(); subcats(); toast('Sub-category saved');
   }
@@ -625,7 +625,7 @@
   function editTag(id){ const t=id?Store.get('tags',id):{name:''};
     openModal(id?'Edit Tag':'New Tag',F.fg('Tag name',F.input('tg_name',t.name)),
       `<button onclick="closeModal()" class="${btn.light}">Cancel</button><button onclick="saveTag('${id||''}')" class="${btn.primary}">Save</button>`); }
-  function saveTag(id){ const name=$('#tg_name').value.trim(); if(!name)return alert('Name required'); Store.upsert('tags',{id:id||undefined,name}); closeModal(); tags(); }
+  async function saveTag(id){ const name=$('#tg_name').value.trim(); if(!name)return alert('Name required'); await Store.upsertNow('tags',{id:id||undefined,name}); closeModal(); tags(); }
 
   /* ════════ PRODUCTS ════════ */
   function products(){
@@ -765,7 +765,7 @@
       || '<p class="text-xs text-zinc-400 py-1">No options yet — click "Add option".</p>'; }
   function addVar(){ _vars.push({id:Store.uid('v_'),value:'',color:_vtype==='shade'?'#cccccc':null,barcode:''}); renderVars(); }
   function scanVariantBarcode(i){ startScan(text=>{ _vars[i].barcode=(text||'').trim(); renderVars(); toast('Barcode captured'); }); }
-  function saveProduct(id){
+  async function saveProduct(id){
     const name=$('#p_name').value.trim(); if(!name){ alert('Product name is required'); return; }
     const subId=$('#p_sub').value; if(!subId){ alert('Select a sub-category'); return; }
     const pid = id || Store.uid('p_');
@@ -780,7 +780,7 @@
     const primary = _imgs[0] || (Store.BLANK_IMAGE || '');
     const detailLines=$('#p_details').value.split('\n').map(s=>s.trim()).filter(Boolean);
     try {
-      Store.upsert('products',{
+      await Store.upsertNow('products',{
         id:pid, name,
         brand, brandId:brand&&brandId?brandId:'',
         image:primary, images:_imgs.slice(),
@@ -863,13 +863,31 @@
     marginHint();
     toast('Matched: '+r.product.name+(r.variant?' · '+r.variant.value:''));
   }
-  function saveBatch(id){
+  async function saveBatch(id){
     const pid=$('#b_prod').value; if(!pid)return alert('Select a product');
-    Store.upsert('batches',{ id:id||undefined, productId:pid, variantId:$('#b_var').value||null,
-      batchNo:$('#b_no').value.trim()||'B-'+Date.now().toString().slice(-4),
-      costPrice:+$('#b_cost').value||0, sellingPrice:+$('#b_sell').value||0, stock:+$('#b_stock').value||0,
-      expiry:$('#b_exp').value, date:Date.now() });
-    closeModal(); inventory();
+    const saveBtn = document.querySelector('#modalFoot .bg-kink');
+    if(saveBtn){
+      saveBtn.disabled = true;
+      saveBtn.style.opacity = '0.6';
+      saveBtn.textContent = 'Saving...';
+    }
+    try{
+      await Store.upsertNow('batches',{ id:id||undefined, productId:pid, variantId:$('#b_var').value||null,
+        batchNo:$('#b_no').value.trim()||'B-'+Date.now().toString().slice(-4),
+        costPrice:+$('#b_cost').value||0, sellingPrice:+$('#b_sell').value||0, stock:+$('#b_stock').value||0,
+        expiry:$('#b_exp').value, date:Date.now() });
+      closeModal();
+      inventory();
+      toast('Batch saved');
+    }catch(error){
+      if(saveBtn){
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = '';
+        saveBtn.textContent = 'Save Batch';
+      }
+      alert('Could not save batch. Please try again.');
+      console.warn('Kanxi batch save failed:', error.message);
+    }
   }
 
   /* ════════ ORDERS ════════ */
@@ -940,9 +958,9 @@
       </div>
     </div>`;
   }
-  function savePaymentSettings(){
+  async function savePaymentSettings(){
     const current=Store.getPaymentSettings();
-    Store.savePaymentSettings({
+    await Store.savePaymentSettings({
       methods:(current.methods||[]).map(m=>({ key:m.key, label:m.label, enabled:!!document.querySelector(`[data-method="${m.key}"]`)?.checked })),
       bankTransfer:{
         bankName:document.getElementById('pay_bank_name')?.value.trim()||'',
