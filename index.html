@@ -105,7 +105,14 @@
 
     /* ── PRODUCT CARDS ── */
     .prod-h-scroll .pcard { flex-shrink: 0; width: 42.5%; min-width: 42.5%; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 0.8rem; padding: 0.5rem 0 1rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 0.6rem; padding: 0.5rem 0 1rem; }
+    .more-grid {
+      display:grid;
+      grid-template-columns:repeat(3, 42.5%);
+      gap:1rem 0.8rem;
+      padding:0.5rem 0 1rem;
+      overflow:hidden;
+    }
     .pcard { cursor: pointer; }
     .pcard-img { position: relative; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: var(--gray-100); margin-bottom: 0.5rem; border:1px solid #e3e3e3; }
     .pcard-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s; }
@@ -514,6 +521,11 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 1.35rem 1rem;
       }
+      .more-grid {
+        grid-template-columns:repeat(3, 31.5%);
+        gap:1.35rem 1rem;
+        overflow:hidden;
+      }
       .pcard-img { border-radius: 14px; }
       .pcard-name { font-size: 0.84rem; }
       .pcard-price { font-size: 0.9rem; }
@@ -736,7 +748,7 @@
   <!-- ── MORE FROM THIS SHOP ── -->
   <div class="section deferred-section">
     <div class="section-head"><h2>More from this shop</h2><span class="see-all">See all</span></div>
-    <div class="grid-2" id="moreGrid"></div>
+    <div class="more-grid" id="moreGrid"></div>
   </div>
 
   <!-- ── FOOTER ── -->
@@ -931,7 +943,7 @@
 
     const best = Store.bestSellers(hp.bestsellers.limit||8);
     const offers = Store.offers(hp.offers.limit||12);
-    const more = Store.storeProducts().slice(0, 8).map(p => Store.card(p));
+    const more = Store.storeProducts().slice(0, 9).map(p => Store.card(p));
 
     document.getElementById('homeSections').innerHTML =
       section(hp.collections.title, collHTML) +
