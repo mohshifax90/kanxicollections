@@ -937,7 +937,7 @@
       section(hp.collections.title, collHTML) +
       section(hp.brands.title, brandHTML) +
       `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
-      (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodGrid(offers))}</div>` : '');
+      (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodScroll(offers))}</div>` : '');
 
     document.getElementById('moreGrid').innerHTML = more.map(cardHTML).join('');
 
