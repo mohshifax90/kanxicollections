@@ -172,6 +172,21 @@ const Store = (() => {
       bankTransfer: { bankName:'Kanxi Collection', accountNumber:'' }
     };
   }
+  function emptyCloudDb(){
+    return {
+      _v:VERSION,
+      categories:[],
+      subcategories:[],
+      tags:[],
+      products:[],
+      batches:[],
+      users:[],
+      orders:[],
+      payments:[],
+      homepage:defaultHomepage(),
+      paymentSettings:defaultPaymentSettings()
+    };
+  }
 
   function normalizeDelivery(address){
     const info = address && address.deliveryInfo || {};
@@ -421,7 +436,7 @@ const Store = (() => {
   }
   function loadCloud(force=false){
     if(cloudLoaded && !force) return cloudDb;
-    const cached = normalize(cloudDb || readCloudCache() || seed());
+    const cached = normalize(cloudDb || readCloudCache() || (USE_CLOUD_CACHE ? seed() : emptyCloudDb()));
     cloudDb = cached;
     cloudLoaded = true;
     lastCloudHash = JSON.stringify(cached);

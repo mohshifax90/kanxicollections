@@ -1036,6 +1036,11 @@
   /* init */
   window.addEventListener('error', e => { try{ toast('⚠ '+(e.message||'Script error')); }catch(_){} });
   let _syncBusy=false;
+  function renderAdminLoading(message='Loading live store data…'){
+    content.innerHTML = `<div class="bg-white border border-zinc-200 rounded-2xl p-8 text-center">
+      <div class="text-sm font-semibold text-zinc-500">${message}</div>
+    </div>`;
+  }
   async function refreshAdminFromCloud(){
     if(_syncBusy || !Store || Store.useLocalStorage) return;
     _syncBusy=true;
@@ -1049,8 +1054,14 @@
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAdminFromCloud(); });
   window.addEventListener('focus', refreshAdminFromCloud);
   refreshBadge();
-  go(currentRoute());
-  refreshAdminFromCloud();
+  if(Store.useLocalStorage){
+    go(currentRoute());
+  }else{
+    document.querySelectorAll('.navi[data-route]').forEach(n=>n.classList.toggle('active', n.dataset.route===currentRoute()));
+    $('#pageTitle').textContent = titles[currentRoute()] || 'Dashboard';
+    renderAdminLoading();
+    refreshAdminFromCloud().finally(()=>go(currentRoute()));
+  }
   icons(); // render static nav icons
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>

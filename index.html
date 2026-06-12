@@ -377,20 +377,17 @@
         <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
       : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
 
+    const best = Store.bestSellers(hp.bestsellers.limit||8);
+    const offers = Store.offers(hp.offers.limit||12);
+    const more = Store.storeProducts().slice(0, 8).map(p => Store.card(p));
+
     document.getElementById('homeSections').innerHTML =
       section(hp.collections.title, collHTML) +
-      section(hp.brands.title, brandHTML);
+      section(hp.brands.title, brandHTML) +
+      `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
+      (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodGrid(offers))}</div>` : '');
 
-    deferWork(() => {
-      const best = Store.bestSellers(hp.bestsellers.limit||8);
-      const offers = Store.offers(hp.offers.limit||12);
-      document.getElementById('homeSections').insertAdjacentHTML('beforeend',
-        `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
-        (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodGrid(offers))}</div>` : '')
-      );
-      const more = Store.storeProducts().slice(0, 8).map(p => Store.card(p));
-      document.getElementById('moreGrid').innerHTML = more.map(cardHTML).join('');
-    });
+    document.getElementById('moreGrid').innerHTML = more.map(cardHTML).join('');
 
     document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
       document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
