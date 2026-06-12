@@ -15,6 +15,23 @@
     a { text-decoration:none; color:inherit; }
     ::selection { background:var(--accent); color:#fff; }
     .app { max-width:480px; margin:0 auto; background:#fff; min-height:100vh; box-shadow:0 0 40px rgba(0,0,0,0.08); }
+    body.pending .titleblock,
+    body.pending .cat-strip,
+    body.pending .filter-row,
+    body.pending .count,
+    body.pending .grid-2 { visibility:hidden; }
+    .loading-shell { display:none; padding:1rem; }
+    body.pending .loading-shell { display:block; }
+    .skeleton { background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); background-size:400% 100%; animation:shimmer 1.2s ease infinite; border-radius:14px; }
+    .sk-title { height:28px; width:58%; margin-bottom:0.9rem; }
+    .sk-copy { height:15px; width:92%; margin-bottom:0.5rem; }
+    .sk-copy.short { width:72%; }
+    .sk-strip { display:flex; gap:0.7rem; margin:1rem 0 1.15rem; }
+    .sk-card { width:118px; aspect-ratio:118/96; border-radius:12px; flex-shrink:0; }
+    .sk-count { height:14px; width:92px; margin-bottom:1rem; }
+    .sk-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.3rem 0.8rem; }
+    .sk-product { aspect-ratio:1/1; border-radius:12px; }
+    @keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
 
     /* header */
     .shop-head { position:sticky; top:0; z-index:50; background:#fff; display:flex; align-items:center; gap:0.7rem; padding:0.8rem 1rem; border-bottom:1px solid var(--line); }
@@ -149,6 +166,24 @@
     <button class="icon-btn menu-btn" title="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
   </div>
 
+  <div class="loading-shell">
+    <div class="skeleton sk-title"></div>
+    <div class="skeleton sk-copy"></div>
+    <div class="skeleton sk-copy short"></div>
+    <div class="sk-strip">
+      <div class="skeleton sk-card"></div>
+      <div class="skeleton sk-card"></div>
+      <div class="skeleton sk-card"></div>
+    </div>
+    <div class="skeleton sk-count"></div>
+    <div class="sk-grid">
+      <div class="skeleton sk-product"></div>
+      <div class="skeleton sk-product"></div>
+      <div class="skeleton sk-product"></div>
+      <div class="skeleton sk-product"></div>
+    </div>
+  </div>
+
   <!-- title -->
   <div class="titleblock">
     <h1 id="catTitle">Category</h1>
@@ -188,6 +223,7 @@
 <script src="assets/store.js?v=7"></script>
 <script src="assets/components.js"></script>
 <script>
+  document.body.classList.add('pending');
   /* ── CATEGORY META (page copy) ── */
   const cats = {
     clothing: { title:'Clothing & Apparel', count:'48 products',
@@ -217,9 +253,6 @@
   const brandQ = params.get('brand');
   const cat = params.get('cat') || (Store.list('categories')[0]||{}).slug || 'clothing';
   const subId = params.get('sub');
-  const currentCategory = Store.categoryBySlug(cat);
-  const currentSub = subId ? Store.get('subcategories', subId) : null;
-
   /* base items + page copy depending on mode (tag / brand / category) */
   let baseItems = [], meta = null, SIZES = [], COLORS = [];
   function refreshBaseItems(){
@@ -242,7 +275,6 @@
     SIZES = [...new Set(baseItems.flatMap(p=>p.sizes))];
     COLORS = [...new Set(baseItems.flatMap(p=>p.colors))];
   }
-  refreshBaseItems();
   const activeKey = tagId||brandQ ? '' : (subId || cat);
 
   function renderCategoryChrome(){
@@ -262,8 +294,6 @@
         <span class="lbl">${c.label}</span>
       </a>`).join('');
   }
-
-  renderCategoryChrome();
 
   /* ── FILTER + SORT STATE ── */
   var state = { sort:'suggested', price:null, onSale:false, inStock:false, sizes:[], colors:[] };
@@ -345,11 +375,24 @@
   }
   function closeSheet(){ document.getElementById('sheetBg').classList.remove('show'); document.getElementById('sheet').classList.remove('show'); }
 
-  renderGrid();
+  function renderShopPage(){
+    refreshBaseItems();
+    renderCategoryChrome();
+    renderGrid();
+    document.body.classList.remove('pending');
+  }
+
+  if (!Store.useLocalStorage && (subId || tagId || brandQ || cat)) {
+    Store.syncFromCloud().finally(renderShopPage);
+  } else {
+    renderShopPage();
+  }
+
   window.addEventListener('kanxi:store-changed', () => {
     refreshBaseItems();
     renderCategoryChrome();
     renderGrid();
+    document.body.classList.remove('pending');
   });
 </script>
 <script defer src="/_vercel/speed-insights/script.js"></script>

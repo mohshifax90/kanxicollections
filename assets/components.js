@@ -9,13 +9,30 @@ function saveCart(cart) {
   else window._kanxiCart = cart;
   updateCartCount();
 }
+function itemStockLimit(product) {
+  if (!(window.Store && product && product.id)) return null;
+  const rawId = String(product.id || '');
+  const [productId, variantId] = rawId.split('_');
+  return variantId ? Store.stockOfVariant(productId, variantId) : Store.stockOf(productId);
+}
 function addToCart(product) {
   const cart = getCart();
   const existing = cart.find(i => i.id === product.id && i.size === product.size);
+  const limit = itemStockLimit(product);
+  const nextQty = (existing ? existing.qty : 0) + (product.qty || 1);
+  if (limit !== null && limit <= 0) {
+    showToast('This variant is out of stock');
+    return false;
+  }
+  if (limit !== null && nextQty > limit) {
+    showToast(limit === 1 ? 'Only 1 left in stock' : `Only ${limit} left in stock`);
+    return false;
+  }
   if (existing) existing.qty += (product.qty || 1);
   else cart.push({ ...product, qty: product.qty || 1 });
   saveCart(cart);
   showToast((product.name || 'Item') + ' added to bag');
+  return true;
 }
 function activeCartPrice(item) {
   if (!(window.Store && item && item.id)) return item.price || 0;

@@ -69,6 +69,8 @@
     .opt-label { font-size:0.9rem; margin-bottom:0.5rem; }
     .opt-label b { font-weight:700; }
     .opt-label span { color:var(--gray-600); }
+    .stock-note { display:block; margin-top:0.22rem; font-size:0.78rem; color:var(--gray-600); }
+    .stock-note.low { color:var(--red); font-weight:600; }
     .swatches { display:flex; gap:0.6rem; overflow-x:auto; scrollbar-width:none; padding-bottom:0.15rem; }
     .swatches::-webkit-scrollbar { display:none; }
     .swatch { width:58px; cursor:pointer; }
@@ -85,8 +87,13 @@
     .size:hover { border-color:var(--black); }
     .size.active { background:#fff; color:var(--black); border:2px solid var(--black); box-shadow:0 0 0 2px #fff inset; }
     .size.sold, .swatch.sold { opacity:0.4; text-decoration:line-through; }
+    .size.sold, .swatch.sold { cursor:not-allowed; }
     .swatch.sold { text-decoration:none; }
     .swatch.sold .swatch-lbl { text-decoration:line-through; }
+    .swatch-stock { display:block; font-size:0.62rem; text-align:center; margin-top:0.16rem; color:var(--gray-600); }
+    .swatch-stock.low { color:var(--red); font-weight:600; }
+    .size-meta { display:block; font-size:0.68rem; line-height:1.15; margin-top:0.12rem; color:var(--gray-600); }
+    .size.low .size-meta { color:var(--red); font-weight:600; }
 
     .deferred-section { content-visibility:auto; contain-intrinsic-size:700px; }
     .sec { padding:0 1rem; }
@@ -220,6 +227,36 @@
     const vp = selVar ? Store.priceOfVariant(sp.id, selVar.id) : null;
     document.getElementById('pPrice').innerHTML = formatPrice(vp || c.price, c.old);
   }
+  function stockTextFor(count){
+    const stock = Math.max(0, Number(count || 0));
+    if (stock <= 0) return 'Out of stock';
+    if (stock === 1) return '1 left';
+    return `${stock} left`;
+  }
+  function activeVariantStock(){
+    if(!sp) return 0;
+    if(selVar) return Store.stockOfVariant(sp.id, selVar.id);
+    return Store.stockOf(sp.id);
+  }
+  function renderSelectionState(){
+    const vt = sp.variantType || 'none';
+    const stock = activeVariantStock();
+    const stockHtml = `<small class="stock-note ${stock > 0 && stock <= 3 ? 'low' : ''}">${stockTextFor(stock)}</small>`;
+    if (vt === 'shade') {
+      document.getElementById('colorSel').innerHTML = `${selVar ? selVar.value : ''}${stockHtml}`;
+    } else if (vt === 'size' || vt === 'volume') {
+      document.getElementById('sizeSel').innerHTML = `${selVar ? selVar.value : ''}${stockHtml}`;
+    }
+    const cartBtn = document.querySelector('.btn-cart');
+    const buyBtn = document.querySelector('.btn-buy');
+    const disabled = stock <= 0;
+    [cartBtn, buyBtn].forEach(btn => {
+      if(!btn) return;
+      btn.disabled = disabled;
+      btn.style.opacity = disabled ? '0.55' : '1';
+      btn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+    });
+  }
 
   let gi = 0;
   function renderProductPage(){
@@ -227,7 +264,7 @@
     if(!sp) return false;
     c = Store.card(sp);
     imgs = (c.images && c.images.length) ? c.images : [c.img];
-    selVar = (sp.variants && sp.variants[0]) || null;
+    selVar = (sp.variants || []).find(v => Store.stockOfVariant(sp.id, v.id) > 0) || (sp.variants && sp.variants[0]) || null;
     gi = 0;
 
     const mainImg = document.getElementById('mainImg');
@@ -266,23 +303,25 @@
     if (vt === 'shade') {
       shadeOpt.style.display='';
       document.getElementById('shadeLabel').textContent = 'Shade:';
-      document.getElementById('colorSel').textContent = selVar ? selVar.value : '';
       document.getElementById('swatches').innerHTML = opts.map((v,i)=>{
         const st = Store.stockOfVariant(sp.id, v.id);
         const preview = imgs[i] || imgs[0];
-        return `<div class="swatch ${i===0?'active':''} ${st===0?'sold':''}" onclick="pickVar('${v.id}',this)">
+        const isActive = selVar && selVar.id === v.id;
+        return `<div class="swatch ${isActive?'active':''} ${st===0?'sold':''} ${st>0 && st<=3?'low':''}" onclick="pickVar('${v.id}',this)">
           <div class="swatch-img">${preview?`<img src="${preview}" alt="${v.value}" loading="lazy" decoding="async"/>`:`<div class="swatch-color" style="background:${v.color||'#ddd'}"></div>`}</div>
-          <div class="swatch-lbl">${v.value}</div></div>`;
+          <div class="swatch-lbl">${v.value}</div>
+          <small class="swatch-stock ${st>0 && st<=3?'low':''}">${stockTextFor(st)}</small></div>`;
       }).join('');
     } else if (vt === 'size' || vt === 'volume') {
       sizeOpt.style.display='';
       document.getElementById('sizeLabel').textContent = (vt==='size'?'Size:':'Volume:');
-      document.getElementById('sizeSel').textContent = selVar ? selVar.value : '';
       document.getElementById('sizes').innerHTML = opts.map((v,i)=>{
         const st = Store.stockOfVariant(sp.id, v.id);
-        return `<div class="size ${i===0?'active':''} ${st===0?'sold':''}" onclick="pickVar('${v.id}',this)">${v.value}</div>`;
+        const isActive = selVar && selVar.id === v.id;
+        return `<div class="size ${isActive?'active':''} ${st===0?'sold':''} ${st>0 && st<=3?'low':''}" onclick="pickVar('${v.id}',this)">${v.value}<small class="size-meta">${stockTextFor(st)}</small></div>`;
       }).join('');
     }
+    renderSelectionState();
 
     const related = Store.cardsBySlug(c.cat).filter(x=>x.id!==id).slice(0,6);
     document.getElementById('related').innerHTML = related.map((r, i)=>
@@ -299,12 +338,18 @@
   function pickVar(vid, el){
     const opts = sp.variants || [];
     const vt = sp.variantType || 'none';
-    selVar = opts.find(v=>v.id===vid);
+    const next = opts.find(v=>v.id===vid);
+    if(!next) return;
+    const stock = Store.stockOfVariant(sp.id, next.id);
+    if(stock <= 0){
+      showToast('This variant is out of stock');
+      return;
+    }
+    selVar = next;
     el.parentElement.querySelectorAll('.swatch,.size').forEach(x=>x.classList.remove('active'));
     el.classList.add('active');
-    const lbl = vt==='shade' ? document.getElementById('colorSel') : document.getElementById('sizeSel');
-    if (lbl) lbl.textContent = selVar.value;
     renderPrice();
+    renderSelectionState();
   }
 
   /* ── heart + share ── */
@@ -317,10 +362,12 @@
     if(!sp || !c) return;
     const vt = sp.variantType || 'none';
     const variantLabel = selVar ? (Store.variantTypeLabel(vt)+': '+selVar.value) : 'One Size';
-    if ((vt!=='none') && !selVar) { showToast('Please select an option'); return; }
-    addToCart({ id:id + (selVar?('_'+selVar.id):''), name:c.brand+' '+c.name, price:curPrice(), size:variantLabel, img:imgs[0] });
+    if ((vt!=='none') && !selVar) { showToast('Please select an option'); return false; }
+    const stock = activeVariantStock();
+    if(stock <= 0){ showToast('This variant is out of stock'); return false; }
+    return addToCart({ id:id + (selVar?('_'+selVar.id):''), name:c.brand+' '+c.name, price:curPrice(), size:variantLabel, img:imgs[0] });
   }
-  function doBuyNow(){ doAddToCart(); setTimeout(()=>location.href='checkout.html', 500); }
+  function doBuyNow(){ if(doAddToCart()) setTimeout(()=>location.href='checkout.html', 500); }
   document.querySelector('.gmain').addEventListener('click', () => {
     if (imgs.length > 1) {
       gi = (gi+1) % imgs.length;

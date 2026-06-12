@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Love Letter</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root{
+      --bg:#fff4f7;
+      --paper:#fffdfb;
+      --ink:#2b1e24;
+      --rose:#f28cab;
+      --rose-deep:#e25584;
+      --rose-soft:#ffd7e5;
+      --gold:#f8c75f;
+      --shadow:0 24px 60px rgba(122, 53, 82, 0.16);
+    }
+    body{
+      margin:0;
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      background:
+        radial-gradient(circle at top, #fff9fb 0, #fff4f7 42%, #ffeef3 100%);
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      color:var(--ink);
+      overflow:hidden;
+    }
+    .scene{
+      width:min(92vw, 360px);
+      position:relative;
+      padding:28px 0 12px;
+    }
+    .hint{
+      text-align:center;
+      font-size:0.88rem;
+      color:#8c6271;
+      margin-bottom:18px;
+      letter-spacing:0.02em;
+      transition:opacity .25s ease, transform .25s ease;
+    }
+    .opened .hint{
+      opacity:0;
+      transform:translateY(-8px);
+    }
+    .stage{
+      position:relative;
+      height:320px;
+      perspective:1200px;
+    }
+    .float-heart{
+      position:absolute;
+      width:14px;
+      height:14px;
+      background:var(--rose);
+      transform:rotate(45deg);
+      opacity:.22;
+      animation:drift 7s ease-in-out infinite;
+    }
+    .float-heart::before,
+    .float-heart::after{
+      content:"";
+      position:absolute;
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      background:inherit;
+    }
+    .float-heart::before{ left:-7px; }
+    .float-heart::after{ top:-7px; }
+    .float-heart.h1{ top:34px; left:12px; animation-delay:0s; }
+    .float-heart.h2{ top:70px; right:24px; animation-delay:1.4s; }
+    .float-heart.h3{ bottom:42px; left:30px; animation-delay:2.5s; }
+    .float-heart.h4{ bottom:86px; right:14px; animation-delay:3.3s; }
+    .envelope-wrap{
+      position:absolute;
+      inset:auto 0 0;
+      display:grid;
+      place-items:center;
+    }
+    .envelope-hit{
+      position:relative;
+      width:300px;
+      height:220px;
+      border:none;
+      background:none;
+      padding:0;
+      cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .envelope-hit:focus-visible{
+      outline:3px solid rgba(226, 85, 132, .35);
+      outline-offset:8px;
+      border-radius:24px;
+    }
+    .letter{
+      position:absolute;
+      left:50%;
+      bottom:84px;
+      width:228px;
+      height:164px;
+      transform:translateX(-50%) translateY(86px) scale(.94);
+      background:linear-gradient(180deg, #fffefc 0%, #fff6f8 100%);
+      border-radius:16px;
+      box-shadow:0 14px 32px rgba(115, 66, 89, .14);
+      padding:22px 20px 18px;
+      text-align:center;
+      transition:transform .9s cubic-bezier(.2,.8,.2,1), box-shadow .9s ease;
+      z-index:1;
+    }
+    .letter::before{
+      content:"";
+      position:absolute;
+      inset:10px;
+      border:1.5px dashed rgba(226, 85, 132, .22);
+      border-radius:12px;
+      pointer-events:none;
+    }
+    .letter-title{
+      margin:0;
+      font-size:1.72rem;
+      line-height:1.02;
+      letter-spacing:.03em;
+      font-weight:800;
+    }
+    .heart-line{
+      margin-top:10px;
+      font-size:1.8rem;
+      color:var(--rose-deep);
+      line-height:1;
+    }
+    .sign{
+      margin-top:16px;
+      font-size:1rem;
+      color:#8a576c;
+      font-weight:600;
+    }
+    .env-back{
+      position:absolute;
+      left:50%;
+      bottom:0;
+      transform:translateX(-50%);
+      width:300px;
+      height:188px;
+      background:linear-gradient(180deg, #ffc8da 0%, #f6a9c1 100%);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .env-back::before{
+      content:"";
+      position:absolute;
+      inset:auto 0 0;
+      height:78px;
+      background:rgba(255,255,255,.15);
+    }
+    .env-flap{
+      position:absolute;
+      left:50%;
+      bottom:94px;
+      width:0;
+      height:0;
+      transform:translateX(-50%) rotateX(0deg);
+      transform-origin:center bottom;
+      border-left:150px solid transparent;
+      border-right:150px solid transparent;
+      border-top:112px solid #f8b5cb;
+      filter:drop-shadow(0 8px 14px rgba(143, 74, 102, .12));
+      transition:transform .85s cubic-bezier(.22,.8,.2,1);
+      z-index:4;
+    }
+    .env-front{
+      position:absolute;
+      left:50%;
+      bottom:0;
+      width:0;
+      height:0;
+      transform:translateX(-50%);
+      border-left:150px solid transparent;
+      border-right:150px solid transparent;
+      border-bottom:112px solid #f497b3;
+      z-index:5;
+    }
+    .env-left,
+    .env-right{
+      position:absolute;
+      bottom:0;
+      width:0;
+      height:0;
+      z-index:4;
+    }
+    .env-left{
+      left:0;
+      border-top:94px solid transparent;
+      border-bottom:94px solid transparent;
+      border-left:150px solid #ffb8cf;
+    }
+    .env-right{
+      right:0;
+      border-top:94px solid transparent;
+      border-bottom:94px solid transparent;
+      border-right:150px solid #ffb2ca;
+    }
+    .seal{
+      position:absolute;
+      left:50%;
+      bottom:58px;
+      transform:translateX(-50%);
+      width:52px;
+      height:52px;
+      border-radius:50%;
+      background:radial-gradient(circle at 30% 30%, #ffdca0 0, var(--gold) 55%, #e5a93a 100%);
+      box-shadow:0 8px 16px rgba(191, 132, 33, .22);
+      display:grid;
+      place-items:center;
+      z-index:6;
+      transition:transform .65s ease, opacity .45s ease;
+    }
+    .seal::before{
+      content:"♥";
+      color:#fff7ea;
+      font-size:1.15rem;
+      transform:translateY(-1px);
+    }
+    .opened .letter{
+      transform:translateX(-50%) translateY(-54px) scale(1);
+      box-shadow:0 24px 48px rgba(115, 66, 89, .18);
+    }
+    .opened .env-flap{
+      transform:translateX(-50%) rotateX(180deg);
+    }
+    .opened .seal{
+      transform:translateX(-50%) scale(.72);
+      opacity:0;
+    }
+    .actions{
+      display:flex;
+      justify-content:center;
+      margin-top:18px;
+    }
+    .reset{
+      border:none;
+      background:#fff;
+      color:#8e5f73;
+      border-radius:999px;
+      padding:10px 16px;
+      font-size:.88rem;
+      font-weight:600;
+      box-shadow:0 10px 24px rgba(122, 53, 82, 0.09);
+      cursor:pointer;
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(8px);
+      transition:all .25s ease;
+    }
+    .opened .reset{
+      opacity:1;
+      pointer-events:auto;
+      transform:translateY(0);
+    }
+    @keyframes drift{
+      0%,100%{ transform:translateY(0) rotate(45deg); }
+      50%{ transform:translateY(-14px) rotate(45deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="scene" id="scene">
+    <div class="hint">Touch the envelope to open</div>
+    <div class="stage">
+      <span class="float-heart h1"></span>
+      <span class="float-heart h2"></span>
+      <span class="float-heart h3"></span>
+      <span class="float-heart h4"></span>
+
+      <div class="envelope-wrap">
+        <button class="envelope-hit" id="envelope" aria-label="Open love letter">
+          <div class="letter">
+            <h1 class="letter-title">With Love " Pretty Girl&gt;</h1>
+            <div class="heart-line">♥</div>
+            <div class="sign">Esha</div>
+          </div>
+          <div class="env-back"></div>
+          <div class="env-flap"></div>
+          <div class="env-left"></div>
+          <div class="env-right"></div>
+          <div class="env-front"></div>
+          <div class="seal"></div>
+        </button>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="reset" id="resetBtn" type="button">Close letter</button>
+    </div>
+  </div>
+
+  <script>
+    const scene = document.getElementById('scene');
+    const envelope = document.getElementById('envelope');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function openLetter() {
+      scene.classList.add('opened');
+    }
+
+    function closeLetter() {
+      scene.classList.remove('opened');
+    }
+
+    envelope.addEventListener('click', openLetter);
+    resetBtn.addEventListener('click', closeLetter);
+  </script>
+</body>
+</html>

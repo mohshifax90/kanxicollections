@@ -922,7 +922,17 @@
     const cart = getCart();
     const item = cart[index];
     if(!item) return;
-    item.qty = Math.max(0, (+item.qty || 0) + delta);
+    const nextQty = Math.max(0, (+item.qty || 0) + delta);
+    if(delta > 0 && window.Store){
+      const rawId = String(item.id || '');
+      const [productId, variantId] = rawId.split('_');
+      const stock = variantId ? Store.stockOfVariant(productId, variantId) : Store.stockOf(productId);
+      if(nextQty > stock){
+        showToast(stock <= 0 ? 'This variant is out of stock' : (stock === 1 ? 'Only 1 left in stock' : `Only ${stock} left in stock`));
+        return;
+      }
+    }
+    item.qty = nextQty;
     if(item.qty <= 0){
       cart.splice(index, 1);
       showToast('Item removed');
