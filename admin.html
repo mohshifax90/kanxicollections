@@ -447,7 +447,7 @@
     if(!_imgAdjust)return;
     const img=_imgAdjust.img, ctx=canvas.getContext('2d');
     canvas.width=outW; canvas.height=outH;
-    ctx.fillStyle='#f4f4f5'; ctx.fillRect(0,0,outW,outH);
+    if(!_imgAdjust.transparent){ ctx.fillStyle='#f4f4f5'; ctx.fillRect(0,0,outW,outH); }
     const zoom=+$('#imgAdjustZoom').value||1, panX=+$('#imgAdjustX').value||0, panY=+$('#imgAdjustY').value||0;
     const scale=Math.max(outW/img.width,outH/img.height)*zoom;
     const dw=img.width*scale, dh=img.height*scale;
@@ -467,7 +467,7 @@
     const c=document.createElement('canvas');
     drawAdjustedTo(c,outW,outH);
     let data;
-    try{ data=c.toDataURL('image/jpeg',_imgAdjust.q||0.78); }catch(e){ data=_imgAdjust.src; }
+    try{ data=c.toDataURL(_imgAdjust.mime||'image/jpeg',_imgAdjust.q||0.78); }catch(e){ data=_imgAdjust.src; }
     const done=_imgAdjust.onApply;
     closeImageAdjust();
     if(done)done(data);
@@ -591,6 +591,7 @@
       <label class="w-12 h-12 rounded-lg border border-zinc-200 grid place-items-center cursor-pointer overflow-hidden bg-zinc-50 shrink-0 text-zinc-400 hover:border-kink">
         ${b.logo?`<img src="${b.logo}" class="w-full h-full object-contain"/>`:ic('image-plus','w-5 h-5')}
         <input type="file" accept="image/*" class="hidden" onchange="onBrandLogo(${i},this)"/></label>
+      ${b.logo?`<button type="button" onclick="adjustBrandLogo(${i})" class="${btn.light} ${btn.sm} whitespace-nowrap">Adjust</button>`:''}
       <input value="${esc(b.name)}" oninput="_brands[${i}].name=this.value" placeholder="Brand name" class="flex-1 px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
       <button type="button" onclick="_brands.splice(${i},1);renderBrands()" class="text-zinc-400 hover:text-red-600 grid place-items-center w-7">${ic('trash-2','w-4 h-4')}</button>
     </div>`).join('') || '<p class="text-xs text-zinc-400 py-1">No brands yet — click "Add brand".</p>';
@@ -605,7 +606,8 @@
       try{ cb(c.toDataURL('image/png')); }catch(e){ cb(src); } };
     img.onerror=()=>cb(src); img.src=src;
   }
-  function onBrandLogo(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>compressLogoImage(e.target.result,240,d=>{ _brands[i].logo=d; renderBrands(); }); r.readAsDataURL(f); input.value=''; }
+  function onBrandLogo(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust brand image',aspect:1,outW:420,q:0.92,mime:'image/png',transparent:true,onApply:d=>{ _brands[i].logo=d; renderBrands(); }}); r.readAsDataURL(f); input.value=''; }
+  function adjustBrandLogo(i){ const src=_brands[i]&&_brands[i].logo; if(!src){ toast('Upload a brand image first'); return; } openImageAdjust({src,title:'Adjust brand image',aspect:1,outW:420,q:0.92,mime:'image/png',transparent:true,onApply:d=>{ _brands[i].logo=d; renderBrands(); }}); }
   async function saveSub(id){
     const name=$('#s_name').value.trim(); if(!name)return alert('Name required');
     try{ await Store.upsertNow('subcategories',{id:id||undefined,name,categoryId:$('#s_cat').value,image:_subImage}); }
