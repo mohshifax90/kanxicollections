@@ -943,6 +943,7 @@
   function orderDetail(id){
     const o=Store.get('orders',id), idx=Store.ORDER_FLOW.indexOf(o.status);
     const payment=Store.list('payments').find(p=>p.orderId===o.id);
+    const sms=o.notifications||{};
     const pipe=`<div class="flex flex-wrap mb-5">${Store.ORDER_FLOW.map((st,i)=>{
       const done=i<idx,cur=i===idx;
       return `<div class="flex-1 min-w-[88px] text-center relative pt-6 text-[0.68rem] ${cur?'text-kink font-bold':done?'text-green-600 font-semibold':'text-zinc-400'}">
@@ -957,6 +958,21 @@
         <select onchange="setStatus('${o.id}',this.value)" class="px-3 py-1.5 border border-zinc-300 rounded-lg text-xs"><option>Set status…</option>${Store.ORDER_FLOW.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select>
       </div>
       ${F.label('Customer')}<div class="text-sm mb-3">${o.userName} · ${o.userPhone}<div class="text-zinc-400">${o.address}</div></div>
+      ${F.label('SMS Debug')}
+      <div class="mb-4 rounded-xl border border-zinc-200 p-3 text-sm">
+        <div class="grid gap-2 text-xs text-zinc-500">
+          <div><b class="text-kink">Confirmed:</b> ${sms.confirmedAt?new Date(sms.confirmedAt).toLocaleString():'Not sent'}</div>
+          <div><b class="text-kink">Out for Delivery:</b> ${sms.outForDeliveryAt?new Date(sms.outForDeliveryAt).toLocaleString():'Not sent'}</div>
+          <div><b class="text-kink">Delivered:</b> ${sms.deliveredAt?new Date(sms.deliveredAt).toLocaleString():'Not sent'}</div>
+          <div><b class="text-kink">Last attempt:</b> ${sms.lastAttemptAt?new Date(sms.lastAttemptAt).toLocaleString():'No attempt yet'}${sms.lastType?` · ${sms.lastType}`:''}</div>
+          <div><b class="text-kink">Last error:</b> ${sms.lastError?esc(sms.lastError):'None'}</div>
+        </div>
+        <div class="flex gap-2 flex-wrap mt-3">
+          <button onclick="resendOrderSms('${o.id}','confirmed')" class="${btn.light} ${btn.sm}">${ic('message-square','w-3.5 h-3.5')} Resend Confirmed</button>
+          <button onclick="resendOrderSms('${o.id}','out_for_delivery')" class="${btn.light} ${btn.sm}">${ic('truck','w-3.5 h-3.5')} Resend Out for Delivery</button>
+          <button onclick="resendOrderSms('${o.id}','delivered')" class="${btn.light} ${btn.sm}">${ic('badge-check','w-3.5 h-3.5')} Resend Delivered</button>
+        </div>
+      </div>
       ${payment?`${F.label('Payment')}<div class="mb-4 rounded-xl border border-zinc-200 p-3 text-sm">
         <div class="flex items-center justify-between gap-3 flex-wrap mb-2"><div><b>${payment.method}</b><div class="text-zinc-400 text-xs">${payment.id}</div></div><div class="flex gap-2">${payPill(payment.status)}${statusPill(o.status)}</div></div>
         ${payment.bankName||payment.accountNumber?`<div class="text-zinc-500 text-xs">${[payment.bankName,payment.accountNumber].filter(Boolean).join(' · ')}</div>`:''}
@@ -969,6 +985,17 @@
         <div class="font-bold">${MVR(it.price*it.qty)}</div></div>`).join('')}
       <div class="flex justify-between font-extrabold text-base mt-3"><span>Total</span><span>${MVR(total(o))}</span></div>`,
       `<button onclick="closeModal()" class="${btn.light}">Close</button>`);
+  }
+  async function resendOrderSms(id, type){
+    try{
+      await Store.resendOrderSms(id, type);
+      toast('SMS resend attempted');
+      refreshBadge();
+      orderDetail(id);
+      orders();
+    }catch(error){
+      alert(error.message || 'Could not resend SMS');
+    }
   }
   function advance(id){
     try{

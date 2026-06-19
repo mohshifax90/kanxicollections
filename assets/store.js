@@ -351,6 +351,9 @@ const Store = window.Store = (() => {
     order.notifications.confirmedAt = order.notifications.confirmedAt || null;
     order.notifications.outForDeliveryAt = order.notifications.outForDeliveryAt || null;
     order.notifications.deliveredAt = order.notifications.deliveredAt || null;
+    order.notifications.lastAttemptAt = order.notifications.lastAttemptAt || null;
+    order.notifications.lastType = order.notifications.lastType || '';
+    order.notifications.lastError = order.notifications.lastError || '';
     return order;
   }
   function persistOrderNotification(orderId, key, value){
@@ -362,23 +365,25 @@ const Store = window.Store = (() => {
     target.notifications[key] = value;
     saveNow(db).catch(error => console.warn('Kanxi order notification save failed:', error.message));
   }
-  function notifyOrderStatus(order){
-    if(typeof fetch !== 'function' || !order || !order.userPhone) return;
+  function smsTypeInfo(order, forcedType=''){
     ensureOrderNotificationState(order);
     const smsSettings = api.getSmsSettings ? api.getSmsSettings() : defaultSmsSettings();
     const templates = smsSettings && smsSettings.templates || defaultSmsSettings().templates;
     const phone = String(order.userPhone || '').replace(/\D/g,'');
-    if(phone.length < 7) return;
     let key = '';
     let body = '';
-    if(CONFIRMED_ORDER_STATUSES.includes(order.status) && !order.notifications.confirmedAt){
+    let type = '';
+    if(forcedType === 'confirmed' || (!forcedType && CONFIRMED_ORDER_STATUSES.includes(order.status) && !order.notifications.confirmedAt)){
       key = 'confirmedAt';
+      type = 'confirmed';
       body = templates.confirmed;
-    }else if(order.status === 'Out for Delivery' && !order.notifications.outForDeliveryAt){
+    }else if(forcedType === 'out_for_delivery' || (!forcedType && order.status === 'Out for Delivery' && !order.notifications.outForDeliveryAt)){
       key = 'outForDeliveryAt';
+      type = 'out_for_delivery';
       body = templates.outForDelivery;
-    }else if(order.status === 'Delivered' && !order.notifications.deliveredAt){
+    }else if(forcedType === 'delivered' || (!forcedType && order.status === 'Delivered' && !order.notifications.deliveredAt)){
       key = 'deliveredAt';
+      type = 'delivered';
       body = templates.delivered;
     }
     body = String(body || '')
@@ -386,14 +391,33 @@ const Store = window.Store = (() => {
       .replace(/\{\{\s*customerName\s*\}\}/g, order.userName || 'Customer')
       .replace(/\{\{\s*deliveryType\s*\}\}/g, order.deliveryType || '')
       .trim();
-    if(!key || !body) return;
-    fetch('/api/msgowl-send-sms', {
+    return {
+      type,
+      key,
+      body,
+      phone,
+      senderId: smsSettings && smsSettings.senderId || defaultSmsSettings().senderId
+    };
+  }
+  function notifyOrderStatus(order, forcedType=''){
+    if(typeof fetch !== 'function' || !order || !order.userPhone) return Promise.resolve(false);
+    ensureOrderNotificationState(order);
+    const info = smsTypeInfo(order, forcedType);
+    if(info.phone.length < 7 || !info.key || !info.body) return Promise.resolve(false);
+    const attemptedAt = Date.now();
+    order.notifications.lastAttemptAt = attemptedAt;
+    order.notifications.lastType = info.type;
+    order.notifications.lastError = '';
+    persistOrderNotification(order.id, 'lastAttemptAt', attemptedAt);
+    persistOrderNotification(order.id, 'lastType', info.type);
+    persistOrderNotification(order.id, 'lastError', '');
+    return fetch('/api/msgowl-send-sms', {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({
-        recipients: phone,
-        sender_id: smsSettings && smsSettings.senderId || defaultSmsSettings().senderId,
-        body
+        recipients: info.phone,
+        sender_id: info.senderId,
+        body: info.body
       })
     })
     .then(async response => {
@@ -406,13 +430,20 @@ const Store = window.Store = (() => {
         throw new Error(message);
       }
       const sentAt = Date.now();
-      order.notifications[key] = sentAt;
-      persistOrderNotification(order.id, key, sentAt);
+      order.notifications[info.key] = sentAt;
+      order.notifications.lastError = '';
+      persistOrderNotification(order.id, info.key, sentAt);
+      persistOrderNotification(order.id, 'lastError', '');
+      return true;
     })
     .catch(error => {
-      order.notifications[key] = null;
-      persistOrderNotification(order.id, key, null);
-      console.warn('Kanxi order SMS failed:', error && error.message ? error.message : error);
+      const message = error && error.message ? error.message : String(error || 'SMS request failed');
+      order.notifications[info.key] = forcedType ? order.notifications[info.key] : null;
+      order.notifications.lastError = message;
+      if(!forcedType) persistOrderNotification(order.id, info.key, null);
+      persistOrderNotification(order.id, 'lastError', message);
+      console.warn('Kanxi order SMS failed:', message);
+      throw error;
     });
   }
 
@@ -1221,6 +1252,16 @@ const Store = window.Store = (() => {
 
     advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(CONFIRMED_ORDER_STATUSES.includes(o.status))o.payStatus='Paid'; ensureOrderStockState(db, o); ensureOrderNotificationState(o); notifyOrderStatus(o); saveNow(db).catch(error=>console.warn('Kanxi order advance save failed:', error.message)); return o; },
     setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st; if(CONFIRMED_ORDER_STATUSES.includes(st))o.payStatus='Paid'; ensureOrderStockState(db, o); ensureOrderNotificationState(o); notifyOrderStatus(o); saveNow(db).catch(error=>console.warn('Kanxi order status save failed:', error.message));} return o; },
+    async resendOrderSms(id, type=''){
+      const db = load();
+      const order = db.orders.find(x=>x.id===id);
+      if(!order) throw new Error('Order not found');
+      ensureOrderNotificationState(order);
+      const forcedType = type || (order.status === 'Delivered' ? 'delivered' : order.status === 'Out for Delivery' ? 'out_for_delivery' : 'confirmed');
+      await notifyOrderStatus(order, forcedType);
+      await saveNow(db);
+      return order;
+    },
     setPaymentStatus(id,status){
       const db=load(), p=db.payments.find(x=>x.id===id);
       if(!p) return null;
