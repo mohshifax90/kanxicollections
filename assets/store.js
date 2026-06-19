@@ -353,6 +353,15 @@ const Store = window.Store = (() => {
     order.notifications.deliveredAt = order.notifications.deliveredAt || null;
     return order;
   }
+  function persistOrderNotification(orderId, key, value){
+    if(!orderId || !key) return;
+    const db = load();
+    const target = (db.orders || []).find(entry => entry && entry.id === orderId);
+    if(!target) return;
+    ensureOrderNotificationState(target);
+    target.notifications[key] = value;
+    saveNow(db).catch(error => console.warn('Kanxi order notification save failed:', error.message));
+  }
   function notifyOrderStatus(order){
     if(typeof fetch !== 'function' || !order || !order.userPhone) return;
     ensureOrderNotificationState(order);
@@ -378,7 +387,6 @@ const Store = window.Store = (() => {
       .replace(/\{\{\s*deliveryType\s*\}\}/g, order.deliveryType || '')
       .trim();
     if(!key || !body) return;
-    order.notifications[key] = Date.now();
     fetch('/api/msgowl-send-sms', {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
@@ -387,8 +395,23 @@ const Store = window.Store = (() => {
         sender_id: smsSettings && smsSettings.senderId || defaultSmsSettings().senderId,
         body
       })
-    }).catch(error => {
+    })
+    .then(async response => {
+      let payload = null;
+      try{
+        payload = await response.json();
+      }catch(_){}
+      if(!response.ok){
+        const message = payload && payload.error || payload && payload.message || `SMS request failed (${response.status})`;
+        throw new Error(message);
+      }
+      const sentAt = Date.now();
+      order.notifications[key] = sentAt;
+      persistOrderNotification(order.id, key, sentAt);
+    })
+    .catch(error => {
       order.notifications[key] = null;
+      persistOrderNotification(order.id, key, null);
       console.warn('Kanxi order SMS failed:', error && error.message ? error.message : error);
     });
   }
