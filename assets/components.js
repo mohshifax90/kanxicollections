@@ -1,12 +1,45 @@
 /* ── KANXI SHARED CART ── */
-function useLocalCart() { return !(window.Store && Store.useLocalStorage === false); }
+const KANXI_CART_KEY = 'kanxi_cart';
+function readCartStorage(storage) {
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(KANXI_CART_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+function writeCartStorage(storage, cart) {
+  if (!storage) return;
+  try {
+    storage.setItem(KANXI_CART_KEY, JSON.stringify(cart));
+  } catch (_) {}
+}
+function useLocalCart() {
+  try {
+    return !!window.localStorage;
+  } catch (_) {
+    return false;
+  }
+}
 function getCart() {
-  if (useLocalCart()) return JSON.parse(localStorage.getItem('kanxi_cart') || '[]');
-  return window._kanxiCart || [];
+  const localCart = readCartStorage(window.localStorage);
+  if (Array.isArray(localCart)) {
+    window._kanxiCart = localCart.slice();
+    return localCart;
+  }
+  const sessionCart = readCartStorage(window.sessionStorage);
+  if (Array.isArray(sessionCart)) {
+    window._kanxiCart = sessionCart.slice();
+    return sessionCart;
+  }
+  return Array.isArray(window._kanxiCart) ? window._kanxiCart.slice() : [];
 }
 function saveCart(cart) {
-  if (useLocalCart()) localStorage.setItem('kanxi_cart', JSON.stringify(cart));
-  else window._kanxiCart = cart;
+  const nextCart = Array.isArray(cart) ? cart.slice() : [];
+  window._kanxiCart = nextCart;
+  writeCartStorage(window.localStorage, nextCart);
+  writeCartStorage(window.sessionStorage, nextCart);
   updateCartCount();
 }
 function itemStockLimit(product) {
@@ -91,6 +124,10 @@ function showToast(msg) {
   window._toastT = setTimeout(() => t.classList.remove('show'), 2600);
 }
 document.addEventListener('DOMContentLoaded', updateCartCount);
+window.addEventListener('storage', (event) => {
+  if (event && event.key && event.key !== KANXI_CART_KEY) return;
+  updateCartCount();
+});
 window.addEventListener('kanxi:store-changed', () => {
   refreshCartPrices();
   updateCartCount();
