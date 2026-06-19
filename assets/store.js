@@ -1206,6 +1206,8 @@ const Store = window.Store = (() => {
         accountNumber:order.accountNumber||'',
         verifiedAt:null
       });
+      ensureOrderNotificationState(order);
+      notifyOrderStatus(order);
       saveNow(db).catch(error=>console.warn('Kanxi order save failed:', error.message));
       return order; },
     async clearOrdersAndPayments(){
