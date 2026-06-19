@@ -42,8 +42,18 @@ function saveCart(cart) {
   writeCartStorage(window.sessionStorage, nextCart);
   updateCartCount();
 }
+function isCartCatalogReady() {
+  if (!window.Store) return false;
+  if (Store.useLocalStorage !== false) return true;
+  try {
+    return (Store.list('products') || []).length > 0;
+  } catch (_) {
+    return false;
+  }
+}
 function itemStockLimit(product) {
   if (!(window.Store && product && product.id)) return null;
+  if (!isCartCatalogReady()) return null;
   const { productId, variantId } = Store.parseCartItemId(product.id);
   if (!productId) return null;
   return variantId ? Store.availableStockOfVariant(productId, variantId) : Store.availableStockOf(productId);
@@ -69,6 +79,7 @@ function addToCart(product) {
 }
 function activeCartPrice(item) {
   if (!(window.Store && item && item.id)) return item.price || 0;
+  if (!isCartCatalogReady()) return item.price || 0;
   const { productId, variantId } = Store.parseCartItemId(item.id);
   if (!productId) return item.price || 0;
   const product = Store.get('products', productId);
