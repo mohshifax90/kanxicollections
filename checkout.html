@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>Kanxi Collection — Checkout</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -183,7 +186,7 @@
     <div class="section-title"><h2>Summary</h2></div>
     <div class="summary-card">
       <div class="sum-row"><span>Subtotal</span><span id="oSub">MVR 0</span></div>
-      <div class="sum-row"><span>Estimated Tax</span><span id="oTax">MVR 0</span></div>
+      <div class="sum-row"><span id="taxLabel">Included Tax</span><span id="oTax">MVR 0</span></div>
       <div class="sum-row"><span>Shipping</span><span id="oShip">MVR 0</span></div>
       <div class="sum-row total"><span>Total</span><span id="oTotal">MVR 0</span></div>
     </div>
@@ -257,16 +260,16 @@
   </div>
 </div>
 
-<script src="assets/icons.js"></script>
-<script src="assets/supabase-config.js?v=1"></script>
-<script src="assets/store.js?v=7"></script>
-<script src="assets/components.js"></script>
+<script src="assets/icons.js?v=2"></script>
+<script src="assets/supabase-config.js?v=2"></script>
+<script src="assets/store.js?v=16"></script>
+<script src="assets/components.js?v=2"></script>
 <script>
   let selectedPay = '';
   let transferSlip = '';
   let paymentSettings = { methods:[], bankTransfer:{ bankName:'Kanxi Collection', accountNumber:'' } };
-  let paymentSyncState = Store.useLocalStorage ? 'ready' : 'loading';
-  let selectedShipping = 'standard';
+  let deliverySettings = { methods:[] };
+  let paymentSyncState = location.protocol === 'file:' ? 'ready' : 'loading';
   let addressMode = 'saved';
   let selectedAddressId = '';
   let guestDraft = {
@@ -279,21 +282,49 @@
     country:'Maldives',
     lat:null,
     lng:null,
-    deliveryType:'standard',
+    deliveryType:'address',
     deliveryInfo:{ boatName:'', contactNumber:'', departureTime:'', note:'' }
   };
   let checkoutLogin = { step:'phone', phone:'', phoneDigits:'', requestId:null, existingUser:null, verifiedPhone:'', profile:{ name:'', line:'', city:'', atoll:'', postcode:'', country:'Maldives', lat:null, lng:null } };
   let checkoutOtpVerifyTimer = 0;
   let checkoutOtpVerifying = false;
-  const shippingOptions = [
-    { key:'standard', label:'Standard', sub:'3-5 business days', amount:5.95 },
-    { key:'expedited', label:'Expedited', sub:'1-3 business days', amount:10.95 }
-  ];
 
   function icons(){ if(window.scheduleLucideRefresh) scheduleLucideRefresh(); else if(window.lucide) lucide.createIcons(); }
   function price(n){ return 'MVR ' + (+n || 0).toLocaleString(); }
   function activeMethods(){
     return (paymentSettings.methods||[]).filter(m=>m.enabled!==false);
+  }
+  function activeDeliveryMethods(){
+    const methods = (deliverySettings.methods||[]).filter(m=>m.enabled!==false);
+    return methods.length ? methods : [{ key:'address', label:'Address', rate:0, enabled:true }];
+  }
+  function normalizeDeliveryType(type){
+    return type === 'standard' ? 'address' : (type || 'address');
+  }
+  function deliveryMethod(type){
+    const key = normalizeDeliveryType(type);
+    return (deliverySettings.methods||[]).find(m=>m.key===key) || activeDeliveryMethods()[0] || { key:'address', label:'Address', rate:0 };
+  }
+  function currentDeliveryType(){
+    const methods = activeDeliveryMethods();
+    const preferred = normalizeDeliveryType(addressMode === 'guest'
+      ? guestDraft.deliveryType
+      : ((selectedSavedAddress() && selectedSavedAddress().deliveryType) || 'address'));
+    return methods.some(m=>m.key===preferred) ? preferred : methods[0].key;
+  }
+  function shippingReady(){
+    const addr = selectedAddressData();
+    if(!addr) return false;
+    if(addressMode === 'guest' && !String(addr.line || '').trim()) return false;
+    const deliveryType = currentDeliveryType();
+    if(['boat','speed_boat'].includes(deliveryType)){
+      return !!(addr.deliveryInfo && String(addr.deliveryInfo.boatName || '').trim());
+    }
+    return true;
+  }
+  function currentShippingRate(){
+    if(!shippingReady()) return null;
+    return Math.max(0, +(deliveryMethod(currentDeliveryType()).rate || 0));
   }
   function payIcon(key){
     return { card:'credit-card', paypal:'wallet', transfer:'landmark', cod:'banknote' }[key] || 'credit-card';
@@ -307,7 +338,7 @@
     }[key] || '';
   }
   function deliveryLabel(type){
-    return ({ standard:'Standard', speed_boat:'Speed Boat', boat:'Boat' })[type] || 'Standard';
+    return Store.deliveryLabel ? Store.deliveryLabel(normalizeDeliveryType(type)) : deliveryMethod(type).label;
   }
   function activeUser(){
     return Store.currentUser();
@@ -331,7 +362,7 @@
         country:(guestDraft.country || 'Maldives').trim(),
         name:guestDraft.name.trim(),
         phone:guestDraft.phone.trim(),
-        deliveryType:guestDraft.deliveryType || 'standard',
+        deliveryType:normalizeDeliveryType(guestDraft.deliveryType),
         deliveryInfo:{
           boatName:(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName || '').trim(),
           contactNumber:(guestDraft.deliveryInfo && guestDraft.deliveryInfo.contactNumber || '').trim(),
@@ -356,7 +387,7 @@
     const a = selectedAddressData();
     const el = document.getElementById('addrInfo');
     if(!el) return;
-    const delivery = a ? deliveryLabel(a.deliveryType || 'standard') : '';
+    const delivery = a ? deliveryLabel(a.deliveryType || 'address') : '';
     const boat = a && a.deliveryInfo || {};
     if(addressMode === 'guest'){
       el.innerHTML = `
@@ -383,6 +414,9 @@
   }
   function setAddressMode(mode){
     addressMode = mode;
+    if(addressMode === 'guest'){
+      guestDraft.deliveryType = currentDeliveryType();
+    }
     renderAddressSheet();
     renderAddress();
     updatePlaceState();
@@ -398,6 +432,7 @@
   function syncAddressDefaults(){
     const list = savedAddresses();
     if(list.length && !list.some(a=>a.id===selectedAddressId)) selectedAddressId = (list.find(a=>a.isDefault) || list[0]).id;
+    guestDraft.deliveryType = currentDeliveryType();
     if(activeUser()){
       if(addressMode === 'login') addressMode = list.length ? 'saved' : 'guest';
       if(addressMode === 'saved' && !list.length) addressMode = 'guest';
@@ -555,7 +590,7 @@
       </div>
       <button class="profile-link" type="button" onclick="location.href='account.html?tab=details'"><i data-lucide="square-pen" style="width:15px;height:15px"></i><span>Manage in profile</span></button>
     ` : `<div class="mini-note">No saved addresses yet. Use guest checkout below, or add one in your profile.</div>${u ? `<button class="profile-link" type="button" onclick="location.href='account.html?tab=details'"><i data-lucide="plus" style="width:15px;height:15px"></i><span>Add in profile</span></button>` : ''}`;
-    const guestType = guestDraft.deliveryType || 'standard';
+    const guestType = normalizeDeliveryType(guestDraft.deliveryType);
     const guestHtml = `
       <div class="guest-form">
         <div class="guest-panel">
@@ -566,9 +601,7 @@
         <div class="guest-panel">
           <div class="guest-panel-title"><span>Delivery Type</span></div>
           <div class="delivery-options">
-            <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="standard" ${guestType==='standard'?'checked':''}><div><b>Address Delivery</b><span>Deliver to the address entered below.</span></div></label>
-            <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="speed_boat" ${guestType==='speed_boat'?'checked':''}><div><b>Speed Boat</b><span>Send through speed boat service.</span></div></label>
-            <label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="boat" ${guestType==='boat'?'checked':''}><div><b>Boat</b><span>Send through regular boat delivery.</span></div></label>
+            ${activeDeliveryMethods().map(method=>`<label class="delivery-radio"><input type="radio" name="guest_delivery_type" value="${method.key}" ${guestType===method.key?'checked':''}><div><b>${method.label}</b><span>${method.rate>0?`${price(method.rate)} delivery rate.`:'No delivery charge.'}</span></div></label>`).join('')}
           </div>
         </div>
         <div class="guest-panel">
@@ -586,7 +619,7 @@
         </div>
         ${(guestType === 'boat' || guestType === 'speed_boat') ? `
           <div class="guest-panel">
-            <div class="guest-panel-title"><span>${guestType === 'speed_boat' ? 'Speed Boat Info' : 'Boat Info'}</span></div>
+            <div class="guest-panel-title"><span>${deliveryLabel(guestType)} Info</span></div>
             <div class="delivery-extra">
               ${guestField('ship-wheel','Boat name','guest_boat_name',guestDraft.deliveryInfo.boatName,'Boat name')}
               <div class="guest-grid">
@@ -608,7 +641,7 @@
       });
       document.querySelectorAll('input[name="guest_delivery_type"]').forEach(el=>{
         el.addEventListener('change', () => {
-          guestDraft.deliveryType = el.value;
+          guestDraft.deliveryType = normalizeDeliveryType(el.value);
           renderAddressSheet();
           renderAddress();
           updatePlaceState();
@@ -752,7 +785,7 @@
         lat:checkoutLogin.profile.lat,
         lng:checkoutLogin.profile.lng,
         isDefault:true,
-        deliveryType:'standard',
+        deliveryType:'address',
         deliveryInfo:{ boatName:'', contactNumber:'', departureTime:'', note:'' }
       }]
     });
@@ -820,29 +853,10 @@
       showToast('Address auto-filled');
     }, ()=>showToast('Could not get location'), { enableHighAccuracy:true, timeout:10000 });
   }
-  function renderShipping(){
-    const wrap = document.getElementById('shipOptions');
-    if(!wrap) return;
-    wrap.innerHTML = shippingOptions.map(opt => `
-      <div class="ship-option ${opt.key===selectedShipping?'active':''}" onclick="selectShipping('${opt.key}')">
-        <div class="ship-left">
-          <div class="ship-radio"></div>
-          <div>
-            <div class="ship-main">${opt.label}</div>
-            <div class="ship-sub">${opt.sub}</div>
-          </div>
-        </div>
-        <div class="ship-price">$${opt.amount.toFixed(2)}</div>
-      </div>
-    `).join('');
-  }
-  function selectShipping(key){
-    selectedShipping = key;
-    renderShipping();
-    render();
-  }
+  function renderShipping(){}
   function renderPayments(){
     paymentSettings = Store.getPaymentSettings();
+    deliverySettings = Store.getDeliverySettings ? Store.getDeliverySettings() : deliverySettings;
     const methods = activeMethods();
     if(!methods.length){
       document.getElementById('paymentList').innerHTML = paymentSyncState === 'loading'
@@ -924,8 +938,7 @@
     if(!item) return;
     const nextQty = Math.max(0, (+item.qty || 0) + delta);
     if(delta > 0 && window.Store){
-      const rawId = String(item.id || '');
-      const [productId, variantId] = rawId.split('_');
+      const { productId, variantId } = Store.parseCartItemId(item.id);
       const stock = variantId ? Store.availableStockOfVariant(productId, variantId) : Store.availableStockOf(productId);
       if(nextQty > stock){
         showToast(stock <= 0 ? 'This variant is out of stock' : (stock === 1 ? 'Only 1 left in stock' : `Only ${stock} left in stock`));
@@ -947,7 +960,7 @@
     const hasAccount = !!(paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber);
     const addr = selectedAddressData();
     const savedReady = addressMode !== 'saved' || !!selectedSavedAddress();
-    const guestDeliveryReady = addressMode !== 'guest' || !['boat','speed_boat'].includes(guestDraft.deliveryType || 'standard') || !!(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim());
+    const guestDeliveryReady = addressMode !== 'guest' || !['boat','speed_boat'].includes(normalizeDeliveryType(guestDraft.deliveryType)) || !!(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim());
     const guestReady = addressMode !== 'guest' || (!!guestDraft.name.trim() && !!guestDraft.phone.trim() && !!guestDraft.line.trim() && guestDeliveryReady);
     const payReady = !!selectedPay && (!transfer || (transferSlip && hasAccount));
     const ready = paymentSyncState !== 'loading' && addressMode !== 'login' && savedReady && guestReady && !!addr && payReady;
@@ -959,11 +972,20 @@
     else if(addressMode === 'guest' && !guestDraft.name.trim()) hint.textContent = 'Add full name for guest checkout.';
     else if(addressMode === 'guest' && !guestDraft.phone.trim()) hint.textContent = 'Add mobile number for guest checkout.';
     else if(addressMode === 'guest' && !guestDraft.line.trim()) hint.textContent = 'Add address for guest checkout.';
-    else if(addressMode === 'guest' && ['boat','speed_boat'].includes(guestDraft.deliveryType || 'standard') && !(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim())) hint.textContent = 'Add boat name to continue.';
+    else if(addressMode === 'guest' && ['boat','speed_boat'].includes(normalizeDeliveryType(guestDraft.deliveryType)) && !(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim())) hint.textContent = 'Add boat name to continue.';
     else if(!addr) hint.textContent = 'Select a delivery address to continue.';
     else if(transfer && !hasAccount) hint.textContent = 'Add bank account details in admin to accept transfers.';
     else if(transfer && !transferSlip) hint.textContent = 'Upload one transfer slip to place this order.';
     else hint.innerHTML = 'By tapping Place Order you agree to our <a href="#" style="color:#0f3b69;font-weight:500">payment terms and policies</a>.';
+  }
+  function subtotalAmount(cart){
+    return cart.reduce((s,i)=>s+i.price*i.qty,0);
+  }
+  function taxAmountForSubtotal(subtotal){
+    return Store.taxAmountFromInclusive ? Store.taxAmountFromInclusive(subtotal) : 0;
+  }
+  function totalAmount(subtotal, shipping){
+    return subtotal + (shipping || 0);
   }
   function render(){
     const cart = refreshCartPrices();
@@ -984,13 +1006,14 @@
         </div>
       </div>
     `).join('') || '<p style="font-size:.9rem;color:#6b7280">Your bag is empty.</p>';
-    const sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
-    const tax = Math.round(sub * 0.08);
-    const shipping = (shippingOptions.find(opt=>opt.key===selectedShipping) || shippingOptions[0]).amount;
-    const total = sub + tax + shipping;
+    const sub = subtotalAmount(cart);
+    const tax = taxAmountForSubtotal(sub);
+    const shipping = currentShippingRate();
+    const total = totalAmount(sub, shipping);
+    document.getElementById('taxLabel').textContent = `Included ${Store.taxType ? Store.taxType() : 'Tax'}`;
     document.getElementById('oSub').textContent = price(sub);
     document.getElementById('oTax').textContent = price(tax);
-    document.getElementById('oShip').textContent = `$${shipping.toFixed(2)}`;
+    document.getElementById('oShip').textContent = shipping === null ? '—' : price(shipping);
     document.getElementById('oTotal').textContent = price(total);
     document.getElementById('placeTotal').textContent = price(total);
     renderAddress();
@@ -1000,17 +1023,16 @@
     icons();
   }
   function refreshCheckoutFromStore(){
-    paymentSyncState = Store.useLocalStorage ? 'ready' : paymentSyncState;
+    paymentSyncState = location.protocol === 'file:' ? 'ready' : paymentSyncState;
     syncAddressDefaults();
     render();
   }
   function placeOrder(){
     const cart = refreshCartPrices();
     if(!cart.length){ showToast('Your bag is empty'); return; }
-    const sub = cart.reduce((s,i)=>s+i.price*i.qty,0);
-    const tax = Math.round(sub * 0.08);
-    const shipping = (shippingOptions.find(opt=>opt.key===selectedShipping) || shippingOptions[0]).amount;
-    const total = sub + tax + shipping;
+    const sub = subtotalAmount(cart);
+    const shipping = currentShippingRate();
+    const total = totalAmount(sub, shipping);
     const u = activeUser();
     const a = selectedAddressData();
     if(addressMode === 'guest'){
@@ -1018,24 +1040,56 @@
       if(!guestDraft.name.trim()) return showToast('Enter full name');
       if(!guestDraft.phone.trim()) return showToast('Enter mobile number');
       if(!guestDraft.line.trim()) return showToast('Enter address');
-      if(['boat','speed_boat'].includes(guestDraft.deliveryType || 'standard') && !(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim())) return showToast('Enter boat name');
+      if(['boat','speed_boat'].includes(normalizeDeliveryType(guestDraft.deliveryType)) && !(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim())) return showToast('Enter boat name');
     } else if(!a){
       return showToast('Select delivery address');
     }
-    const order = Store.placeOrder({
-      userName:addressMode === 'guest' ? (guestDraft.name.trim() || 'Guest') : (u ? u.name : 'Guest'),
-      userPhone:addressMode === 'guest' ? guestDraft.phone.trim() : (u ? u.phone : ''),
-      items:cart.map(it=>({ productId:(it.id||'').split('_')[0], name:it.name, qty:it.qty, price:it.price, image:it.img })),
-      shipping,
-      total,
-      payMethod:selectedPay,
-      transferSlip:selectedPay==='transfer' ? transferSlip : '',
-      bankName:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.bankName || '') : '',
-      accountNumber:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || '') : '',
-      address:a ? [a.line,a.city,a.atoll,a.postcode,a.country].filter(Boolean).join(', ') : 'Maldives',
-      deliveryType:addressMode === 'guest' ? (guestDraft.deliveryType || 'standard') : (a.deliveryType || selectedShipping),
-      deliveryInfo:addressMode === 'guest' ? (guestDraft.deliveryInfo || null) : (a && a.deliveryInfo || null)
-    });
+    if(shipping === null) return showToast('Set address and delivery details first');
+    const finalDeliveryType = currentDeliveryType();
+    let order;
+    try{
+      order = Store.placeOrder({
+        userName:addressMode === 'guest' ? (guestDraft.name.trim() || 'Guest') : (u ? u.name : 'Guest'),
+        userPhone:addressMode === 'guest' ? guestDraft.phone.trim() : (u ? u.phone : ''),
+        items:cart.map(it=>{
+          const { productId, variantId } = Store.parseCartItemId(it.id);
+          return {
+            productId:productId || null,
+            variantId:variantId || null,
+            name:it.name,
+            qty:it.qty,
+            price:it.price,
+            image:it.img,
+            size:it.size || ''
+          };
+        }),
+        shipping,
+        total,
+        payMethod:selectedPay,
+        transferSlip:selectedPay==='transfer' ? transferSlip : '',
+        bankName:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.bankName || '') : '',
+        accountNumber:selectedPay==='transfer' ? (paymentSettings.bankTransfer && paymentSettings.bankTransfer.accountNumber || '') : '',
+        address:a ? [a.line,a.city,a.atoll,a.postcode,a.country].filter(Boolean).join(', ') : 'Maldives',
+        addressMeta:a ? {
+          label:a.label || '',
+          line:a.line || '',
+          city:a.city || '',
+          atoll:a.atoll || '',
+          postcode:a.postcode || '',
+          country:a.country || 'Maldives',
+          lat:a.lat ?? null,
+          lng:a.lng ?? null,
+          name:addressMode === 'guest' ? (guestDraft.name.trim() || 'Guest') : (u ? u.name : ''),
+          phone:addressMode === 'guest' ? guestDraft.phone.trim() : (u ? u.phone : '')
+        } : null,
+        deliveryType:finalDeliveryType,
+        deliveryInfo:addressMode === 'guest' ? (guestDraft.deliveryInfo || null) : (a && a.deliveryInfo || null)
+      });
+    }catch(error){
+      showToast(error && error.message ? error.message : 'Could not place order');
+      render();
+      return;
+    }
     document.getElementById('onum').textContent = '#' + order.id;
     document.getElementById('success').classList.add('show');
     saveCart([]);
@@ -1054,7 +1108,7 @@
   });
   syncAddressDefaults();
   render();
-  if(!Store.useLocalStorage){
+  if(location.protocol !== 'file:'){
     Store.syncFromCloud().finally(() => {
       paymentSyncState = 'ready';
       refreshCheckoutFromStore();

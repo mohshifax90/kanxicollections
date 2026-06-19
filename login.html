@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>Kanxi Collection — Sign in</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -73,11 +76,14 @@
       <section id="step-otp" class="hidden">
         <h2 class="mb-1 text-[1.4rem] font-semibold tracking-[-0.02em]">Verify number</h2>
         <p class="mb-6 text-[0.92rem] leading-6 text-muted">Enter the 6-digit code sent to <b id="otpPhone"></b>.</p>
+        <div class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[#ede8e0] bg-[#faf7f2] px-4 py-3 text-[0.9rem]">
+          <b id="otpPhoneRow"></b>
+          <button type="button" class="font-medium text-accent" onclick="editOtpPhone()">Edit</button>
+        </div>
         <div class="mb-4 rounded-xl bg-cream px-4 py-3 text-center text-[0.82rem] text-muted">Enter the verification code sent by SMS.</div>
         <div class="mb-4">
-          <input id="otpAutofill" type="text" inputmode="numeric" autocomplete="one-time-code" name="one-time-code" pattern="[0-9]*" class="absolute h-px w-px opacity-0 pointer-events-none"/>
           <div id="otpInputs" class="grid grid-cols-6 gap-2.5">
-            <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 1" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
+            <input maxlength="6" inputmode="numeric" autocomplete="one-time-code" name="one-time-code" pattern="[0-9]*" aria-label="OTP digit 1" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
             <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 2" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
             <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 3" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
             <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 4" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
@@ -143,15 +149,15 @@
     </div>
   </div>
 
-  <script src="assets/icons.js"></script>
-  <script src="assets/supabase-config.js?v=1"></script>
-  <script src="assets/store.js?v=7"></script>
+  <script src="assets/icons.js?v=2"></script>
+  <script src="assets/supabase-config.js?v=2"></script>
+  <script src="assets/store.js?v=16"></script>
   <script>
     const $ = s => document.querySelector(s);
     const params = new URLSearchParams(location.search);
     const redirect = params.get('redirect') || 'index.html';
     const returnTo = params.get('return') || '';
-    let phoneFull = '', phoneForOtp = '', existingUser = null, gender = '', geo = null, otpRequestId = null;
+    let phoneFull = '', phoneForOtp = '', existingUser = null, gender = '', geo = null, otpRequestId = null, otpVerifying = false, otpAutoVerifyTimer = 0;
 
     function showToast(m){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t);} t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
     let _iconRAF = 0;
@@ -209,7 +215,6 @@
     }
 
     const otpInputs = [...document.querySelectorAll('#otpInputs input')];
-    const otpAutofill = $('#otpAutofill');
     const phoneInput = $('#phone');
 
     if(phoneInput){
@@ -220,7 +225,6 @@
 
     function clearOtpInputs(){
       otpInputs.forEach(inp=>inp.value='');
-      if(otpAutofill) otpAutofill.value = '';
       otpInputs[0]?.focus();
     }
 
@@ -229,6 +233,23 @@
       otpInputs.forEach((inp, i)=>{ inp.value = digits[i] || ''; });
       if(digits.length < otpInputs.length) otpInputs[digits.length]?.focus();
       else otpInputs[otpInputs.length - 1]?.focus();
+      maybeAutoVerifyOtp();
+    }
+
+    function maybeAutoVerifyOtp(){
+      const code = otpInputs.map(i=>i.value).join('');
+      clearTimeout(otpAutoVerifyTimer);
+      if(code.length === 6 && !otpVerifying){
+        otpAutoVerifyTimer = setTimeout(()=>verifyOtp(true), 120);
+      }
+    }
+
+    function editOtpPhone(){
+      clearTimeout(otpAutoVerifyTimer);
+      otpVerifying = false;
+      showStep('phone');
+      $('#phone').value = phoneFull.replace(/\D/g,'').slice(-7);
+      $('#phone').focus();
     }
 
     async function sendOtp(){
@@ -239,6 +260,7 @@
       phoneForOtp = phoneFull.replace(/\D/g,'');
       existingUser = Store.findUserByPhone(phoneFull);
       $('#otpPhone').textContent = phoneFull;
+      $('#otpPhoneRow').textContent = phoneFull;
       const btn = document.querySelector('#step-phone button');
       setButtonLoading(btn, true, 'Sending...');
       try{
@@ -246,7 +268,7 @@
         otpRequestId = data.id || otpRequestId;
         showStep('otp');
         clearOtpInputs();
-        if(otpAutofill) otpAutofill.focus();
+        otpInputs[0]?.focus();
         showToast('OTP sent');
       }catch(error){
         showToast(error.message);
@@ -266,7 +288,7 @@
         const data = await callOtpApi(otpRequestId ? '/api/msgowl-resend-otp' : '/api/msgowl-send-otp', payload);
         otpRequestId = data.id || otpRequestId;
         clearOtpInputs();
-        if(otpAutofill) otpAutofill.focus();
+        otpInputs[0]?.focus();
         showToast('OTP resent');
       }catch(error){
         showToast(error.message);
@@ -286,6 +308,7 @@
         }
         inp.value = digits;
         if(inp.value && i < otpInputs.length - 1) otpInputs[i+1].focus();
+        maybeAutoVerifyOtp();
       });
       inp.addEventListener('keydown',e=>{ if(e.key==='Backspace' && !inp.value && i>0) otpInputs[i-1].focus(); });
       inp.addEventListener('paste',e=>{
@@ -297,14 +320,12 @@
         }
       });
     });
-    if(otpAutofill){
-      otpAutofill.addEventListener('input', ()=>fillOtpInputs(otpAutofill.value));
-      otpAutofill.addEventListener('change', ()=>fillOtpInputs(otpAutofill.value));
-    }
 
-    async function verifyOtp(){
+    async function verifyOtp(auto){
+      if(otpVerifying) return;
       const code = otpInputs.map(i=>i.value).join('');
-      if(code.length !== 6) return showToast('Enter the 6-digit code');
+      if(code.length !== 6) return auto ? null : showToast('Enter the 6-digit code');
+      otpVerifying = true;
       const btn = $('#verifyBtn');
       setButtonLoading(btn, true, 'Verifying...');
       try{
@@ -316,6 +337,7 @@
       }catch(error){
         showToast(error.message);
       }finally{
+        otpVerifying = false;
         setButtonLoading(btn, false);
       }
     }

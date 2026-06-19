@@ -11,13 +11,13 @@ function saveCart(cart) {
 }
 function itemStockLimit(product) {
   if (!(window.Store && product && product.id)) return null;
-  const rawId = String(product.id || '');
-  const [productId, variantId] = rawId.split('_');
+  const { productId, variantId } = Store.parseCartItemId(product.id);
+  if (!productId) return null;
   return variantId ? Store.availableStockOfVariant(productId, variantId) : Store.availableStockOf(productId);
 }
 function addToCart(product) {
   const cart = getCart();
-  const existing = cart.find(i => i.id === product.id && i.size === product.size);
+  const existing = cart.find(i => i.id === product.id);
   const limit = itemStockLimit(product);
   const nextQty = (existing ? existing.qty : 0) + (product.qty || 1);
   if (limit !== null && limit <= 0) {
@@ -36,8 +36,8 @@ function addToCart(product) {
 }
 function activeCartPrice(item) {
   if (!(window.Store && item && item.id)) return item.price || 0;
-  const rawId = String(item.id || '');
-  const [productId, variantId] = rawId.split('_');
+  const { productId, variantId } = Store.parseCartItemId(item.id);
+  if (!productId) return item.price || 0;
   const product = Store.get('products', productId);
   if (!product) return item.price || 0;
   return variantId ? (Store.priceOfVariant(productId, variantId) || Store.priceOf(product) || item.price || 0)
@@ -52,7 +52,21 @@ function refreshCartPrices() {
       item.price = next;
       changed = true;
     }
+    const limit = itemStockLimit(item);
+    if (limit !== null) {
+      const clamped = Math.max(0, Math.min(+item.qty || 0, limit));
+      if (clamped !== (+item.qty || 0)) {
+        item.qty = clamped;
+        changed = true;
+      }
+    }
   });
+  for (let i = cart.length - 1; i >= 0; i -= 1) {
+    if ((+cart[i].qty || 0) <= 0) {
+      cart.splice(i, 1);
+      changed = true;
+    }
+  }
   if (changed) saveCart(cart);
   return cart;
 }

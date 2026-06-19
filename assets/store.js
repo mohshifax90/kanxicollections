@@ -2,10 +2,10 @@
    KANXI COLLECTION — DATA STORE
    Supabase in production, localStorage on localhost.
 ═══════════════════════════════════════════ */
-const Store = (() => {
+const Store = window.Store = (() => {
   const KEY = 'kanxi_db';
   const CLOUD_CACHE_KEY = 'kanxi_cloud_cache';
-  const VERSION = 3;
+  const VERSION = 4;
   const CLOUD_EVENT = 'kanxi:store-changed';
   const CLOUD_STATUS_EVENT = 'kanxi:store-sync';
   const IS_FILE = location.protocol === 'file:';
@@ -14,7 +14,7 @@ const Store = (() => {
   const CAN_SYNC_CLOUD = !IS_FILE;
   const IS_ADMIN_PAGE = /admin\.html$/i.test(location.pathname);
   const DEFER_CLOUD_BOOT = false;
-  const REALTIME_ENABLED = CAN_SYNC_CLOUD && !IS_LOCALHOST;
+  const REALTIME_ENABLED = CAN_SYNC_CLOUD;
   const USE_CLOUD_CACHE = USE_LOCAL;
   const SUPABASE_JS_SRC = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
@@ -36,11 +36,18 @@ const Store = (() => {
   let realtimeChannel = null;
 
   const ORDER_FLOW = ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
+  const CONFIRMED_ORDER_STATUSES = ['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'];
   const PAYMENT_METHODS = [
     { key:'card', label:'Card', enabled:true },
     { key:'paypal', label:'PayPal', enabled:true },
     { key:'transfer', label:'Bank Transfer', enabled:true },
     { key:'cod', label:'Cash on Delivery', enabled:true },
+  ];
+  const DELIVERY_METHODS = [
+    { key:'address', label:'Address', rate:0, enabled:true },
+    { key:'speed_boat', label:'Speed Boat', rate:10, enabled:true },
+    { key:'boat', label:'Boat', rate:10, enabled:true },
+    { key:'self_pickup', label:'Self Pickup', rate:0, enabled:true },
   ];
   const VARIANT_TYPES = [
     { key:'none',   label:'No variants' },
@@ -143,7 +150,22 @@ const Store = (() => {
     const orders = [];
     const payments = [];
 
-    return { _v:VERSION, categories:cats, subcategories:subs, tags, products, batches, users, orders, payments, paymentSettings:defaultPaymentSettings() };
+    return {
+      _v:VERSION,
+      categories:cats,
+      subcategories:subs,
+      tags,
+      products,
+      batches,
+      users,
+      orders,
+      payments,
+      orderSeq:1,
+      paymentSettings:defaultPaymentSettings(),
+      deliverySettings:defaultDeliverySettings(),
+      taxSettings:defaultTaxSettings(),
+      smsSettings:defaultSmsSettings()
+    };
   }
 
   function defaultHomepage(){
@@ -172,6 +194,28 @@ const Store = (() => {
       bankTransfer: { bankName:'Kanxi Collection', accountNumber:'' }
     };
   }
+  function defaultDeliverySettings(){
+    return {
+      methods: DELIVERY_METHODS.map(m=>({ ...m }))
+    };
+  }
+  function defaultTaxSettings(){
+    return {
+      rates: [
+        { id:'tax_default', type:'GST', rate:8, startDate:'2026-01-01', enabled:true }
+      ]
+    };
+  }
+  function defaultSmsSettings(){
+    return {
+      senderId: 'Kanxi',
+      templates: {
+        confirmed: 'Kanxi: Your order {{orderId}} has been confirmed. We will update you again when it is out for delivery.',
+        outForDelivery: 'Kanxi: Your order {{orderId}} is now out for delivery.',
+        delivered: 'Kanxi: Your order {{orderId}} has been delivered. Thank you for shopping with Kanxi Collection.'
+      }
+    };
+  }
   function emptyCloudDb(){
     return {
       _v:VERSION,
@@ -183,15 +227,178 @@ const Store = (() => {
       users:[],
       orders:[],
       payments:[],
+      orderSeq:1,
       homepage:defaultHomepage(),
-      paymentSettings:defaultPaymentSettings()
+      paymentSettings:defaultPaymentSettings(),
+      deliverySettings:defaultDeliverySettings(),
+      taxSettings:defaultTaxSettings(),
+      smsSettings:defaultSmsSettings()
     };
+  }
+
+  function orderNumberValue(id){
+    const match = String(id || '').match(/^KNX-(\d{1,6})$/);
+    return match ? +match[1] : 0;
+  }
+  function nextOrderSequence(db){
+    const saved = +(db && db.orderSeq || 0);
+    if(saved > 0) return saved;
+    const highest = Math.max(0, ...(db.orders || []).map(order => orderNumberValue(order.id)));
+    return highest + 1 || 1;
+  }
+  function nextOrderId(db){
+    const seq = Math.max(1, nextOrderSequence(db));
+    db.orderSeq = seq + 1;
+    return 'KNX-' + String(seq).padStart(6, '0');
+  }
+  function activeBatchFor(db, productId, variantId=null){
+    const batches = (db.batches || [])
+      .filter(batch => batch.productId === productId && (batch.variantId || null) === (variantId || null))
+      .sort((a,b)=>(+a.date || 0) - (+b.date || 0));
+    const available = batches.find(batch => (+batch.stock || 0) > 0);
+    return available || batches[0] || null;
+  }
+  function stockForItem(db, item){
+    if(!item) return 0;
+    return item.variantId
+      ? api.availableStockOfVariant(item.productId, item.variantId)
+      : api.availableStockOf(item.productId);
+  }
+  function reserveOrderStock(db, items){
+    for(const item of (items || [])){
+      const needed = Math.max(0, +(item.qty || 0));
+      if(!needed || !item.productId) continue;
+      const available = stockForItem(db, item);
+      if(needed > available){
+        throw new Error(available <= 0
+          ? `${item.name || 'Item'} is out of stock`
+          : `Only ${available} left for ${item.name || 'this item'}`);
+      }
+    }
+    for(const item of (items || [])){
+      const needed = Math.max(0, +(item.qty || 0));
+      if(!needed || !item.productId) continue;
+      const batch = activeBatchFor(db, item.productId, item.variantId || null);
+      if(batch) batch.stock = Math.max(0, (+batch.stock || 0) - needed);
+    }
+  }
+  function validateOrderStock(db, items){
+    for(const item of (items || [])){
+      const needed = Math.max(0, +(item.qty || 0));
+      if(!needed || !item.productId) continue;
+      const available = stockForItem(db, item);
+      if(needed > available){
+        throw new Error(available <= 0
+          ? `${item.name || 'Item'} is out of stock`
+          : `Only ${available} left for ${item.name || 'this item'}`);
+      }
+    }
+  }
+  function restoreOrderStock(db, items){
+    for(const item of (items || [])){
+      const qty = Math.max(0, +(item.qty || 0));
+      if(!qty || !item.productId) continue;
+      let batch = activeBatchFor(db, item.productId, item.variantId || null);
+      if(!batch){
+        batch = {
+          id: uid('b_'),
+          productId: item.productId,
+          variantId: item.variantId || null,
+          batchNo: 'B-' + String((db.batches || []).length + 1).padStart(4, '0'),
+          costPrice: 0,
+          sellingPrice: +(item.price || 0),
+          stock: 0,
+          expiry: '',
+          date: Date.now()
+        };
+        db.batches = db.batches || [];
+        db.batches.push(batch);
+      }
+      batch.stock = Math.max(0, (+batch.stock || 0) + qty);
+    }
+  }
+  function ensureOrderStockState(db, order){
+    if(!order) return order;
+    const isConfirmed = CONFIRMED_ORDER_STATUSES.includes(order.status);
+    if(isConfirmed && !order.stockAdjusted){
+      reserveOrderStock(db, order.items || []);
+      order.stockAdjusted = true;
+      order.stockAdjustedAt = Date.now();
+    }else if(order.status === 'Returned' && order.stockAdjusted && !order.stockRestored){
+      restoreOrderStock(db, order.items || []);
+      order.stockRestored = true;
+      order.stockRestoredAt = Date.now();
+    }
+    return order;
+  }
+  function normalizeOrderAddressMeta(meta){
+    if(!meta) return null;
+    return {
+      label: meta.label || '',
+      line: meta.line || '',
+      city: meta.city || '',
+      atoll: meta.atoll || '',
+      postcode: meta.postcode || '',
+      country: meta.country || 'Maldives',
+      lat: meta.lat ?? null,
+      lng: meta.lng ?? null,
+      name: meta.name || '',
+      phone: meta.phone || '',
+    };
+  }
+  function ensureOrderNotificationState(order){
+    if(!order.notifications) order.notifications = {};
+    order.notifications.confirmedAt = order.notifications.confirmedAt || null;
+    order.notifications.outForDeliveryAt = order.notifications.outForDeliveryAt || null;
+    order.notifications.deliveredAt = order.notifications.deliveredAt || null;
+    return order;
+  }
+  function notifyOrderStatus(order){
+    if(typeof fetch !== 'function' || !order || !order.userPhone) return;
+    ensureOrderNotificationState(order);
+    const smsSettings = api.getSmsSettings ? api.getSmsSettings() : defaultSmsSettings();
+    const templates = smsSettings && smsSettings.templates || defaultSmsSettings().templates;
+    const phone = String(order.userPhone || '').replace(/\D/g,'');
+    if(phone.length < 7) return;
+    let key = '';
+    let body = '';
+    if(CONFIRMED_ORDER_STATUSES.includes(order.status) && !order.notifications.confirmedAt){
+      key = 'confirmedAt';
+      body = templates.confirmed;
+    }else if(order.status === 'Out for Delivery' && !order.notifications.outForDeliveryAt){
+      key = 'outForDeliveryAt';
+      body = templates.outForDelivery;
+    }else if(order.status === 'Delivered' && !order.notifications.deliveredAt){
+      key = 'deliveredAt';
+      body = templates.delivered;
+    }
+    body = String(body || '')
+      .replace(/\{\{\s*orderId\s*\}\}/g, order.id || '')
+      .replace(/\{\{\s*customerName\s*\}\}/g, order.userName || 'Customer')
+      .replace(/\{\{\s*deliveryType\s*\}\}/g, order.deliveryType || '')
+      .trim();
+    if(!key || !body) return;
+    order.notifications[key] = Date.now();
+    fetch('/api/msgowl-send-sms', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        recipients: phone,
+        sender_id: smsSettings && smsSettings.senderId || defaultSmsSettings().senderId,
+        body
+      })
+    }).catch(error => {
+      order.notifications[key] = null;
+      console.warn('Kanxi order SMS failed:', error && error.message ? error.message : error);
+    });
   }
 
   function normalizeDelivery(address){
     const info = address && address.deliveryInfo || {};
+    const rawType = address && address.deliveryType || 'address';
+    const type = rawType === 'standard' ? 'address' : rawType;
     return {
-      type: address && address.deliveryType || 'standard',
+      type,
       boatName: info.boatName || '',
       contactNumber: info.contactNumber || '',
       departureTime: info.departureTime || '',
@@ -238,9 +445,24 @@ const Store = (() => {
   }
 
   function readLocal(){ try{ return JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){ return null; } }
-  function writeLocal(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
+  function writeLocal(db){
+    try{
+      localStorage.setItem(KEY, JSON.stringify(db));
+    }catch(error){
+      console.warn('Kanxi local save skipped:', error && error.message ? error.message : error);
+    }
+  }
+  function looksLikeSeededDemo(db){
+    if(!db || !Array.isArray(db.categories) || !Array.isArray(db.products)) return false;
+    const demoCategoryIds = ['c_cloth','c_skin','c_make','c_bags','c_watch'];
+    const demoProductIds = ['cl-001','sk-001','mk-001','bg-001','wt-001'];
+    const hasDemoCategories = demoCategoryIds.every(id => db.categories.some(category => category && category.id === id));
+    const hasDemoProducts = demoProductIds.some(id => db.products.some(product => product && product.id === id));
+    return hasDemoCategories && hasDemoProducts;
+  }
   function normalize(db){
-    if(!db || db._v!==VERSION) db=seed();
+    if(!db) db=emptyCloudDb();
+    if(!db._v) db._v = VERSION;
     const catBrandMap={};
     (db.categories||[]).forEach(c=>{
       const seen={};
@@ -307,9 +529,58 @@ const Store = (() => {
       bankName: db.paymentSettings.bankTransfer && db.paymentSettings.bankTransfer.bankName || paymentDefaults.bankTransfer.bankName,
       accountNumber: db.paymentSettings.bankTransfer && db.paymentSettings.bankTransfer.accountNumber || paymentDefaults.bankTransfer.accountNumber,
     };
+    if(!db.deliverySettings) db.deliverySettings = defaultDeliverySettings();
+    const deliveryDefaults = defaultDeliverySettings();
+    const savedDeliveryMethods = Array.isArray(db.deliverySettings.methods) ? db.deliverySettings.methods : [];
+    db.deliverySettings.methods = savedDeliveryMethods.length
+      ? savedDeliveryMethods.map(method => ({
+          key: String(method && method.key || '').trim() || uid('delivery_'),
+          label: String(method && method.label || 'Delivery').trim() || 'Delivery',
+          rate: Math.max(0, +(method && method.rate || 0)),
+          enabled: method && method.enabled !== false
+        }))
+      : deliveryDefaults.methods.map(method => ({ ...method }));
+    if(!db.taxSettings) db.taxSettings = defaultTaxSettings();
+    const taxDefaults = defaultTaxSettings();
+    const savedTaxRates = Array.isArray(db.taxSettings.rates) ? db.taxSettings.rates : [];
+    db.taxSettings.rates = savedTaxRates.length
+      ? savedTaxRates.map(rate => ({
+          id: String(rate && rate.id || uid('tax_')),
+          type: String(rate && rate.type || 'GST').trim() || 'GST',
+          rate: Math.max(0, +(rate && rate.rate || 0)),
+          startDate: String(rate && rate.startDate || '').trim() || '2026-01-01',
+          enabled: rate && rate.enabled !== false
+        })).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)))
+      : taxDefaults.rates.map(rate => ({ ...rate }));
+    if(!db.smsSettings) db.smsSettings = defaultSmsSettings();
+    const smsDefaults = defaultSmsSettings();
+    db.smsSettings.senderId = String(db.smsSettings.senderId || smsDefaults.senderId).trim() || smsDefaults.senderId;
+    db.smsSettings.templates = {
+      confirmed: String(db.smsSettings.templates && db.smsSettings.templates.confirmed || smsDefaults.templates.confirmed).trim() || smsDefaults.templates.confirmed,
+      outForDelivery: String(db.smsSettings.templates && db.smsSettings.templates.outForDelivery || smsDefaults.templates.outForDelivery).trim() || smsDefaults.templates.outForDelivery,
+      delivered: String(db.smsSettings.templates && db.smsSettings.templates.delivered || smsDefaults.templates.delivered).trim() || smsDefaults.templates.delivered,
+    };
     db.users = (db.users||[]).map(normalizeUser);
-    db.orders = (db.orders||[]).map(o=>({ transferSlip:'', bankName:'', accountNumber:'', deliveryType:'standard', deliveryInfo:null, ...o }));
+    db.orders = (db.orders||[]).map(o=>({
+      transferSlip:'',
+      bankName:'',
+      accountNumber:'',
+      deliveryType:'address',
+      deliveryInfo:null,
+      addressMeta:null,
+      notifications:null,
+      stockAdjusted:false,
+      stockRestored:false,
+      stockAdjustedAt:null,
+      stockRestoredAt:null,
+      ...o,
+      deliveryType:(o && o.deliveryType)==='standard' ? 'address' : (o && o.deliveryType || 'address')
+    })).map(order => {
+      order.addressMeta = normalizeOrderAddressMeta(order.addressMeta);
+      return ensureOrderNotificationState(order);
+    });
     db.payments = (db.payments||[]).map(p=>({ slipImage:'', bankName:'', accountNumber:'', verifiedAt:null, ...p }));
+    db.orderSeq = Math.max(1, +(db.orderSeq || 0) || nextOrderSequence(db));
     return db;
   }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
@@ -436,7 +707,7 @@ const Store = (() => {
   }
   function loadCloud(force=false){
     if(cloudLoaded && !force) return cloudDb;
-    const cached = normalize(cloudDb || readCloudCache() || (USE_CLOUD_CACHE ? seed() : emptyCloudDb()));
+    const cached = normalize(cloudDb || readCloudCache() || emptyCloudDb());
     cloudDb = cached;
     cloudLoaded = true;
     lastCloudHash = JSON.stringify(cached);
@@ -448,7 +719,10 @@ const Store = (() => {
   }
   function load(){
     if(USE_LOCAL){
-      const db=normalize(readLocal());
+      const cachedCloud = readCloudCache();
+      const localDb = readLocal();
+      const preferred = cachedCloud || (looksLikeSeededDemo(localDb) ? null : localDb) || emptyCloudDb();
+      const db=normalize(preferred);
       writeLocal(db);
       if(CAN_SYNC_CLOUD) scheduleCloudSync();
       return db;
@@ -456,7 +730,7 @@ const Store = (() => {
     return loadCloud();
   }
   async function pushCloud(db){
-    if(USE_LOCAL) return;
+    if(!CAN_SYNC_CLOUD) return;
     const row=cloudRow(), raw=JSON.stringify(db);
     if(raw===lastCloudHash && raw!==pendingCloudHash) return;
     emitSync('saving');
@@ -479,25 +753,23 @@ const Store = (() => {
     emitSync('saved');
   }
   function queueCloudSave(db){
-    if(USE_LOCAL) return;
+    if(!CAN_SYNC_CLOUD) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>pushCloud(db), 400);
   }
   function save(db){
     const clean=normalize(db);
-    if(USE_LOCAL){ writeLocal(clean); return; }
+    if(USE_LOCAL) writeLocal(clean);
     cloudDb = clean;
-    writeCloudCache(clean, 'full');
+    writeCloudCache(clean);
     queueCloudSave(clean);
   }
   function saveNow(db){
     const clean = normalize(db);
-    if(USE_LOCAL){
-      writeLocal(clean);
-      return Promise.resolve(clean);
-    }
+    if(USE_LOCAL) writeLocal(clean);
     cloudDb = clean;
     writeCloudCache(clean);
+    if(!CAN_SYNC_CLOUD) return Promise.resolve(clean);
     return saveCloudNow(clean).then(()=>clean);
   }
   async function syncFromCloud(){
@@ -521,7 +793,7 @@ const Store = (() => {
       emitSync('loaded', { empty:true });
       return { ok:true, empty:true };
     }
-    const localDb = USE_LOCAL ? normalize(readLocal()) : load();
+    const localDb = USE_LOCAL ? normalize(readCloudCache() || (looksLikeSeededDemo(readLocal()) ? null : readLocal()) || emptyCloudDb()) : load();
     if(USE_LOCAL) writeLocal(localDb);
     const db=normalize(data.data), cloudRaw=JSON.stringify(db), localRaw=JSON.stringify(localDb), liveRaw=JSON.stringify(cloudDb||localDb);
     if(pendingCloudHash && cloudRaw!==pendingCloudHash && liveRaw===pendingCloudHash){
@@ -570,11 +842,11 @@ const Store = (() => {
   }
 
   const api = {
-    ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, uid, im, BLANK_IMAGE,
+    ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, DELIVERY_METHODS, uid, im, BLANK_IMAGE,
     useLocalStorage: USE_LOCAL,
     phoneKey(value){ return String(value || '').replace(/\D/g,''); },
     all(){ return load(); },
-    reset(){ const db=normalize(seed()); save(db); return db; },
+    reset(){ const db=normalize(emptyCloudDb()); save(db); return db; },
     syncFromCloud,
     list(c){ return load()[c]||[]; },
     get(c,id){ return (load()[c]||[]).find(x=>x.id===id); },
@@ -733,11 +1005,119 @@ const Store = (() => {
       await saveNow(db);
       return db.paymentSettings;
     },
+    getDeliverySettings(){ return load().deliverySettings || defaultDeliverySettings(); },
+    getSmsSettings(){ return load().smsSettings || defaultSmsSettings(); },
+    async saveSmsSettings(settings){
+      const db = load();
+      const defaults = defaultSmsSettings();
+      db.smsSettings = {
+        senderId: String(settings && settings.senderId || defaults.senderId).trim() || defaults.senderId,
+        templates: {
+          confirmed: String(settings && settings.templates && settings.templates.confirmed || defaults.templates.confirmed).trim() || defaults.templates.confirmed,
+          outForDelivery: String(settings && settings.templates && settings.templates.outForDelivery || defaults.templates.outForDelivery).trim() || defaults.templates.outForDelivery,
+          delivered: String(settings && settings.templates && settings.templates.delivered || defaults.templates.delivered).trim() || defaults.templates.delivered
+        }
+      };
+      await saveNow(db);
+      return db.smsSettings;
+    },
+    getTaxSettings(){ return load().taxSettings || defaultTaxSettings(); },
+    async saveTaxSettings(settings){
+      const db = load();
+      const rates = Array.isArray(settings && settings.rates) ? settings.rates : [];
+      db.taxSettings = {
+        rates: rates.map(rate => ({
+          id: String(rate && rate.id || uid('tax_')),
+          type: String(rate && rate.type || 'GST').trim() || 'GST',
+          rate: Math.max(0, +(rate && rate.rate || 0)),
+          startDate: String(rate && rate.startDate || '').trim() || '2026-01-01',
+          enabled: rate && rate.enabled !== false
+        })).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)))
+      };
+      await saveNow(db);
+      return db.taxSettings;
+    },
+    activeTaxRate(at = Date.now()){
+      const settings = this.getTaxSettings();
+      const current = new Date(at).toISOString().slice(0,10);
+      const enabledRates = (settings.rates || []).filter(rate => rate.enabled !== false).sort((a,b)=>String(a.startDate).localeCompare(String(b.startDate)));
+      const currentRates = enabledRates.filter(rate => String(rate.startDate || '') <= current);
+      return currentRates[currentRates.length - 1] || enabledRates[enabledRates.length - 1] || null;
+    },
+    currentTaxRate(at = Date.now()){
+      const rule = this.activeTaxRate(at);
+      return Math.max(0, +(rule && rule.rate || 0));
+    },
+    taxType(at = Date.now()){
+      const rule = this.activeTaxRate(at);
+      return rule && rule.type || 'Tax';
+    },
+    taxAmountFromInclusive(amount, at = Date.now()){
+      const gross = Math.max(0, +(amount || 0));
+      const rate = this.currentTaxRate(at);
+      if(!gross || !rate) return 0;
+      return Math.round((gross - (gross / (1 + rate / 100))) * 100) / 100;
+    },
+    priceExcludingTax(amount, at = Date.now()){
+      const gross = Math.max(0, +(amount || 0));
+      const rate = this.currentTaxRate(at);
+      if(!gross || !rate) return gross;
+      return Math.round((gross / (1 + rate / 100)) * 100) / 100;
+    },
+    getActiveDeliveryMethods(){
+      return (this.getDeliverySettings().methods || []).filter(method => method.enabled !== false);
+    },
+    deliveryMethod(key){
+      const normKey = key === 'standard' ? 'address' : key;
+      const methods = this.getDeliverySettings().methods || [];
+      return methods.find(method => method.key === normKey) || null;
+    },
+    deliveryLabel(key){
+      const method = this.deliveryMethod(key);
+      if(method) return method.label;
+      return key === 'standard' ? 'Address' : 'Delivery';
+    },
+    deliveryRate(key){
+      const method = this.deliveryMethod(key);
+      return method ? Math.max(0, +(method.rate || 0)) : 0;
+    },
+    async saveDeliverySettings(settings){
+      const db = load();
+      const methods = Array.isArray(settings && settings.methods) ? settings.methods : [];
+      db.deliverySettings = {
+        methods: methods.map(method => ({
+          key: String(method && method.key || '').trim() || uid('delivery_'),
+          label: String(method && method.label || 'Delivery').trim() || 'Delivery',
+          rate: Math.max(0, +(method && method.rate || 0)),
+          enabled: method && method.enabled !== false
+        }))
+      };
+      await saveNow(db);
+      return db.deliverySettings;
+    },
     imageForTag(tagId){ const p=this.storeProducts().find(p=>(p.tags||[]).includes(tagId)); return p?p.image:''; },
     brandById(id){ return this.allBrands().find(b=>b.id===id); },
     productsByTag(tagId){ return this.storeProducts().filter(p=>(p.tags||[]).includes(tagId)).map(p=>this.card(p)); },
     productsByBrand(name){ const n=(name||'').toLowerCase(); return this.storeProducts().filter(p=>(p.brand||'').toLowerCase()===n).map(p=>this.card(p)); },
     offers(limit=12){ return this.storeProducts().filter(p=>this.tagNames(p.tags).includes('Sale')).slice(0,limit).map(p=>this.card(p)); },
+    parseCartItemId(rawId){
+      const value = String(rawId || '');
+      if(!value) return { productId:null, variantId:null };
+      if(value.includes('::')){
+        const [productId, variantId] = value.split('::');
+        return { productId:productId || null, variantId:variantId || null };
+      }
+      const products = this.list('products');
+      let matched = null;
+      products.forEach(product => {
+        if(matched || !product || !product.id) return;
+        const prefix = `${product.id}_`;
+        if(value === product.id) matched = { productId:product.id, variantId:null };
+        else if(value.startsWith(prefix)) matched = { productId:product.id, variantId:value.slice(prefix.length) || null };
+      });
+      if(matched) return matched;
+      return { productId:value, variantId:null };
+    },
     productSales(){ const map={}; const ps=this.list('products');
       this.list('orders').forEach(o=>(o.items||[]).forEach(it=>{ let pid=it.productId; if(!pid){ const m=ps.find(p=>it.name && it.name.indexOf(p.name)===0); pid=m&&m.id; } if(pid) map[pid]=(map[pid]||0)+(it.qty||1); }));
       return map; },
@@ -749,7 +1129,7 @@ const Store = (() => {
 
     /* ── place a real order from storefront checkout ── */
     placeOrder(o){ const db=load();
-      const id='KNX-'+Math.floor(100000+Math.random()*900000);
+      const id=nextOrderId(db);
       const methodKey=String(o.payMethod||'card').toLowerCase();
       const settings=db.paymentSettings || defaultPaymentSettings();
       const method=(settings.methods||[]).find(m=>m.key===methodKey) || PAYMENT_METHODS.find(m=>m.key===methodKey) || PAYMENT_METHODS[0];
@@ -758,6 +1138,16 @@ const Store = (() => {
       const bankTransfer=settings.bankTransfer || defaultPaymentSettings().bankTransfer;
       const orderStatus=transfer?'Pending Slip Verification':(cod?'Order Accepted':'Paid');
       const payStatus=transfer?'Pending Slip Verification':(cod?'Pending':'Paid');
+      const items=(o.items||[]).map(i=>({
+        productId:i.productId||null,
+        variantId:i.variantId||null,
+        name:i.name,
+        qty:Math.max(1, +(i.qty || 1)),
+        price:+(i.price || 0),
+        image:i.image||'',
+        size:i.size || ''
+      }));
+      validateOrderStock(db, items);
       const delivery = o.deliveryInfo ? {
         boatName:o.deliveryInfo.boatName || '',
         contactNumber:o.deliveryInfo.contactNumber || '',
@@ -766,13 +1156,20 @@ const Store = (() => {
       } : null;
       const order={ id, userName:o.userName||'Guest', userPhone:o.userPhone||'', date:Date.now(),
         status:orderStatus, payStatus, payMethod:method.label,
-        items:(o.items||[]).map(i=>({ productId:i.productId||null, name:i.name, qty:i.qty, price:i.price, image:i.image||'' })),
+        items,
+        addressMeta: normalizeOrderAddressMeta(o.addressMeta),
+        notifications: { confirmedAt:null, outForDeliveryAt:null, deliveredAt:null },
+        stockAdjusted:false,
+        stockRestored:false,
+        stockAdjustedAt:null,
+        stockRestoredAt:null,
         shipping:o.shipping||0, address:o.address||'', transferSlip:o.transferSlip||'',
         bankName:transfer?(o.bankName||bankTransfer.bankName||''):'',
         accountNumber:transfer?(o.accountNumber||bankTransfer.accountNumber||''):'',
-        deliveryType:o.deliveryType || 'standard',
+        deliveryType:(o.deliveryType === 'standard' ? 'address' : (o.deliveryType || 'address')),
         deliveryInfo:delivery
       };
+      ensureOrderStockState(db, order);
       db.orders.push(order);
       db.payments.push({
         id:uid('p_'),
@@ -788,9 +1185,17 @@ const Store = (() => {
       });
       saveNow(db).catch(error=>console.warn('Kanxi order save failed:', error.message));
       return order; },
+    async clearOrdersAndPayments(){
+      const db = load();
+      db.orders = [];
+      db.payments = [];
+      db.orderSeq = 1;
+      await saveNow(db);
+      return true;
+    },
 
-    advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'].includes(o.status))o.payStatus='Paid'; saveNow(db).catch(error=>console.warn('Kanxi order advance save failed:', error.message)); return o; },
-    setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st; if(['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'].includes(st))o.payStatus='Paid'; saveNow(db).catch(error=>console.warn('Kanxi order status save failed:', error.message));} return o; },
+    advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(CONFIRMED_ORDER_STATUSES.includes(o.status))o.payStatus='Paid'; ensureOrderStockState(db, o); ensureOrderNotificationState(o); notifyOrderStatus(o); saveNow(db).catch(error=>console.warn('Kanxi order advance save failed:', error.message)); return o; },
+    setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st; if(CONFIRMED_ORDER_STATUSES.includes(st))o.payStatus='Paid'; ensureOrderStockState(db, o); ensureOrderNotificationState(o); notifyOrderStatus(o); saveNow(db).catch(error=>console.warn('Kanxi order status save failed:', error.message));} return o; },
     setPaymentStatus(id,status){
       const db=load(), p=db.payments.find(x=>x.id===id);
       if(!p) return null;
@@ -800,6 +1205,9 @@ const Store = (() => {
       if(o){
         o.payStatus=status;
         if(status==='Paid' && ['Pending Payment','Pending Slip Verification'].includes(o.status)) o.status='Paid';
+        ensureOrderStockState(db, o);
+        ensureOrderNotificationState(o);
+        notifyOrderStatus(o);
       }
       saveNow(db).catch(error=>console.warn('Kanxi payment status save failed:', error.message));
       return p;

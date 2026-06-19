@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>Kanxi Collection — Shop</title>
   <meta name="description" content="Shop Kanxi Collection for fashion, beauty, skincare, accessories, and lifestyle products in the Maldives. Discover new arrivals and bestsellers.">
   <link rel="canonical" href="https://kanxicollection.com/">
@@ -314,7 +317,7 @@
   .btn-logout:hover{background:#c0392b;color:#fff;}
   .menu-close{position:absolute;top:1rem;left:-44px;width:36px;height:36px;border-radius:50%;background:#fff;border:none;font-size:1.1rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
 </style>
-<script src="assets/icons.js"></script>
+<script src="assets/icons.js?v=2"></script>
 <script>
   function openCats(){ document.getElementById('catBg').classList.add('show'); document.getElementById('catSheet').classList.add('show'); }
   function closeCats(){ document.getElementById('catBg').classList.remove('show'); document.getElementById('catSheet').classList.remove('show'); }
@@ -340,9 +343,9 @@
   }
 </script>
 
-<script src="assets/supabase-config.js?v=1"></script>
-<script src="assets/store.js?v=7"></script>
-<script src="assets/components.js"></script>
+<script src="assets/supabase-config.js?v=2"></script>
+<script src="assets/store.js?v=16"></script>
+<script src="assets/components.js?v=2"></script>
 <script>
   /* ── PRODUCTS — live from admin Store ── */
   let productImgIndex = 0;
@@ -435,7 +438,11 @@
         <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
     }).join('')}</div>`;
 
-    const brandList = Store.allBrands();
+    const configuredBrandIds = (hp.brands && Array.isArray(hp.brands.brandIds)) ? hp.brands.brandIds : [];
+    const allBrands = Store.allBrands();
+    const brandList = configuredBrandIds.length
+      ? configuredBrandIds.map(id => brandsById[id]).filter(Boolean)
+      : allBrands;
     const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map((b, i)=>`
       <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">
         <div class="brand-logo">${b.logo?`<img alt="${b.name}" ${imgAttrs('brand', i, b.logo)}/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>

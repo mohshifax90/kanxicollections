@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>Kanxi Collection — Product</title>
   <style>
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
@@ -208,10 +211,10 @@
   <button class="btn-buy" onclick="doBuyNow()">Buy now</button>
 </div>
 
-<script src="assets/icons.js"></script>
-<script src="assets/supabase-config.js?v=1"></script>
-<script src="assets/store.js?v=7"></script>
-<script src="assets/components.js"></script>
+<script src="assets/icons.js?v=2"></script>
+<script src="assets/supabase-config.js?v=2"></script>
+<script src="assets/store.js?v=16"></script>
+<script src="assets/components.js?v=2"></script>
 <script>
   document.body.classList.add('pending');
   function goBack(){ if (history.length > 1 && document.referrer && new URL(document.referrer).origin === location.origin) history.back(); else location.href = 'index.html'; }
@@ -376,7 +379,7 @@
       document.querySelectorAll('.gdot').forEach((d,i)=>d.classList.toggle('active', i===gi));
     }
   });
-  if (!renderProductPage() && !Store.useLocalStorage) {
+  if (!renderProductPage() && location.protocol !== 'file:') {
     Store.syncFromCloud().finally(() => renderProductPage());
   }
   window.addEventListener('kanxi:store-changed', () => { renderProductPage(); });

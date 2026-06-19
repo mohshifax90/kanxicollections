@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>Kanxi Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -45,12 +48,14 @@
       <button data-route="inventory" class="navi"><i data-lucide="boxes" class="w-[18px] h-[18px]"></i> Inventory</button>
       <p class="px-5 pt-4 pb-1 text-[0.65rem] tracking-widest uppercase text-zinc-500 font-semibold">Sales</p>
       <button data-route="orders" class="navi"><i data-lucide="package" class="w-[18px] h-[18px]"></i> Orders <span id="ordBadge" class="ml-auto hidden bg-kacc text-white text-[0.6rem] font-bold rounded-full px-2 py-0.5"></span></button>
+      <button data-route="delivery" class="navi"><i data-lucide="map-pinned" class="w-[18px] h-[18px]"></i> Delivery</button>
+      <button data-route="deliveryMethods" class="navi"><i data-lucide="truck" class="w-[18px] h-[18px]"></i> Delivery Methods</button>
       <button data-route="payments" class="navi"><i data-lucide="credit-card" class="w-[18px] h-[18px]"></i> Payments</button>
       <button data-route="paymentMethods" class="navi"><i data-lucide="wallet-cards" class="w-[18px] h-[18px]"></i> Payment Methods</button>
+      <button data-route="smsSettings" class="navi"><i data-lucide="messages-square" class="w-[18px] h-[18px]"></i> SMS Settings</button>
+      <button data-route="taxSettings" class="navi"><i data-lucide="receipt" class="w-[18px] h-[18px]"></i> Tax Settings</button>
       <p class="px-5 pt-4 pb-1 text-[0.65rem] tracking-widest uppercase text-zinc-500 font-semibold">People</p>
       <button data-route="users" class="navi"><i data-lucide="users" class="w-[18px] h-[18px]"></i> Users</button>
-      <p class="px-5 pt-4 pb-1 text-[0.65rem] tracking-widest uppercase text-zinc-500 font-semibold">System</p>
-      <button onclick="if(confirm('Reset all demo data?')){Store.reset();location.reload();}" class="navi"><i data-lucide="rotate-ccw" class="w-[18px] h-[18px]"></i> Reset data</button>
     </nav>
   </aside>
   <div id="scrim" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-black/40 z-30 lg:hidden"></div>
@@ -135,8 +140,8 @@
 
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://unpkg.com/@zxing/browser@latest"></script>
-<script src="assets/supabase-config.js?v=1"></script>
-<script src="assets/store.js?v=7"></script>
+<script src="assets/supabase-config.js?v=2"></script>
+<script src="assets/store.js?v=16"></script>
 <script>
   /* ── Lucide auto-render: re-create icons whenever content/modal changes ── */
   let _iconRAF;
@@ -152,6 +157,10 @@
   const content = $('#content');
   const MVR = n => 'MVR ' + (+n).toLocaleString();
   const esc = s => (s==null?'':String(s)).replace(/"/g,'&quot;');
+  const escText = s => (s==null?'':String(s))
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
 
   function toggleSidebar(){ $('#sidebar').classList.toggle('-translate-x-full'); $('#scrim').classList.toggle('hidden'); }
 
@@ -282,8 +291,8 @@
     <button type="button" aria-label="Delete" title="Delete" onclick="event.stopPropagation(); ${onDel}" class="inline-flex h-9 w-9 items-center justify-center rounded text-zinc-500 hover:bg-red-50 hover:text-red-600">${ic('trash-2','w-4 h-4')}</button></div>`;
 
   /* ── ROUTING ── */
-  const routes = { dashboard:dashboard, homepage:homepage, categories:categories, subcategories:subcats, products:products, tags:tags, inventory:inventory, orders:orders, payments:payments, paymentMethods:paymentMethods, users:users };
-  const titles = { dashboard:'Dashboard', homepage:'Homepage CMS', categories:'Categories', subcategories:'Sub-categories', products:'Products', tags:'Tags', inventory:'Inventory', orders:'Orders', payments:'Payments', paymentMethods:'Payment Methods', users:'Users' };
+  const routes = { dashboard:dashboard, homepage:homepage, categories:categories, subcategories:subcats, products:products, tags:tags, inventory:inventory, orders:orders, delivery:delivery, deliveryMethods:deliveryMethods, payments:payments, paymentMethods:paymentMethods, smsSettings:smsSettings, taxSettings:taxSettings, users:users };
+  const titles = { dashboard:'Dashboard', homepage:'Homepage CMS', categories:'Categories', subcategories:'Sub-categories', products:'Products', tags:'Tags', inventory:'Inventory', orders:'Orders', delivery:'Delivery', deliveryMethods:'Delivery Methods', payments:'Payments', paymentMethods:'Payment Methods', smsSettings:'SMS Settings', taxSettings:'Tax Settings', users:'Users' };
   function go(route){
     if(!routes[route]) route='dashboard';
     location.hash = route;
@@ -332,7 +341,7 @@
   function renderHP(){
     const brands=Store.allBrands();
     const brandsById={}; brands.forEach(b=>brandsById[b.id]=b);
-    const selectedBrands = `${_hp.brands.brandIds.length?`<div class="px-4 pt-4"><p class="text-xs text-zinc-400 mb-2">Featured order — drag to reorder</p><div class="flex flex-wrap gap-2">${_hp.brands.brandIds.map((bid,i)=>{ const b=brandsById[bid]; if(!b)return ''; return `<div draggable="true" ondragstart="dragStart(event,'brand',${i})" ondragover="dragOver(event)" ondrop="dropAt(event,'brand',${i})" class="flex items-center gap-1.5 border border-kacc bg-kcream/40 rounded-full pl-1.5 pr-2 py-1 cursor-grab active:cursor-grabbing">${ic('grip-vertical','w-3.5 h-3.5 text-zinc-400 pointer-events-none')}${b.logo?`<img src="${b.logo}" class="w-5 h-5 rounded-full object-contain pointer-events-none"/>`:''}<span class="text-xs font-semibold pointer-events-none">${b.name}</span><button onclick="toggleBrand('${bid}')" class="text-zinc-400 hover:text-red-600">${ic('x','w-3 h-3')}</button></div>`; }).join('')}</div></div>`:''}`;
+    const selectedBrands = `${_hp.brands.brandIds.length?`<div class="px-4 pt-4"><p class="text-xs text-zinc-400 mb-2">Featured order — drag or use arrows to reorder</p><div class="flex flex-wrap gap-2">${_hp.brands.brandIds.map((bid,i)=>{ const b=brandsById[bid]; if(!b)return ''; return `<div ondragover="dragOver(event)" ondrop="dropAt(event,'brand',${i})" class="flex items-center gap-1.5 border border-kacc bg-kcream/40 rounded-full pl-1.5 pr-2 py-1">${`<span draggable="true" ondragstart="dragStart(event,'brand',${i})" class="grid place-items-center text-zinc-400 cursor-grab active:cursor-grabbing" title="Drag to reorder">${ic('grip-vertical','w-3.5 h-3.5')}</span>`}${b.logo?`<img src="${b.logo}" class="w-5 h-5 rounded-full object-contain"/>`:''}<span class="text-xs font-semibold">${b.name}</span><div class="flex items-center gap-1 ml-1"><button onclick="moveBrand(${i},-1)" ${i===0?'disabled':''} class="text-zinc-400 hover:text-kink disabled:opacity-30">${ic('chevron-left','w-3 h-3')}</button><button onclick="moveBrand(${i},1)" ${i===_hp.brands.brandIds.length-1?'disabled':''} class="text-zinc-400 hover:text-kink disabled:opacity-30">${ic('chevron-right','w-3 h-3')}</button><button onclick="toggleBrand('${bid}')" class="text-zinc-400 hover:text-red-600">${ic('x','w-3 h-3')}</button></div></div>`; }).join('')}</div></div>`:''}`;
     content.innerHTML =
       `<div class="flex items-center justify-between mb-4"><p class="text-sm text-zinc-500">Edit the storefront homepage. Changes appear after customers reload.</p>
         <button onclick="saveHP()" class="${btn.primary}">${ic('save','w-4 h-4')} Save Homepage</button></div>`+
@@ -348,10 +357,10 @@
       /* Brands */
       card(`Section 2`, titleInput('_hp.brands.title',_hp.brands.title),
         brands.length? selectedBrands + `<div class="p-4 grid grid-cols-2 sm:grid-cols-3 gap-2">${brands.map(b=>`
-          <label class="flex items-center gap-2 border rounded-lg p-2 cursor-pointer ${_hp.brands.brandIds.includes(b.id)?'border-kacc ring-1 ring-kacc bg-kcream/40':'border-zinc-200'}">
-            <input type="checkbox" ${_hp.brands.brandIds.includes(b.id)?'checked':''} onchange="toggleBrand('${b.id}')" class="accent-kink"/>
+          <div onclick="toggleBrand('${b.id}')" class="flex items-center gap-2 border rounded-lg p-2 cursor-pointer ${_hp.brands.brandIds.includes(b.id)?'border-kacc ring-1 ring-kacc bg-kcream/40':'border-zinc-200'}">
+            <input type="checkbox" ${_hp.brands.brandIds.includes(b.id)?'checked':''} onchange="setBrandEnabled('${b.id}',this.checked)" onclick="event.stopPropagation()" class="accent-kink"/>
             ${b.logo?`<img src="${b.logo}" class="w-8 h-8 object-contain rounded"/>`:`<span class="w-8 h-8 rounded-full bg-kcream text-kacc grid place-items-center text-[0.62rem] font-bold">${(b.name||'?').slice(0,2).toUpperCase()}</span>`}
-            <span class="text-sm font-medium">${b.name}</span><span class="text-[0.7rem] text-zinc-400 ml-auto">${b.categoryName}</span></label>`).join('')}</div>`
+            <span class="text-sm font-medium">${b.name}</span><span class="text-[0.7rem] text-zinc-400 ml-auto">${b.categoryName}</span></div>`).join('')}</div>`
           :`<p class="p-5 text-sm text-zinc-400">No brands yet — add brands in <b>Categories</b> first.</p>`)+
       `<div class="h-4"></div>`+
       /* Best Sellers */
@@ -408,7 +417,22 @@
     :'<p class="text-sm text-zinc-400">No items yet.</p>'}</div>`; }
   function addCC(){ _hp.collections.cards.push({id:Store.uid('cc_'),caption:'',tagId:'',linkType:'tag',linkValue:'',image:''}); renderHP(); }
   function addMenuItem(){ _hp.menu.items.push({id:Store.uid('hm_'),label:'',linkType:'category',linkValue:''}); renderHP(); }
-  function toggleBrand(id){ const a=_hp.brands.brandIds; const i=a.indexOf(id); if(i<0)a.push(id);else a.splice(i,1); renderHP(); }
+  function setBrandEnabled(id, enabled){
+    const a=_hp.brands.brandIds;
+    const i=a.indexOf(id);
+    if(enabled && i<0) a.push(id);
+    if(!enabled && i>=0) a.splice(i,1);
+    renderHP();
+  }
+  function toggleBrand(id){ setBrandEnabled(id, !_hp.brands.brandIds.includes(id)); }
+  function moveBrand(index, delta){
+    const a=_hp.brands.brandIds;
+    const to=index + delta;
+    if(index < 0 || index >= a.length || to < 0 || to >= a.length) return;
+    const [m]=a.splice(index,1);
+    a.splice(to,0,m);
+    renderHP();
+  }
 
   /* ── drag-to-reorder (collections cards + selected brands) ── */
   var _dragFrom=null;
@@ -832,6 +856,7 @@
   function editBatch(id){
     const b=id?Store.get('batches',id):{productId:(Store.list('products')[0]||{}).id,variantId:null,batchNo:nextBatchNo(),costPrice:'',sellingPrice:'',stock:'',expiry:''};
     const prods=Store.list('products'); const sel='w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm';
+    const activeTax = Store.activeTaxRate();
     openModal(id?'Edit Batch':'Add Batch',
       F.fg('Scan / SKU',`<div class="flex gap-2">
         <input id="b_sku" placeholder="Scan QR or type SKU…" class="flex-1 px-3 py-2.5 border border-zinc-300 rounded-lg text-sm font-mono outline-none focus:border-kink"/>
@@ -840,7 +865,8 @@
       F.fg('Product',`<select id="b_prod" onchange="loadBatchVariants()" class="${sel}">${prods.map(p=>`<option value="${p.id}" ${p.id===b.productId?'selected':''}>${p.name}</option>`).join('')}</select>`)+
       F.fg('Variant / Option',`<select id="b_var" onchange="syncBatchSku()" class="${sel}"></select>`)+
       `<div class="flex gap-3"><div class="flex-1">${F.fg('Batch No (auto)',`<input id="b_no" value="${esc(b.batchNo||nextBatchNo())}" readonly class="w-full px-3 py-2.5 border border-zinc-200 rounded-lg text-sm bg-zinc-100 text-zinc-500 font-mono"/>`)}</div><div class="flex-1">${F.fg('Stock (units)',F.input('b_stock',b.stock,'','number'))}</div></div>`+
-      `<div class="flex gap-3"><div class="flex-1">${F.fg('Cost Price (MVR)',F.input('b_cost',b.costPrice,'','number'))}</div><div class="flex-1">${F.fg('Selling Price (MVR)',F.input('b_sell',b.sellingPrice,'','number'))}</div></div>`+
+      `<div class="flex gap-3"><div class="flex-1">${F.fg('Cost Price (MVR)',F.input('b_cost',b.costPrice,'','number'))}</div><div class="flex-1">${F.fg('Selling Price (MVR · tax inclusive)',F.input('b_sell',b.sellingPrice,'','number'))}</div></div>`+
+      `<div class="text-[0.72rem] text-zinc-400 -mt-2 mb-2">${esc(activeTax && activeTax.type || 'Tax')} ${(+(activeTax && activeTax.rate || 0)).toLocaleString()}% is included in the selling price.</div>`+
       `<div id="marginHint" class="text-xs text-zinc-500 mb-3"></div>`+
       F.fg('Expiry date (optional)',F.input('b_exp',b.expiry,'','date')),
       `<button onclick="closeModal()" class="${btn.light}">Cancel</button><button onclick="saveBatch('${id||''}')" class="${btn.primary}">${ic('save','w-4 h-4')} Save Batch</button>`);
@@ -848,7 +874,13 @@
     ['b_cost','b_sell'].forEach(x=>$('#'+x).addEventListener('input',marginHint)); marginHint();
   }
   function marginHint(){ const c=+$('#b_cost').value||0, s=+$('#b_sell').value||0; const el=$('#marginHint'); if(!el)return;
-    if(c&&s){ const m=Math.round((1-c/s)*100), pr=s-c; el.innerHTML=`Margin: <b class="${m>=40?'text-green-600':m>=20?'text-amber-600':'text-red-600'}">${m}%</b> · Profit per unit: <b>${MVR(pr)}</b>`; } else el.textContent=''; }
+    if(c&&s){
+      const net = Store.priceExcludingTax ? Store.priceExcludingTax(s) : s;
+      const tax = Store.taxAmountFromInclusive ? Store.taxAmountFromInclusive(s) : 0;
+      const m = net ? Math.round((1-c/net)*100) : 0;
+      const pr = net-c;
+      el.innerHTML=`Net of tax: <b>${MVR(net)}</b> · Included tax: <b>${MVR(tax)}</b> · Margin: <b class="${m>=40?'text-green-600':m>=20?'text-amber-600':'text-red-600'}">${m}%</b> · Profit per unit: <b>${MVR(pr)}</b>`;
+    } else el.textContent=''; }
   function loadBatchVariants(selId){ const p=Store.get('products',$('#b_prod').value); const vs=(p&&p.variants)||[];
     $('#b_var').innerHTML = vs.length ? vs.map(v=>`<option value="${v.id}" ${v.id===selId?'selected':''}>${Store.variantTypeLabel(p.variantType)}: ${v.value}</option>`).join('') : `<option value="">— No variants (single stock) —</option>`;
     syncBatchSku(); }
@@ -938,8 +970,100 @@
       <div class="flex justify-between font-extrabold text-base mt-3"><span>Total</span><span>${MVR(total(o))}</span></div>`,
       `<button onclick="closeModal()" class="${btn.light}">Close</button>`);
   }
-  function advance(id){ Store.advanceOrder(id); refreshBadge(); orderDetail(id); orders(); }
-  function setStatus(id,st){ if(st==='Set status…')return; Store.setOrderStatus(id,st); refreshBadge(); orderDetail(id); orders(); }
+  function advance(id){
+    try{
+      Store.advanceOrder(id); refreshBadge(); orderDetail(id); orders();
+    }catch(error){
+      alert(error.message || 'Could not confirm this order');
+    }
+  }
+  function setStatus(id,st){
+    if(st==='Set status…')return;
+    try{
+      Store.setOrderStatus(id,st); refreshBadge(); orderDetail(id); orders();
+    }catch(error){
+      alert(error.message || 'Could not update order status');
+    }
+  }
+
+  function deliveryRows(statuses){
+    return Store.list('orders')
+      .filter(order => statuses.includes(order.status))
+      .slice()
+      .reverse();
+  }
+  function deliveryCard(order){
+    const addressMeta = order.addressMeta || null;
+    const geo = addressMeta && addressMeta.lat != null && addressMeta.lng != null
+      ? `${(+addressMeta.lat).toFixed(5)}, ${( +addressMeta.lng).toFixed(5)}`
+      : '';
+    const deliveryInfo = order.deliveryInfo || {};
+    const deliveryType = Store.deliveryLabel(order.deliveryType || 'address');
+    const detailBits = [
+      addressMeta && addressMeta.line,
+      addressMeta && [addressMeta.city, addressMeta.atoll].filter(Boolean).join(', '),
+      addressMeta && [addressMeta.postcode, addressMeta.country].filter(Boolean).join(' · ')
+    ].filter(Boolean);
+    return `<div class="rounded-2xl border border-zinc-200 bg-white p-4">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="font-mono text-xs text-zinc-400">${order.id}</div>
+          <div class="font-extrabold text-sm mt-1">${order.userName || 'Customer'}</div>
+          <div class="text-xs text-zinc-500 mt-1">${order.userPhone || '—'}</div>
+        </div>
+        <div class="flex gap-2 flex-wrap justify-end">${statusPill(order.status)}${pill(deliveryType,'gray')}</div>
+      </div>
+      <div class="grid gap-3 text-sm">
+        <div>
+          ${F.label('Address')}
+          <div class="text-zinc-700">${detailBits.join('<br/>') || order.address || 'No address details'}</div>
+        </div>
+        <div>
+          ${F.label('Delivery details')}
+          <div class="text-zinc-700">${deliveryInfo.boatName ? `Boat: ${esc(deliveryInfo.boatName)}<br/>` : ''}${deliveryInfo.contactNumber ? `Contact: ${esc(deliveryInfo.contactNumber)}<br/>` : ''}${deliveryInfo.departureTime ? `Departure: ${esc(deliveryInfo.departureTime)}<br/>` : ''}${deliveryInfo.note ? `Note: ${esc(deliveryInfo.note)}` : ''}${!deliveryInfo.boatName && !deliveryInfo.contactNumber && !deliveryInfo.departureTime && !deliveryInfo.note ? '—' : ''}</div>
+        </div>
+        <div>
+          ${F.label('Geo location')}
+          <div class="text-zinc-700">${geo ? `<a class="text-blue-600 hover:underline" target="_blank" href="https://maps.google.com/?q=${encodeURIComponent(geo)}">${geo}</a>` : 'No fetched location saved'}</div>
+        </div>
+        <div class="flex items-center justify-between gap-3 pt-2">
+          <div class="text-xs text-zinc-500">${order.items.reduce((sum, item)=>sum + (+item.qty || 0), 0)} item(s)</div>
+          <div class="flex gap-2 flex-wrap">
+            ${order.status === 'Ready to Dispatch' ? `<button onclick="advance('${order.id}'); delivery();" class="${btn.primary} ${btn.sm}">${ic('truck','w-3.5 h-3.5')} Mark Out for Delivery</button>` : ''}
+            ${order.status === 'Out for Delivery' ? `<button onclick="setStatus('${order.id}','Delivered'); delivery();" class="${btn.primary} ${btn.sm}">${ic('badge-check','w-3.5 h-3.5')} Mark Delivered</button>` : ''}
+            <button onclick="orderDetail('${order.id}')" class="${btn.light} ${btn.sm}">${ic('square-pen','w-3.5 h-3.5')} Open</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+  function delivery(){
+    const ready = deliveryRows(['Ready to Dispatch']);
+    const moving = deliveryRows(['Out for Delivery']);
+    content.innerHTML = `
+      <div class="grid gap-5">
+        <div class="bg-white border border-zinc-200 rounded-2xl p-5">
+          <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <div>
+              <h2 class="font-extrabold">Ready to Dispatch</h2>
+              <p class="text-sm text-zinc-500 mt-1">Orders prepared for dispatch, with address, geo location, and delivery type.</p>
+            </div>
+            <div class="text-sm font-semibold text-zinc-500">${ready.length} order(s)</div>
+          </div>
+          <div class="grid gap-3">${ready.map(deliveryCard).join('') || `<div class="rounded-2xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">No orders ready to dispatch.</div>`}</div>
+        </div>
+        <div class="bg-white border border-zinc-200 rounded-2xl p-5">
+          <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <div>
+              <h2 class="font-extrabold">Out for Delivery</h2>
+              <p class="text-sm text-zinc-500 mt-1">Live delivery queue for orders already handed over.</p>
+            </div>
+            <div class="text-sm font-semibold text-zinc-500">${moving.length} order(s)</div>
+          </div>
+          <div class="grid gap-3">${moving.map(deliveryCard).join('') || `<div class="rounded-2xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">No orders are currently out for delivery.</div>`}</div>
+        </div>
+      </div>`;
+  }
 
   /* ════════ PAYMENTS ════════ */
   function paymentSettingsCard(){
@@ -1000,6 +1124,204 @@
   function paymentMethods(){
     content.innerHTML = paymentSettingsCard();
   }
+  function smsSettings(){
+    const settings = Store.getSmsSettings();
+    content.innerHTML = `<div class="bg-white border border-zinc-200 rounded-2xl p-5">
+      <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <div>
+          <h2 class="font-extrabold">SMS Settings</h2>
+          <p class="text-sm text-zinc-500 mt-1">Set the sender name and the SMS body used for order confirmation, dispatch, and delivery updates.</p>
+        </div>
+        <button onclick="saveSmsSettings()" class="${btn.primary} ${btn.sm}">${ic('save','w-4 h-4')} Save SMS settings</button>
+      </div>
+      <div class="grid gap-4">
+        <div>
+          ${F.label('Sender ID')}
+          <input id="sms_sender_id" value="${esc(settings.senderId||'')}" placeholder="Kanxi" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
+        </div>
+        <div class="rounded-2xl border border-kacc/30 bg-kcream/40 px-4 py-3 text-sm text-kink">
+          Use <b>{{orderId}}</b>, <b>{{customerName}}</b>, and <b>{{deliveryType}}</b> inside the message body.
+        </div>
+        <div>
+          ${F.label('Order confirmation SMS')}
+          <textarea id="sms_template_confirmed" rows="4" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink resize-y">${escText(settings.templates&&settings.templates.confirmed||'')}</textarea>
+        </div>
+        <div>
+          ${F.label('Out for delivery SMS')}
+          <textarea id="sms_template_out" rows="4" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink resize-y">${escText(settings.templates&&settings.templates.outForDelivery||'')}</textarea>
+        </div>
+        <div>
+          ${F.label('Delivered SMS')}
+          <textarea id="sms_template_delivered" rows="4" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink resize-y">${escText(settings.templates&&settings.templates.delivered||'')}</textarea>
+        </div>
+      </div>
+    </div>`;
+  }
+  async function saveSmsSettings(){
+    try{
+      await Store.saveSmsSettings({
+        senderId: document.getElementById('sms_sender_id')?.value.trim() || 'Kanxi',
+        templates: {
+          confirmed: document.getElementById('sms_template_confirmed')?.value.trim() || '',
+          outForDelivery: document.getElementById('sms_template_out')?.value.trim() || '',
+          delivered: document.getElementById('sms_template_delivered')?.value.trim() || ''
+        }
+      });
+      toast('SMS settings saved');
+      smsSettings();
+    }catch(error){
+      alert(error.message || 'Could not save SMS settings');
+    }
+  }
+  function taxRateRow(rate, index){
+    return `<div class="rounded-2xl border border-zinc-200 p-4 bg-white">
+      <div class="grid gap-4 lg:grid-cols-[1fr_150px_170px_auto_auto] lg:items-end">
+        <div>
+          ${F.label('Tax type')}
+          <input value="${esc(rate.type||'')}" oninput="_taxRates[${index}].type=this.value" placeholder="GST" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
+        </div>
+        <div>
+          ${F.label('Rate (%)')}
+          <input type="number" min="0" step="0.01" value="${esc(rate.rate||0)}" oninput="_taxRates[${index}].rate=this.value" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
+        </div>
+        <div>
+          ${F.label('Start date')}
+          <input type="date" value="${esc(rate.startDate||'')}" oninput="_taxRates[${index}].startDate=this.value" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
+        </div>
+        <label class="flex items-center gap-2 lg:pb-2.5 text-sm font-semibold text-kink">
+          <input type="checkbox" ${rate.enabled!==false?'checked':''} onchange="_taxRates[${index}].enabled=this.checked" class="h-4 w-4 accent-kink"/>
+          <span>Enabled</span>
+        </label>
+        <button type="button" onclick="removeTaxRate(${index})" class="${btn.light} ${btn.sm} lg:mb-1">${ic('trash-2','w-3.5 h-3.5')} Remove</button>
+      </div>
+    </div>`;
+  }
+  let _taxRates = [];
+  function addTaxRate(){
+    _taxRates.push({ id:Store.uid('tax_'), type:'GST', rate:0, startDate:new Date().toISOString().slice(0,10), enabled:true });
+    taxSettings();
+  }
+  function removeTaxRate(index){
+    _taxRates.splice(index,1);
+    taxSettings();
+  }
+  function taxSettings(){
+    const settings = Store.getTaxSettings();
+    const active = Store.activeTaxRate();
+    _taxRates = JSON.parse(JSON.stringify(settings.rates || []));
+    content.innerHTML = `<div class="bg-white border border-zinc-200 rounded-2xl p-5">
+      <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <div>
+          <h2 class="font-extrabold">Tax Settings</h2>
+          <p class="text-sm text-zinc-500 mt-1">Selling price in inventory is tax inclusive. The active rate is chosen by the latest enabled start date.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="addTaxRate()" class="${btn.light} ${btn.sm}">${ic('plus','w-4 h-4')} Add tax rate</button>
+          <button onclick="saveTaxSettings()" class="${btn.primary} ${btn.sm}">${ic('save','w-4 h-4')} Save tax settings</button>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-kacc/30 bg-kcream/40 px-4 py-3 text-sm text-kink mb-4">
+        Active now: <b>${esc(active && active.type || 'Tax')}</b> · <b>${+(active && active.rate || 0)}%</b>${active && active.startDate ? ` · starts ${active.startDate}` : ''}
+      </div>
+      <div class="grid gap-3">
+        ${_taxRates.map(taxRateRow).join('') || `<div class="rounded-2xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">No tax rate yet. Add one above.</div>`}
+      </div>
+    </div>`;
+  }
+  async function saveTaxSettings(){
+    try{
+      const rates = _taxRates.map((rate, index) => {
+        const type = String(rate.type || '').trim();
+        const startDate = String(rate.startDate || '').trim();
+        if(!type) throw new Error(`Tax row ${index + 1} needs a tax type`);
+        if(!startDate) throw new Error(`Tax row ${index + 1} needs a start date`);
+        return {
+          id: rate.id || Store.uid('tax_'),
+          type,
+          rate: Math.max(0, +(rate.rate || 0)),
+          startDate,
+          enabled: rate.enabled !== false
+        };
+      });
+      if(!rates.length) throw new Error('Add at least one tax rate');
+      await Store.saveTaxSettings({ rates });
+      toast('Tax settings saved');
+      taxSettings();
+    }catch(error){
+      alert(error.message || 'Could not save tax settings');
+    }
+  }
+  function deliveryMethodRow(method, index){
+    return `<div class="rounded-2xl border border-zinc-200 p-4 bg-white">
+      <div class="grid gap-4 lg:grid-cols-[1.1fr_0.9fr_160px_auto_auto] lg:items-end">
+        <div>
+          ${F.label('Method name')}
+          <input value="${esc(method.label||'')}" oninput="_deliveryMethods[${index}].label=this.value" placeholder="Delivery method name" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
+        </div>
+        <div>
+          ${F.label('Key')}
+          <input value="${esc(method.key||'')}" oninput="_deliveryMethods[${index}].key=this.value.toLowerCase().replace(/[^a-z0-9_]+/g,'_').replace(/^_+|_+$/g,'')" placeholder="address" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink font-mono"/>
+        </div>
+        <div>
+          ${F.label('Rate (MVR)')}
+          <input type="number" min="0" step="0.01" value="${esc(method.rate||0)}" oninput="_deliveryMethods[${index}].rate=this.value" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
+        </div>
+        <label class="flex items-center gap-2 lg:pb-2.5 text-sm font-semibold text-kink">
+          <input type="checkbox" ${method.enabled!==false?'checked':''} onchange="_deliveryMethods[${index}].enabled=this.checked" class="h-4 w-4 accent-kink"/>
+          <span>Enabled</span>
+        </label>
+        <button type="button" onclick="removeDeliveryMethod(${index})" class="${btn.light} ${btn.sm} lg:mb-1">${ic('trash-2','w-3.5 h-3.5')} Remove</button>
+      </div>
+    </div>`;
+  }
+  let _deliveryMethods = [];
+  function addDeliveryMethod(){
+    _deliveryMethods.push({ key:`method_${_deliveryMethods.length+1}`, label:'New Method', rate:0, enabled:true });
+    deliveryMethods();
+  }
+  function removeDeliveryMethod(index){
+    _deliveryMethods.splice(index,1);
+    deliveryMethods();
+  }
+  function deliveryMethods(){
+    const settings = Store.getDeliverySettings();
+    _deliveryMethods = JSON.parse(JSON.stringify(settings.methods || []));
+    content.innerHTML = `<div class="bg-white border border-zinc-200 rounded-2xl p-5">
+      <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <div>
+          <h2 class="font-extrabold">Delivery Methods</h2>
+          <p class="text-sm text-zinc-500 mt-1">Create, enable, disable, and price the delivery methods shown in checkout.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="addDeliveryMethod()" class="${btn.light} ${btn.sm}">${ic('plus','w-4 h-4')} Add method</button>
+          <button onclick="saveDeliveryMethods()" class="${btn.primary} ${btn.sm}">${ic('save','w-4 h-4')} Save methods</button>
+        </div>
+      </div>
+      <div class="grid gap-3" id="deliveryMethodList">
+        ${_deliveryMethods.map(deliveryMethodRow).join('') || `<div class="rounded-2xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">No delivery methods yet. Add one above.</div>`}
+      </div>
+    </div>`;
+  }
+  async function saveDeliveryMethods(){
+    try{
+      const seen = new Set();
+      const methods = _deliveryMethods.map((method, index) => {
+        const key = String(method.key || '').trim().toLowerCase().replace(/[^a-z0-9_]+/g,'_').replace(/^_+|_+$/g,'');
+        const label = String(method.label || '').trim();
+        if(!key) throw new Error(`Method ${index + 1} needs a key`);
+        if(!label) throw new Error(`Method ${index + 1} needs a name`);
+        if(seen.has(key)) throw new Error(`Duplicate method key: ${key}`);
+        seen.add(key);
+        return { key, label, rate: Math.max(0, +(method.rate || 0)), enabled: method.enabled !== false };
+      });
+      if(!methods.length) throw new Error('Add at least one delivery method');
+      await Store.saveDeliverySettings({ methods });
+      toast('Delivery methods saved');
+      deliveryMethods();
+    }catch(error){
+      alert(error.message || 'Could not save delivery methods');
+    }
+  }
   function payments(){
     const pays=Store.list('payments').slice().reverse();
     content.innerHTML = card('Payments', `<span class="text-sm text-zinc-500">Received: <b>${MVR(pays.filter(p=>p.status==='Paid').reduce((s,p)=>s+p.amount,0))}</b></span>`,
@@ -1010,8 +1332,20 @@
       </tbody></table>`);
   }
   function refund(id){ const p=Store.get('payments',id); p.status='Refunded'; Store.upsert('payments',p); payments(); }
-  function markPaid(id){ Store.setPaymentStatus(id,'Paid'); refreshBadge(); payments(); }
-  function verifyPayment(id){ Store.setPaymentStatus(id,'Paid'); refreshBadge(); payments(); paymentDetail(id); }
+  function markPaid(id){
+    try{
+      Store.setPaymentStatus(id,'Paid'); refreshBadge(); payments();
+    }catch(error){
+      alert(error.message || 'Could not mark payment as paid');
+    }
+  }
+  function verifyPayment(id){
+    try{
+      Store.setPaymentStatus(id,'Paid'); refreshBadge(); payments(); paymentDetail(id);
+    }catch(error){
+      alert(error.message || 'Could not verify payment');
+    }
+  }
 
   /* ════════ USERS ════════ */
   function users(){
@@ -1044,7 +1378,7 @@
     </div>`;
   }
   async function refreshAdminFromCloud(){
-    if(_syncBusy || !Store || Store.useLocalStorage) return;
+    if(_syncBusy || !Store || location.protocol === 'file:') return;
     _syncBusy=true;
     try{
       const result = await Store.syncFromCloud();
@@ -1056,7 +1390,7 @@
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshAdminFromCloud(); });
   window.addEventListener('focus', refreshAdminFromCloud);
   refreshBadge();
-  if(Store.useLocalStorage){
+  if(location.protocol === 'file:'){
     go(currentRoute());
   }else{
     document.querySelectorAll('.navi[data-route]').forEach(n=>n.classList.toggle('active', n.dataset.route===currentRoute()));

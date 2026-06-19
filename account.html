@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <title>Kanxi Collection — My Account</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -106,9 +109,9 @@
   <div class="panel" id="panel-offers"></div>
 </div>
 
-<script src="assets/icons.js"></script>
-<script src="assets/supabase-config.js?v=1"></script>
-<script src="assets/store.js?v=7"></script>
+<script src="assets/icons.js?v=2"></script>
+<script src="assets/supabase-config.js?v=2"></script>
+<script src="assets/store.js?v=16"></script>
 <script>
   const $ = s => document.querySelector(s);
   const MVR = n => 'MVR ' + (+n).toLocaleString();
@@ -422,7 +425,7 @@
   showTab((new URLSearchParams(location.search).get('tab') || 'details'));
   icons();
   window.addEventListener('kanxi:store-changed', ()=>{ syncUser(); renderHero(); renderDetails(); renderOrders(); renderOffers(); showTab((new URLSearchParams(location.search).get('tab') || 'details')); });
-  if(!Store.useLocalStorage){
+  if(location.protocol !== 'file:'){
     Store.syncFromCloud().finally(()=>{
       syncUser();
       renderHero();
