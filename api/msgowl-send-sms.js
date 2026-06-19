@@ -3,7 +3,7 @@ const { getBody, handleError, json, methodGuard, phoneDigits } = require('./_msg
 const MSGOWL_REST_BASE = 'https://rest.msgowl.com';
 
 async function requestMsgowlRest(path, payload) {
-  const accessKey = process.env.MSGOWL_ACCESS_KEY;
+  const accessKey = process.env.MSGOWL_REST_ACCESS_KEY || process.env.MSGOWL_ACCESS_KEY;
   if (!accessKey) {
     const error = new Error('SMS service is not configured.');
     error.statusCode = 500;

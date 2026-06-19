@@ -21,7 +21,7 @@ function phoneDigits(value) {
 }
 
 async function requestMsgowl(path, payload) {
-  const accessKey = process.env.MSGOWL_ACCESS_KEY;
+  const accessKey = process.env.MSGOWL_OTP_ACCESS_KEY || process.env.MSGOWL_ACCESS_KEY;
   if (!accessKey) {
     const error = new Error('OTP service is not configured.');
     error.statusCode = 500;
