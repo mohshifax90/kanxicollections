@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <title>Kanxi Collection — Order Status</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f5f6fb;--panel:#fff;--soft:#f8fafc;--blue:#4f5cf0;--blue-dark:#4250ec;--green:#0f9f62;--amber:#d97706;--red:#dc2626}
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+    button,input{font:inherit}
+    .app{max-width:560px;margin:0 auto;min-height:100vh;padding:1.1rem 1rem 2rem}
+    .hero{padding:1rem 0 1.2rem}
+    .eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+    .title{font-size:1.55rem;font-weight:900;margin-top:.45rem}
+    .subtitle{font-size:.92rem;color:var(--muted);line-height:1.55;margin-top:.45rem}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:1rem}
+    .stack{display:grid;gap:1rem}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;color:var(--muted)}
+    .amount{font-size:1.45rem;font-weight:900;margin-top:.35rem}
+    .pill{display:inline-flex;align-items:center;padding:.3rem .7rem;border-radius:999px;font-size:.72rem;font-weight:800;white-space:nowrap}
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-top:1rem}
+    .meta-item{padding:.82rem .9rem;border-radius:18px;background:var(--soft);border:1px solid #eef2f7}
+    .meta-label{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem}
+    .meta-value{font-size:.88rem;font-weight:700;line-height:1.45}
+    .pipe{display:flex;flex-wrap:wrap;margin-top:1.15rem}
+    .step{flex:1;min-width:84px;text-align:center;position:relative;padding-top:1.45rem;font-size:.66rem}
+    .step-dot{position:absolute;top:.15rem;left:50%;transform:translateX(-50%);width:.82rem;height:.82rem;border-radius:999px;background:#d1d5db;z-index:2}
+    .step-line{position:absolute;top:.52rem;left:50%;width:100%;height:2px;background:#d1d5db}
+    .step.active{color:var(--ink);font-weight:800}
+    .step.done{color:var(--green);font-weight:800}
+    .step.done .step-dot{background:var(--green)}
+    .step.active .step-dot{background:var(--blue);box-shadow:0 0 0 5px rgba(79,92,240,.14)}
+    .step.done .step-line{background:var(--green)}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:.9rem;padding:.38rem 0;color:var(--muted);font-size:.92rem}
+    .row.total{margin-top:.75rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--ink);font-size:1rem;font-weight:900}
+    .section-title{font-size:.98rem;font-weight:900;margin-bottom:.75rem}
+    .items{display:grid;gap:.8rem}
+    .item{display:grid;grid-template-columns:64px 1fr auto;gap:.75rem;align-items:center}
+    .item img{width:64px;height:72px;border-radius:16px;object-fit:cover;background:var(--soft);border:1px solid var(--line)}
+    .item-name{font-size:.9rem;font-weight:800;line-height:1.35}
+    .item-sub{font-size:.78rem;color:var(--muted);line-height:1.4;margin-top:.18rem}
+    .item-price{font-size:.88rem;font-weight:900;white-space:nowrap}
+    .address-lines{font-size:.88rem;color:var(--muted);line-height:1.6}
+    .actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:none;border-radius:14px;padding:.92rem 1rem;font-weight:800;cursor:pointer}
+    .btn-primary{background:var(--blue);color:#fff}
+    .btn-primary:hover{background:var(--blue-dark)}
+    .btn-light{background:#eef2f7;color:var(--ink)}
+    .verify-card{display:grid;gap:.8rem}
+    .verify-copy{font-size:.9rem;color:var(--muted);line-height:1.55}
+    .field label{display:block;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+    .field input{width:100%;border:1px solid var(--line);border-radius:14px;padding:.92rem .95rem;background:#fff;outline:none}
+    .field input:focus{border-color:var(--blue)}
+    .helper{font-size:.8rem;color:var(--muted);line-height:1.5}
+    .empty{padding:1.6rem;text-align:center;color:var(--muted)}
+    .toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%) translateY(2rem);background:#111827;color:#fff;padding:.82rem 1.15rem;border-radius:12px;font-size:.84rem;opacity:0;transition:.24s;z-index:20}
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+    @media (min-width:620px){.app{padding-top:1.4rem}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="hero">
+      <div class="eyebrow">Kanxi Collection</div>
+      <div class="title">Order Status</div>
+      <div class="subtitle">View your order progress and receipt details from the secure link sent to your phone.</div>
+    </div>
+
+    <div id="verifyCard" class="card verify-card">
+      <div class="section-title">Verify Order</div>
+      <div class="verify-copy">Enter the 7-digit mobile number used for the order if it is not already filled in from your SMS link.</div>
+      <div class="field">
+        <label for="phoneInput">Mobile Number</label>
+        <input id="phoneInput" inputmode="numeric" maxlength="7" placeholder="Enter 7-digit mobile number"/>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="button" onclick="verifyOrder()">View Order</button>
+      </div>
+      <div class="helper">We only show receipt details for the phone number tied to this order.</div>
+    </div>
+
+    <div id="orderPanel" class="stack" style="display:none"></div>
+  </div>
+
+  <script src="assets/icons.js?v=2"></script>
+  <script src="assets/supabase-config.js?v=2"></script>
+  <script src="assets/store.js?v=16"></script>
+  <script>
+    const $ = s => document.querySelector(s);
+    const orderId = new URLSearchParams(location.search).get('order') || '';
+    const phoneFromUrl = ((new URLSearchParams(location.search).get('phone') || '').replace(/\D/g,'')).slice(-7);
+    const fullPhoneFromUrl = (new URLSearchParams(location.search).get('phone') || '').replace(/\D/g,'');
+    const MVR = n => 'MVR ' + (+n || 0).toLocaleString();
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const ORDER_FLOW = ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
+
+    function showToast(msg){
+      let t = document.getElementById('toast');
+      if(!t){ t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; document.body.appendChild(t); }
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2300);
+    }
+    function phoneKey(value){ return Store.phoneKey ? Store.phoneKey(value) : String(value || '').replace(/\D/g,''); }
+    function moneyTotal(order){
+      return (order.items || []).reduce((sum, item) => sum + (+item.price || 0) * (+item.qty || 0), 0) + (+order.shipping || 0);
+    }
+    function tone(status){
+      const map = {
+        'Pending Payment':['#fdf3e3','#d97706'],
+        'Pending Slip Verification':['#fdf3e3','#d97706'],
+        'Paid':['#eef2ff','#4f5cf0'],
+        'Order Accepted':['#eef2ff','#4f5cf0'],
+        'Packing':['#f5f3ff','#7c3aed'],
+        'Ready to Dispatch':['#f5f3ff','#7c3aed'],
+        'Out for Delivery':['#eef2ff','#4f5cf0'],
+        'Delivered':['#e8f7ee','#0f9f62'],
+        'Returned':['#feeceb','#dc2626']
+      };
+      return map[status] || ['#eef2f7','#6b7280'];
+    }
+    function timeLabel(ts){
+      if(!ts) return '—';
+      return new Date(ts).toLocaleString();
+    }
+    function statusPipe(order){
+      const idx = ORDER_FLOW.indexOf(order.status);
+      return `<div class="pipe">${ORDER_FLOW.map((step, i) => `
+        <div class="step ${i < idx ? 'done' : i === idx ? 'active' : ''}">
+          <span class="step-dot"></span>
+          ${i < ORDER_FLOW.length - 1 ? `<span class="step-line"></span>` : ''}
+          ${step}
+        </div>`).join('')}</div>`;
+    }
+    function addressLines(order){
+      const meta = order.addressMeta || null;
+      const out = [];
+      if(meta && meta.line) out.push(meta.line);
+      if(meta && (meta.city || meta.atoll)) out.push([meta.city, meta.atoll].filter(Boolean).join(', '));
+      if(meta && (meta.postcode || meta.country)) out.push([meta.postcode, meta.country].filter(Boolean).join(' · '));
+      if(order.deliveryType) out.push(Store.deliveryLabel ? Store.deliveryLabel(order.deliveryType) : order.deliveryType);
+      return out.filter(Boolean);
+    }
+    function renderOrder(order){
+      const [bg, fg] = tone(order.status);
+      const subtotal = (order.items || []).reduce((sum, item) => sum + (+item.price || 0) * (+item.qty || 0), 0);
+      const tax = Store.taxAmountFromInclusive ? Store.taxAmountFromInclusive(subtotal) : 0;
+      const address = addressLines(order);
+      $('#orderPanel').style.display = 'grid';
+      $('#orderPanel').innerHTML = `
+        <div class="card">
+          <div class="top">
+            <div>
+              <div class="mono">Order ${esc(order.id)}</div>
+              <div class="amount">${MVR(moneyTotal(order))}</div>
+            </div>
+            <span class="pill" style="background:${bg};color:${fg}">${esc(order.status)}</span>
+          </div>
+          <div class="meta">
+            <div class="meta-item"><div class="meta-label">Placed</div><div class="meta-value">${timeLabel(order.date)}</div></div>
+            <div class="meta-item"><div class="meta-label">Payment</div><div class="meta-value">${esc(order.payMethod || '—')} · ${esc(order.payStatus || '—')}</div></div>
+            <div class="meta-item"><div class="meta-label">Customer</div><div class="meta-value">${esc(order.userName || 'Customer')}</div></div>
+            <div class="meta-item"><div class="meta-label">Phone</div><div class="meta-value">${esc(order.userPhone || '—')}</div></div>
+          </div>
+          ${statusPipe(order)}
+        </div>
+
+        <div class="card">
+          <div class="section-title">Receipt</div>
+          <div class="items">
+            ${(order.items || []).map(item => `
+              <div class="item">
+                <img src="${esc(item.image || '')}" alt="${esc(item.name || 'Item')}"/>
+                <div>
+                  <div class="item-name">${esc(item.name || 'Item')}</div>
+                  <div class="item-sub">${esc(item.size || 'Standard')} · Qty ${+item.qty || 0}</div>
+                </div>
+                <div class="item-price">${MVR((+item.price || 0) * (+item.qty || 0))}</div>
+              </div>`).join('')}
+          </div>
+          <div class="row"><span>Subtotal</span><span>${MVR(subtotal)}</span></div>
+          <div class="row"><span>Included Tax</span><span>${MVR(tax)}</span></div>
+          <div class="row"><span>Shipping</span><span>${MVR(+order.shipping || 0)}</span></div>
+          <div class="row total"><span>Total</span><span>${MVR(moneyTotal(order))}</span></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Delivery Details</div>
+          <div class="address-lines">${address.length ? address.map(line => `<div>${esc(line)}</div>`).join('') : '<div>No address details available.</div>'}</div>
+          <div class="actions">
+            <button class="btn btn-light" type="button" onclick="window.print()">Print Receipt</button>
+            <a class="btn btn-primary" href="index.html">Continue Shopping</a>
+          </div>
+        </div>
+      `;
+    }
+    function findOrderByPhone(phoneDigits){
+      if(!orderId) return null;
+      const digits = String(phoneDigits || '').replace(/\D/g,'');
+      return Store.list('orders').find(order => order.id === orderId && phoneKey(order.userPhone).endsWith(digits));
+    }
+    function verifyOrder(){
+      const digits = String($('#phoneInput').value || '').replace(/\D/g,'').slice(-7);
+      if(digits.length !== 7) return showToast('Enter the 7-digit mobile number');
+      const order = findOrderByPhone(digits);
+      if(!order){
+        $('#orderPanel').style.display = 'none';
+        return showToast('Order not found for this number');
+      }
+      renderOrder(order);
+      $('#verifyCard').style.display = 'none';
+    }
+    function boot(){
+      if(phoneFromUrl) $('#phoneInput').value = phoneFromUrl;
+      if(!orderId){
+        $('#verifyCard').innerHTML = '<div class="empty">Missing order link details.</div>';
+        return;
+      }
+      if(location.protocol !== 'file:'){
+        Store.syncFromCloud().finally(() => {
+          if(phoneFromUrl || fullPhoneFromUrl){
+            const order = findOrderByPhone(phoneFromUrl || fullPhoneFromUrl);
+            if(order){
+              renderOrder(order);
+              $('#verifyCard').style.display = 'none';
+            }
+          }
+        });
+      }
+    }
+    boot();
+  </script>
+</body>
+</html>

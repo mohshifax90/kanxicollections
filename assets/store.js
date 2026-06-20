@@ -13,6 +13,7 @@ const Store = window.Store = (() => {
   const USE_LOCAL = IS_FILE || IS_LOCALHOST;
   const CAN_SYNC_CLOUD = !IS_FILE;
   const IS_ADMIN_PAGE = /admin\.html$/i.test(location.pathname);
+  const PUBLIC_SITE_ORIGIN = IS_FILE || IS_LOCALHOST ? 'https://kanxicollection.com' : location.origin;
   const DEFER_CLOUD_BOOT = false;
   const REALTIME_ENABLED = CAN_SYNC_CLOUD;
   const USE_CLOUD_CACHE = USE_LOCAL;
@@ -210,9 +211,9 @@ const Store = window.Store = (() => {
     return {
       senderId: 'Kanxi',
       templates: {
-        confirmed: 'Kanxi: Your order {{orderId}} has been confirmed. We will update you again when it is out for delivery.',
-        outForDelivery: 'Kanxi: Your order {{orderId}} is now out for delivery.',
-        delivered: 'Kanxi: Your order {{orderId}} has been delivered. Thank you for shopping with Kanxi Collection.'
+        confirmed: 'Kanxi: Your order {{orderId}} has been confirmed. View order: {{orderLink}}',
+        outForDelivery: 'Kanxi: Your order {{orderId}} is now out for delivery. Track it here: {{orderLink}}',
+        delivered: 'Kanxi: Your order {{orderId}} has been delivered. Receipt: {{receiptLink}}'
       }
     };
   }
@@ -346,6 +347,14 @@ const Store = window.Store = (() => {
       phone: meta.phone || '',
     };
   }
+  function orderPublicLink(order){
+    if(!order || !order.id) return '';
+    const params = new URLSearchParams();
+    params.set('order', order.id);
+    const phone = String(order.userPhone || '').replace(/\D/g,'');
+    if(phone) params.set('phone', phone);
+    return `${PUBLIC_SITE_ORIGIN}/order-status.html?${params.toString()}`;
+  }
   function ensureOrderNotificationState(order){
     if(!order.notifications) order.notifications = {};
     order.notifications.confirmedAt = order.notifications.confirmedAt || null;
@@ -390,7 +399,11 @@ const Store = window.Store = (() => {
       .replace(/\{\{\s*orderId\s*\}\}/g, order.id || '')
       .replace(/\{\{\s*customerName\s*\}\}/g, order.userName || 'Customer')
       .replace(/\{\{\s*deliveryType\s*\}\}/g, order.deliveryType || '')
+      .replace(/\{\{\s*orderLink\s*\}\}/g, orderPublicLink(order))
+      .replace(/\{\{\s*receiptLink\s*\}\}/g, orderPublicLink(order))
       .trim();
+    const publicLink = orderPublicLink(order);
+    if(publicLink && !body.includes(publicLink)) body += ` View order: ${publicLink}`;
     return {
       type,
       key,
@@ -1060,6 +1073,7 @@ const Store = window.Store = (() => {
       return db.paymentSettings;
     },
     getDeliverySettings(){ return load().deliverySettings || defaultDeliverySettings(); },
+    publicOrderLink(order){ return orderPublicLink(order); },
     getSmsSettings(){ return load().smsSettings || defaultSmsSettings(); },
     async saveSmsSettings(settings){
       const db = load();

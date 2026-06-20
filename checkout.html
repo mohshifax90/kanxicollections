@@ -248,7 +248,7 @@
       <div class="amount" id="placeTotal">MVR 0</div>
     </div>
   </div>
-  <button class="place-btn" id="placeBtn" onclick="placeOrder()">Place order</button>
+  <button class="place-btn" id="placeBtn" onclick="handlePlaceAction()">Place order</button>
   <div class="hint" id="placeHint">By tapping Place Order you agree to our <a href="#" style="color:#0f3b69;font-weight:500">payment terms and policies</a>.</div>
 </div>
 
@@ -983,19 +983,30 @@
     const guestReady = addressMode !== 'guest' || (!!guestDraft.name.trim() && !!guestDraft.phone.trim() && !!guestDraft.line.trim() && guestDeliveryReady);
     const payReady = !!selectedPay && (!transfer || (transferSlip && hasAccount));
     const ready = paymentSyncState !== 'loading' && addressMode !== 'login' && savedReady && guestReady && !!addr && payReady;
-    btn.disabled = !ready;
+    const needsAddressSelection = addressMode === 'login' || !addr || (addressMode === 'saved' && !selectedSavedAddress());
+    btn.disabled = !ready && !needsAddressSelection;
+    btn.textContent = needsAddressSelection ? 'Select Address' : 'Place Order';
     if(paymentSyncState === 'loading') hint.textContent = 'Loading active payment methods from admin settings.';
     else if(!selectedPay) hint.textContent = 'Enable at least one payment method in admin.';
-    else if(addressMode === 'login') hint.textContent = 'Log in or choose guest checkout to continue.';
+    else if(addressMode === 'login') hint.textContent = 'Tap Select Address to log in with OTP or use guest checkout.';
     else if(addressMode === 'saved' && !selectedSavedAddress()) hint.textContent = 'Select a saved delivery address to continue.';
     else if(addressMode === 'guest' && !guestDraft.name.trim()) hint.textContent = 'Add full name for guest checkout.';
     else if(addressMode === 'guest' && !guestDraft.phone.trim()) hint.textContent = 'Add mobile number for guest checkout.';
     else if(addressMode === 'guest' && !guestDraft.line.trim()) hint.textContent = 'Add address for guest checkout.';
     else if(addressMode === 'guest' && ['boat','speed_boat'].includes(normalizeDeliveryType(guestDraft.deliveryType)) && !(guestDraft.deliveryInfo && guestDraft.deliveryInfo.boatName.trim())) hint.textContent = 'Add boat name to continue.';
-    else if(!addr) hint.textContent = 'Select a delivery address to continue.';
+    else if(!addr) hint.textContent = 'Tap Select Address to choose login with OTP or guest checkout.';
     else if(transfer && !hasAccount) hint.textContent = 'Add bank account details in admin to accept transfers.';
     else if(transfer && !transferSlip) hint.textContent = 'Upload one transfer slip to place this order.';
     else hint.innerHTML = 'By tapping Place Order you agree to our <a href="#" style="color:#0f3b69;font-weight:500">payment terms and policies</a>.';
+  }
+  function handlePlaceAction(){
+    const addr = selectedAddressData();
+    const needsAddressSelection = addressMode === 'login' || !addr || (addressMode === 'saved' && !selectedSavedAddress());
+    if(needsAddressSelection){
+      openAddressSheet();
+      return;
+    }
+    placeOrder();
   }
   function subtotalAmount(cart){
     return cart.reduce((s,i)=>s+i.price*i.qty,0);
