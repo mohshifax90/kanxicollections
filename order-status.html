@@ -28,7 +28,34 @@
     .meta-item{padding:.82rem .9rem;border-radius:18px;background:var(--soft);border:1px solid #eef2f7}
     .meta-label{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem}
     .meta-value{font-size:.88rem;font-weight:700;line-height:1.45}
-    .pipe{display:flex;flex-wrap:wrap;margin-top:1.15rem}
+    .status-block{margin-top:1.15rem}
+    .status-desktop{display:none}
+    .status-mobile{border:1px solid var(--line);border-radius:18px;background:var(--soft);overflow:hidden}
+    .status-mobile summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:.85rem;padding:.95rem 1rem;cursor:pointer}
+    .status-mobile summary::-webkit-details-marker{display:none}
+    .status-summary-copy{display:grid;gap:.18rem}
+    .status-summary-label{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .status-summary-value{font-size:.95rem;font-weight:900;color:var(--ink)}
+    .status-summary-meta{font-size:.78rem;color:var(--muted)}
+    .status-chevron{width:2rem;height:2rem;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);font-size:1rem;color:var(--muted);transition:transform .2s ease}
+    .status-mobile[open] .status-chevron{transform:rotate(180deg)}
+    .status-mobile-body{padding:0 1rem 1rem}
+    .status-mobile-list{display:grid;gap:.12rem}
+    .status-mobile-step{display:grid;grid-template-columns:20px 1fr;gap:.8rem;position:relative;padding:0 0 .85rem}
+    .status-mobile-step:last-child{padding-bottom:0}
+    .status-mobile-step:last-child::after{display:none}
+    .status-mobile-step::after{content:"";position:absolute;left:9px;top:18px;bottom:-2px;width:2px;background:#d1d5db}
+    .status-mobile-step.done::after{background:var(--green)}
+    .status-mobile-step.active::after{background:linear-gradient(to bottom,var(--blue),#d1d5db)}
+    .status-mobile-dot{width:1.05rem;height:1.05rem;border-radius:999px;background:#d1d5db;position:relative;z-index:1;margin-top:.1rem}
+    .status-mobile-step.done .status-mobile-dot{background:var(--green)}
+    .status-mobile-step.active .status-mobile-dot{background:var(--blue);box-shadow:0 0 0 5px rgba(79,92,240,.14)}
+    .status-mobile-content{padding-top:.02rem}
+    .status-mobile-name{font-size:.92rem;font-weight:800;color:var(--ink);line-height:1.35}
+    .status-mobile-step.done .status-mobile-name{color:var(--green)}
+    .status-mobile-step.active .status-mobile-name{color:var(--blue)}
+    .status-mobile-note{font-size:.78rem;color:var(--muted);margin-top:.18rem}
+    .pipe{display:flex;flex-wrap:wrap}
     .step{flex:1;min-width:84px;text-align:center;position:relative;padding-top:1.45rem;font-size:.66rem}
     .step-dot{position:absolute;top:.15rem;left:50%;transform:translateX(-50%);width:.82rem;height:.82rem;border-radius:999px;background:#d1d5db;z-index:2}
     .step-line{position:absolute;top:.52rem;left:50%;width:100%;height:2px;background:#d1d5db}
@@ -61,7 +88,11 @@
     .empty{padding:1.6rem;text-align:center;color:var(--muted)}
     .toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%) translateY(2rem);background:#111827;color:#fff;padding:.82rem 1.15rem;border-radius:12px;font-size:.84rem;opacity:0;transition:.24s;z-index:20}
     .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
-    @media (min-width:620px){.app{padding-top:1.4rem}}
+    @media (min-width:620px){
+      .app{padding-top:1.4rem}
+      .status-mobile{display:none}
+      .status-desktop{display:block}
+    }
   </style>
 </head>
 <body>
@@ -132,12 +163,42 @@
     }
     function statusPipe(order){
       const idx = ORDER_FLOW.indexOf(order.status);
-      return `<div class="pipe">${ORDER_FLOW.map((step, i) => `
-        <div class="step ${i < idx ? 'done' : i === idx ? 'active' : ''}">
-          <span class="step-dot"></span>
-          ${i < ORDER_FLOW.length - 1 ? `<span class="step-line"></span>` : ''}
-          ${step}
-        </div>`).join('')}</div>`;
+      const currentIndex = idx >= 0 ? idx : 0;
+      const currentStep = ORDER_FLOW[currentIndex] || order.status || 'Order Placed';
+      const completedCount = Math.max(1, currentIndex + 1);
+      return `
+        <div class="status-block">
+          <details class="status-mobile">
+            <summary>
+              <div class="status-summary-copy">
+                <div class="status-summary-label">Order Progress</div>
+                <div class="status-summary-value">${esc(currentStep)}</div>
+                <div class="status-summary-meta">Step ${completedCount} of ${ORDER_FLOW.length}</div>
+              </div>
+              <span class="status-chevron">⌄</span>
+            </summary>
+            <div class="status-mobile-body">
+              <div class="status-mobile-list">
+                ${ORDER_FLOW.map((step, i) => `
+                  <div class="status-mobile-step ${i < currentIndex ? 'done' : i === currentIndex ? 'active' : ''}">
+                    <span class="status-mobile-dot"></span>
+                    <div class="status-mobile-content">
+                      <div class="status-mobile-name">${esc(step)}</div>
+                      ${i === currentIndex ? '<div class="status-mobile-note">Current order status</div>' : ''}
+                    </div>
+                  </div>`).join('')}
+              </div>
+            </div>
+          </details>
+          <div class="status-desktop">
+            <div class="pipe">${ORDER_FLOW.map((step, i) => `
+              <div class="step ${i < currentIndex ? 'done' : i === currentIndex ? 'active' : ''}">
+                <span class="step-dot"></span>
+                ${i < ORDER_FLOW.length - 1 ? `<span class="step-line"></span>` : ''}
+                ${esc(step)}
+              </div>`).join('')}</div>
+          </div>
+        </div>`;
     }
     function addressLines(order){
       const meta = order.addressMeta || null;
