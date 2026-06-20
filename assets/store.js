@@ -37,7 +37,8 @@ const Store = window.Store = (() => {
   let realtimeChannel = null;
 
   const ORDER_FLOW = ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
-  const CONFIRMED_ORDER_STATUSES = ['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered'];
+  const COD_ORDER_FLOW = ['Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Payment Collected','Delivered','Returned'];
+  const CONFIRMED_ORDER_STATUSES = ['Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Payment Collected','Delivered'];
   const PAYMENT_METHODS = [
     { key:'card', label:'Card', enabled:true },
     { key:'paypal', label:'PayPal', enabled:true },
@@ -212,7 +213,7 @@ const Store = window.Store = (() => {
       senderId: 'Kanxi',
       templates: {
         confirmed: 'Kanxi: Your order {{orderId}} has been confirmed. View order: {{orderLink}}',
-        outForDelivery: 'Kanxi: Your order {{orderId}} is now out for delivery. Track it here: {{orderLink}}',
+        outForDelivery: 'Kanxi: Your order {{orderId}} is now out for delivery. Delivery OTP: {{deliveryOtp}}. Track it here: {{orderLink}}',
         delivered: 'Kanxi: Your order {{orderId}} has been delivered. Receipt: {{receiptLink}}'
       }
     };
@@ -251,6 +252,36 @@ const Store = window.Store = (() => {
     const seq = Math.max(1, nextOrderSequence(db));
     db.orderSeq = seq + 1;
     return 'KNX-' + String(seq).padStart(6, '0');
+  }
+  function paymentMethodKey(value){
+    const normalized = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_');
+    if(['cash_on_delivery','cashondelivery','cod'].includes(normalized)) return 'cod';
+    if(['bank_transfer','banktransfer','transfer'].includes(normalized)) return 'transfer';
+    if(['card','credit_card','debit_card'].includes(normalized)) return 'card';
+    if(['paypal','pay_pal'].includes(normalized)) return 'paypal';
+    return normalized;
+  }
+  function isCashOnDelivery(order){
+    return paymentMethodKey(order && order.payMethodKey || order && order.payMethod) === 'cod';
+  }
+  function isBankTransfer(order){
+    return paymentMethodKey(order && order.payMethodKey || order && order.payMethod) === 'transfer';
+  }
+  function orderFlowFor(order){
+    return isCashOnDelivery(order) ? COD_ORDER_FLOW : ORDER_FLOW;
+  }
+  function ensureOrderPublicRef(order){
+    if(!order) return '';
+    if(order.publicRef) return String(order.publicRef);
+    const suffix = Math.random().toString(36).slice(2,6).toUpperCase();
+    const orderDigits = String(order.id || '').replace(/\D/g,'').slice(-6) || Math.floor(Math.random()*1000000).toString().padStart(6,'0');
+    order.publicRef = `R${orderDigits}${suffix}`;
+    return order.publicRef;
+  }
+  function findOrderByPublicRef(db, ref){
+    const key = String(ref || '').trim().toUpperCase();
+    if(!key) return null;
+    return (db.orders || []).find(order => String(order && order.publicRef || '').toUpperCase() === key) || null;
   }
   function activeBatchFor(db, productId, variantId=null){
     const batches = (db.batches || [])
@@ -332,6 +363,14 @@ const Store = window.Store = (() => {
     }
     return order;
   }
+  function ensureDeliveryOtp(order){
+    if(!order) return '';
+    order.deliveryOtp = String(order.deliveryOtp || '').replace(/\D/g,'').slice(0,6);
+    if(order.deliveryOtp.length !== 6){
+      order.deliveryOtp = String(Math.floor(100000 + Math.random() * 900000));
+    }
+    return order.deliveryOtp;
+  }
   function normalizeOrderAddressMeta(meta){
     if(!meta) return null;
     return {
@@ -347,12 +386,14 @@ const Store = window.Store = (() => {
       phone: meta.phone || '',
     };
   }
+  function orderHasGeo(order){
+    const meta = order && order.addressMeta;
+    return !!(meta && meta.lat != null && meta.lng != null && !Number.isNaN(+meta.lat) && !Number.isNaN(+meta.lng));
+  }
   function orderPublicLink(order){
     if(!order || !order.id) return '';
     const params = new URLSearchParams();
-    params.set('order', order.id);
-    const phone = String(order.userPhone || '').replace(/\D/g,'');
-    if(phone) params.set('phone', phone);
+    params.set('r', ensureOrderPublicRef(order));
     return `${PUBLIC_SITE_ORIGIN}/order-status.html?${params.toString()}`;
   }
   function ensureOrderNotificationState(order){
@@ -401,9 +442,16 @@ const Store = window.Store = (() => {
       .replace(/\{\{\s*deliveryType\s*\}\}/g, order.deliveryType || '')
       .replace(/\{\{\s*orderLink\s*\}\}/g, orderPublicLink(order))
       .replace(/\{\{\s*receiptLink\s*\}\}/g, orderPublicLink(order))
+      .replace(/\{\{\s*locationLink\s*\}\}/g, orderPublicLink(order))
+      .replace(/\{\{\s*deliveryOtp\s*\}\}/g, order.status === 'Out for Delivery' ? ensureDeliveryOtp(order) : '')
       .trim();
     const publicLink = orderPublicLink(order);
     if(publicLink && !body.includes(publicLink)) body += ` View order: ${publicLink}`;
+    if(publicLink && !orderHasGeo(order) && !/update current location/i.test(body)) body += ` Update current location: ${publicLink}`;
+    if(type === 'out_for_delivery'){
+      const otp = ensureDeliveryOtp(order);
+      if(otp && !body.includes(otp)) body += ` Delivery OTP: ${otp}`;
+    }
     return {
       type,
       key,
@@ -632,6 +680,11 @@ const Store = window.Store = (() => {
       transferSlip:'',
       bankName:'',
       accountNumber:'',
+      payMethodKey:'',
+      publicRef:'',
+      deliveryOtp:'',
+      deliveryOtpSentAt:null,
+      deliveryOtpVerifiedAt:null,
       deliveryType:'address',
       deliveryInfo:null,
       addressMeta:null,
@@ -643,7 +696,10 @@ const Store = window.Store = (() => {
       ...o,
       deliveryType:(o && o.deliveryType)==='standard' ? 'address' : (o && o.deliveryType || 'address')
     })).map(order => {
+      order.payMethodKey = paymentMethodKey(order.payMethodKey || order.payMethod);
+      ensureOrderPublicRef(order);
       order.addressMeta = normalizeOrderAddressMeta(order.addressMeta);
+      syncOrderPaymentState(order);
       return ensureOrderNotificationState(order);
     });
     db.payments = (db.payments||[]).map(p=>({ slipImage:'', bankName:'', accountNumber:'', verifiedAt:null, ...p }));
@@ -908,8 +964,26 @@ const Store = window.Store = (() => {
       return item;
   }
 
+  function syncOrderPaymentState(order){
+    if(!order) return order;
+    const key = paymentMethodKey(order.payMethodKey || order.payMethod);
+    order.payMethodKey = key;
+    if(key === 'cod'){
+      order.payStatus = ['Payment Collected','Delivered'].includes(order.status) ? 'Paid' : 'Pending';
+    }else if(key === 'transfer'){
+      if(order.payStatus === 'Paid' && ['Pending Payment','Pending Slip Verification'].includes(order.status)){
+        order.status = 'Paid';
+      }else if(order.payStatus !== 'Paid'){
+        order.payStatus = 'Pending Slip Verification';
+      }
+    }else{
+      order.payStatus = 'Paid';
+    }
+    return order;
+  }
+
   const api = {
-    ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, DELIVERY_METHODS, uid, im, BLANK_IMAGE,
+    ORDER_FLOW, COD_ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, DELIVERY_METHODS, uid, im, BLANK_IMAGE,
     useLocalStorage: USE_LOCAL,
     phoneKey(value){ return String(value || '').replace(/\D/g,''); },
     all(){ return load(); },
@@ -1074,6 +1148,29 @@ const Store = window.Store = (() => {
     },
     getDeliverySettings(){ return load().deliverySettings || defaultDeliverySettings(); },
     publicOrderLink(order){ return orderPublicLink(order); },
+    getOrderFlow(order){ return orderFlowFor(order).slice(); },
+    getOrderByPublicRef(ref){
+      const order = findOrderByPublicRef(load(), ref);
+      return order || null;
+    },
+    async updateOrderLocation(ref, patch){
+      const db = load();
+      const order = findOrderByPublicRef(db, ref);
+      if(!order) throw new Error('Order not found');
+      const existing = normalizeOrderAddressMeta(order.addressMeta) || {};
+      order.addressMeta = normalizeOrderAddressMeta({
+        ...existing,
+        line: patch && patch.line != null ? patch.line : existing.line,
+        city: patch && patch.city != null ? patch.city : existing.city,
+        atoll: patch && patch.atoll != null ? patch.atoll : existing.atoll,
+        postcode: patch && patch.postcode != null ? patch.postcode : existing.postcode,
+        country: patch && patch.country != null ? patch.country : existing.country,
+        lat: patch && patch.lat != null ? patch.lat : existing.lat,
+        lng: patch && patch.lng != null ? patch.lng : existing.lng
+      });
+      await saveNow(db);
+      return order;
+    },
     getSmsSettings(){ return load().smsSettings || defaultSmsSettings(); },
     async saveSmsSettings(settings){
       const db = load();
@@ -1223,10 +1320,14 @@ const Store = window.Store = (() => {
         note:o.deliveryInfo.note || ''
       } : null;
       const order={ id, userName:o.userName||'Guest', userPhone:o.userPhone||'', date:Date.now(),
-        status:orderStatus, payStatus, payMethod:method.label,
+        status:orderStatus, payStatus, payMethod:method.label, payMethodKey:methodKey,
         items,
         addressMeta: normalizeOrderAddressMeta(o.addressMeta),
         notifications: { confirmedAt:null, outForDeliveryAt:null, deliveredAt:null },
+        publicRef:'',
+        deliveryOtp:'',
+        deliveryOtpSentAt:null,
+        deliveryOtpVerifiedAt:null,
         stockAdjusted:false,
         stockRestored:false,
         stockAdjustedAt:null,
@@ -1237,6 +1338,7 @@ const Store = window.Store = (() => {
         deliveryType:(o.deliveryType === 'standard' ? 'address' : (o.deliveryType || 'address')),
         deliveryInfo:delivery
       };
+      ensureOrderPublicRef(order);
       ensureOrderStockState(db, order);
       db.orders.push(order);
       db.payments.push({
@@ -1264,8 +1366,39 @@ const Store = window.Store = (() => {
       return true;
     },
 
-    advanceOrder(id){ const db=load(),o=db.orders.find(x=>x.id===id); if(!o)return; const i=ORDER_FLOW.indexOf(o.status); if(i>=0&&i<ORDER_FLOW.length-1)o.status=ORDER_FLOW[i+1]; if(CONFIRMED_ORDER_STATUSES.includes(o.status))o.payStatus='Paid'; ensureOrderStockState(db, o); ensureOrderNotificationState(o); notifyOrderStatus(o); saveNow(db).catch(error=>console.warn('Kanxi order advance save failed:', error.message)); return o; },
-    setOrderStatus(id,st){ const db=load(),o=db.orders.find(x=>x.id===id); if(o){o.status=st; if(CONFIRMED_ORDER_STATUSES.includes(st))o.payStatus='Paid'; ensureOrderStockState(db, o); ensureOrderNotificationState(o); notifyOrderStatus(o); saveNow(db).catch(error=>console.warn('Kanxi order status save failed:', error.message));} return o; },
+    advanceOrder(id){
+      const db=load(),o=db.orders.find(x=>x.id===id);
+      if(!o) return;
+      const flow = orderFlowFor(o);
+      const i=flow.indexOf(o.status);
+      if(i>=0&&i<flow.length-1) o.status=flow[i+1];
+      if(o.status === 'Out for Delivery'){
+        ensureDeliveryOtp(o);
+        o.deliveryOtpSentAt = Date.now();
+      }
+      syncOrderPaymentState(o);
+      ensureOrderStockState(db, o);
+      ensureOrderNotificationState(o);
+      notifyOrderStatus(o);
+      saveNow(db).catch(error=>console.warn('Kanxi order advance save failed:', error.message));
+      return o;
+    },
+    setOrderStatus(id,st){
+      const db=load(),o=db.orders.find(x=>x.id===id);
+      if(o){
+        o.status=st;
+        if(st === 'Out for Delivery'){
+          ensureDeliveryOtp(o);
+          o.deliveryOtpSentAt = Date.now();
+        }
+        syncOrderPaymentState(o);
+        ensureOrderStockState(db, o);
+        ensureOrderNotificationState(o);
+        notifyOrderStatus(o);
+        saveNow(db).catch(error=>console.warn('Kanxi order status save failed:', error.message));
+      }
+      return o;
+    },
     async resendOrderSms(id, type=''){
       const db = load();
       const order = db.orders.find(x=>x.id===id);
@@ -1284,13 +1417,32 @@ const Store = window.Store = (() => {
       const o=db.orders.find(x=>x.id===p.orderId);
       if(o){
         o.payStatus=status;
-        if(status==='Paid' && ['Pending Payment','Pending Slip Verification'].includes(o.status)) o.status='Paid';
+        if(status==='Paid' && isCashOnDelivery(o) && o.status === 'Out for Delivery') o.status='Payment Collected';
+        else if(status==='Paid' && ['Pending Payment','Pending Slip Verification'].includes(o.status)) o.status='Paid';
+        syncOrderPaymentState(o);
         ensureOrderStockState(db, o);
         ensureOrderNotificationState(o);
         notifyOrderStatus(o);
       }
       saveNow(db).catch(error=>console.warn('Kanxi payment status save failed:', error.message));
       return p;
+    },
+    verifyDeliveryOtp(id, code){
+      const db = load();
+      const order = db.orders.find(entry => entry.id === id);
+      if(!order) throw new Error('Order not found');
+      const normalized = String(code || '').replace(/\D/g,'');
+      if(normalized.length !== 6) throw new Error('Enter the 6-digit delivery OTP');
+      if(!order.deliveryOtp) throw new Error('Delivery OTP has not been generated yet');
+      if(normalized !== String(order.deliveryOtp)) throw new Error('Delivery OTP does not match');
+      order.deliveryOtpVerifiedAt = Date.now();
+      order.status = 'Delivered';
+      syncOrderPaymentState(order);
+      ensureOrderStockState(db, order);
+      ensureOrderNotificationState(order);
+      notifyOrderStatus(order);
+      saveNow(db).catch(error=>console.warn('Kanxi delivery OTP save failed:', error.message));
+      return order;
     },
 
     currentUser(){

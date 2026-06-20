@@ -273,7 +273,7 @@
     const map={gray:'bg-zinc-100 text-zinc-600',green:'bg-green-50 text-green-700',red:'bg-red-50 text-red-600',amber:'bg-amber-50 text-amber-700',blue:'bg-blue-50 text-blue-700',purple:'bg-purple-50 text-purple-700',dark:'bg-kink text-white'};
     return `<span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${map[tone]}">${text}</span>`;
   }
-  function statusPill(s){ const m={'Pending Payment':'amber','Pending Slip Verification':'amber','Paid':'blue','Order Accepted':'blue','Packing':'purple','Ready to Dispatch':'purple','Out for Delivery':'blue','Delivered':'green','Returned':'red'}; return pill(s,m[s]||'gray'); }
+  function statusPill(s){ const m={'Pending Payment':'amber','Pending Slip Verification':'amber','Paid':'blue','Order Accepted':'blue','Packing':'purple','Ready to Dispatch':'purple','Out for Delivery':'blue','Payment Collected':'blue','Delivered':'green','Returned':'red'}; return pill(s,m[s]||'gray'); }
   function payPill(s){ const m={Paid:'green',Pending:'amber','Pending Slip Verification':'amber',Refunded:'red'}; return pill(s,m[s]||'gray'); }
   function card(title, tools, inner){
     return `<div class="bg-white border border-zinc-200 rounded-2xl overflow-hidden">
@@ -926,8 +926,9 @@
 
   /* ════════ ORDERS ════════ */
   function orders(){
+    const statusOptions = Array.from(new Set([...(Store.ORDER_FLOW||[]), ...(Store.COD_ORDER_FLOW||[])]));
     content.innerHTML = card('Orders',
-      `<select id="ordFilter" onchange="filterOrders(this.value)" class="px-3 py-2 border border-zinc-300 rounded-lg text-sm"><option>All statuses</option>${Store.ORDER_FLOW.map(s=>`<option>${s}</option>`).join('')}</select>`,
+      `<select id="ordFilter" onchange="filterOrders(this.value)" class="px-3 py-2 border border-zinc-300 rounded-lg text-sm"><option>All statuses</option>${statusOptions.map(s=>`<option>${s}</option>`).join('')}</select>`,
       `<table class="w-full">${TH(['Order','Customer','Items','Total','Payment','Status','Date',''])}<tbody id="ordBody">
       ${Store.list('orders').slice().reverse().map(orow).join('')||empty(8)}</tbody></table>`);
   }
@@ -941,21 +942,21 @@
   function filterOrders(v){ const os=Store.list('orders').slice().reverse().filter(o=>v==='All statuses'||o.status===v); $('#ordBody').innerHTML=os.map(orow).join('')||empty(8); }
 
   function orderDetail(id){
-    const o=Store.get('orders',id), idx=Store.ORDER_FLOW.indexOf(o.status);
+    const o=Store.get('orders',id), flow=Store.getOrderFlow(o), idx=flow.indexOf(o.status);
     const payment=Store.list('payments').find(p=>p.orderId===o.id);
     const sms=o.notifications||{};
-    const pipe=`<div class="flex flex-wrap mb-5">${Store.ORDER_FLOW.map((st,i)=>{
+    const pipe=`<div class="flex flex-wrap mb-5">${flow.map((st,i)=>{
       const done=i<idx,cur=i===idx;
       return `<div class="flex-1 min-w-[88px] text-center relative pt-6 text-[0.68rem] ${cur?'text-kink font-bold':done?'text-green-600 font-semibold':'text-zinc-400'}">
         <span class="absolute top-0.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full ${cur?'bg-kacc ring-4 ring-kacc/25':done?'bg-green-600':'bg-zinc-200'} z-10"></span>
-        ${i<Store.ORDER_FLOW.length-1?`<span class="absolute top-2 left-1/2 w-full h-0.5 ${done?'bg-green-600':'bg-zinc-200'}"></span>`:''}
+        ${i<flow.length-1?`<span class="absolute top-2 left-1/2 w-full h-0.5 ${done?'bg-green-600':'bg-zinc-200'}"></span>`:''}
         ${st}</div>`;}).join('')}</div>`;
-    const canAdv=idx<Store.ORDER_FLOW.length-1 && o.status!=='Returned';
+    const canAdv=idx<flow.length-1 && o.status!=='Returned';
     openModal('Order '+o.id, pipe+
       `<div class="flex gap-2 flex-wrap mb-4">
-        ${canAdv?`<button onclick="advance('${o.id}')" class="${btn.primary} ${btn.sm}">Advance → ${Store.ORDER_FLOW[idx+1]}</button>`:''}
+        ${canAdv?`<button onclick="advance('${o.id}')" class="${btn.primary} ${btn.sm}">Advance → ${flow[idx+1]}</button>`:''}
         ${o.status==='Delivered'?`<button onclick="setStatus('${o.id}','Returned')" class="${btn.light} ${btn.sm}">↩ Create Return</button>`:''}
-        <select onchange="setStatus('${o.id}',this.value)" class="px-3 py-1.5 border border-zinc-300 rounded-lg text-xs"><option>Set status…</option>${Store.ORDER_FLOW.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select>
+        <select onchange="setStatus('${o.id}',this.value)" class="px-3 py-1.5 border border-zinc-300 rounded-lg text-xs"><option>Set status…</option>${flow.map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select>
       </div>
       ${F.label('Customer')}<div class="text-sm mb-3">${o.userName} · ${o.userPhone}<div class="text-zinc-400">${o.address}</div></div>
       ${F.label('SMS Debug')}
@@ -964,6 +965,8 @@
           <div><b class="text-kink">Confirmed:</b> ${sms.confirmedAt?new Date(sms.confirmedAt).toLocaleString():'Not sent'}</div>
           <div><b class="text-kink">Out for Delivery:</b> ${sms.outForDeliveryAt?new Date(sms.outForDeliveryAt).toLocaleString():'Not sent'}</div>
           <div><b class="text-kink">Delivered:</b> ${sms.deliveredAt?new Date(sms.deliveredAt).toLocaleString():'Not sent'}</div>
+          <div><b class="text-kink">Delivery OTP:</b> ${o.deliveryOtp?esc(o.deliveryOtp):'Not generated'}</div>
+          <div><b class="text-kink">OTP verified:</b> ${o.deliveryOtpVerifiedAt?new Date(o.deliveryOtpVerifiedAt).toLocaleString():'Not verified'}</div>
           <div><b class="text-kink">Last attempt:</b> ${sms.lastAttemptAt?new Date(sms.lastAttemptAt).toLocaleString():'No attempt yet'}${sms.lastType?` · ${sms.lastType}`:''}</div>
           <div><b class="text-kink">Last error:</b> ${sms.lastError?esc(sms.lastError):'None'}</div>
         </div>
@@ -1031,6 +1034,8 @@
       addressMeta && [addressMeta.city, addressMeta.atoll].filter(Boolean).join(', '),
       addressMeta && [addressMeta.postcode, addressMeta.country].filter(Boolean).join(' · ')
     ].filter(Boolean);
+    const isCod = String(order.payMethodKey || order.payMethod || '').toLowerCase() === 'cod';
+    const needsCollection = isCod && order.status === 'Out for Delivery' && order.payStatus !== 'Paid';
     return `<div class="rounded-2xl border border-zinc-200 bg-white p-4">
       <div class="flex items-start justify-between gap-3 mb-3">
         <div>
@@ -1051,13 +1056,14 @@
         </div>
         <div>
           ${F.label('Geo location')}
-          <div class="text-zinc-700">${geo ? `<a class="text-blue-600 hover:underline" target="_blank" href="https://maps.google.com/?q=${encodeURIComponent(geo)}">${geo}</a>` : 'No fetched location saved'}</div>
+          <div class="text-zinc-700">${geo ? `<a class="${btn.light} ${btn.sm} inline-flex" target="_blank" rel="noopener noreferrer" href="https://maps.google.com/?q=${encodeURIComponent(geo)}">${ic('navigation','w-3.5 h-3.5')} Navigate to Map</a>` : 'No fetched location saved'}</div>
         </div>
         <div class="flex items-center justify-between gap-3 pt-2">
           <div class="text-xs text-zinc-500">${order.items.reduce((sum, item)=>sum + (+item.qty || 0), 0)} item(s)</div>
           <div class="flex gap-2 flex-wrap">
             ${order.status === 'Ready to Dispatch' ? `<button onclick="advance('${order.id}'); delivery();" class="${btn.primary} ${btn.sm}">${ic('truck','w-3.5 h-3.5')} Mark Out for Delivery</button>` : ''}
-            ${order.status === 'Out for Delivery' ? `<button onclick="setStatus('${order.id}','Delivered'); delivery();" class="${btn.primary} ${btn.sm}">${ic('badge-check','w-3.5 h-3.5')} Mark Delivered</button>` : ''}
+            ${needsCollection ? `<button onclick="collectDeliveryPayment('${order.id}')" class="${btn.primary} ${btn.sm}">${ic('wallet','w-3.5 h-3.5')} Collect Payment</button>` : ''}
+            ${order.status === 'Out for Delivery' || order.status === 'Payment Collected' ? `<button onclick="promptDeliveryOtp('${order.id}')" class="${btn.primary} ${btn.sm}">${ic('badge-check','w-3.5 h-3.5')} Verify OTP & Deliver</button>` : ''}
             <button onclick="orderDetail('${order.id}')" class="${btn.light} ${btn.sm}">${ic('square-pen','w-3.5 h-3.5')} Open</button>
           </div>
         </div>
@@ -1066,7 +1072,7 @@
   }
   function delivery(){
     const ready = deliveryRows(['Ready to Dispatch']);
-    const moving = deliveryRows(['Out for Delivery']);
+    const moving = deliveryRows(['Out for Delivery','Payment Collected']);
     content.innerHTML = `
       <div class="grid gap-5">
         <div class="bg-white border border-zinc-200 rounded-2xl p-5">
@@ -1090,6 +1096,52 @@
           <div class="grid gap-3">${moving.map(deliveryCard).join('') || `<div class="rounded-2xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">No orders are currently out for delivery.</div>`}</div>
         </div>
       </div>`;
+  }
+  function collectDeliveryPayment(id){
+    try{
+      const payment = Store.list('payments').find(p=>p.orderId===id);
+      if(!payment) throw new Error('Payment not found for this order');
+      Store.setPaymentStatus(payment.id,'Paid');
+      toast('Payment collected');
+      delivery();
+      orders();
+      refreshBadge();
+      orderDetail(id);
+    }catch(error){
+      alert(error.message || 'Could not collect payment');
+    }
+  }
+  function promptDeliveryOtp(id){
+    const order = Store.get('orders', id);
+    if(!order) return;
+    if(String(order.payMethodKey || order.payMethod || '').toLowerCase() === 'cod' && order.payStatus !== 'Paid'){
+      alert('Collect payment before marking this cash on delivery order as delivered.');
+      return;
+    }
+    openModal('Verify Delivery OTP',
+      `<div class="space-y-4">
+        <div class="rounded-xl border border-zinc-200 p-4 text-sm text-zinc-600">
+          Ask the customer for the 6-digit delivery OTP sent in the Out for Delivery SMS before completing this delivery.
+        </div>
+        <div>
+          ${F.label('Delivery OTP')}
+          <input id="deliveryOtpInput" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
+        </div>
+      </div>`,
+      `<button onclick="closeModal()" class="${btn.light}">Cancel</button><button onclick="confirmDeliveryOtp('${id}')" class="${btn.primary}">Verify & Mark Delivered</button>`);
+  }
+  function confirmDeliveryOtp(id){
+    try{
+      const code = document.getElementById('deliveryOtpInput')?.value || '';
+      Store.verifyDeliveryOtp(id, code);
+      toast('Delivery confirmed');
+      closeModal();
+      delivery();
+      orders();
+      refreshBadge();
+    }catch(error){
+      alert(error.message || 'Could not verify delivery OTP');
+    }
   }
 
   /* ════════ PAYMENTS ════════ */
@@ -1167,7 +1219,7 @@
           <input id="sms_sender_id" value="${esc(settings.senderId||'')}" placeholder="Kanxi" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink"/>
         </div>
         <div class="rounded-2xl border border-kacc/30 bg-kcream/40 px-4 py-3 text-sm text-kink">
-          Use <b>{{orderId}}</b>, <b>{{customerName}}</b>, <b>{{deliveryType}}</b>, <b>{{orderLink}}</b>, and <b>{{receiptLink}}</b> inside the message body.
+          Use <b>{{orderId}}</b>, <b>{{customerName}}</b>, <b>{{deliveryType}}</b>, <b>{{orderLink}}</b>, <b>{{receiptLink}}</b>, <b>{{locationLink}}</b>, and <b>{{deliveryOtp}}</b> inside the message body.
         </div>
         <div>
           ${F.label('Order confirmation SMS')}

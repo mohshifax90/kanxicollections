@@ -13,16 +13,20 @@
     body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
     a{text-decoration:none;color:inherit}
     button,input{font:inherit}
-    .app{max-width:560px;margin:0 auto;min-height:100vh;padding:1.1rem 1rem 2rem}
-    .hero{padding:1rem 0 1.2rem}
+    .app{max-width:560px;margin:0 auto;min-height:100vh;padding:1rem .9rem 2rem}
+    .hero{padding:.45rem 0 .9rem}
     .eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-    .title{font-size:1.55rem;font-weight:900;margin-top:.45rem}
-    .subtitle{font-size:.92rem;color:var(--muted);line-height:1.55;margin-top:.45rem}
+    .title{font-size:1.25rem;font-weight:900;margin-top:.38rem}
+    .subtitle{font-size:.88rem;color:var(--muted);line-height:1.55;margin-top:.32rem}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:1rem}
     .stack{display:grid;gap:1rem}
     .top{display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;color:var(--muted)}
     .amount{font-size:1.45rem;font-weight:900;margin-top:.35rem}
+    .receipt-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.9rem;border-bottom:1px dashed var(--line);padding-bottom:.95rem;margin-bottom:.95rem}
+    .receipt-brand{font-size:1rem;font-weight:900;letter-spacing:.08em}
+    .receipt-copy{font-size:.8rem;color:var(--muted);line-height:1.5;margin-top:.18rem}
+    .receipt-meta{font-size:.8rem;color:var(--muted);text-align:right;line-height:1.55}
     .pill{display:inline-flex;align-items:center;padding:.3rem .7rem;border-radius:999px;font-size:.72rem;font-weight:800;white-space:nowrap}
     .meta{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-top:1rem}
     .meta-item{padding:.82rem .9rem;border-radius:18px;background:var(--soft);border:1px solid #eef2f7}
@@ -74,6 +78,16 @@
     .item-sub{font-size:.78rem;color:var(--muted);line-height:1.4;margin-top:.18rem}
     .item-price{font-size:.88rem;font-weight:900;white-space:nowrap}
     .address-lines{font-size:.88rem;color:var(--muted);line-height:1.6}
+    .info-banner{margin-top:1rem;padding:.9rem 1rem;border-radius:18px;border:1px solid #dbe4ff;background:#eef2ff}
+    .info-banner-title{font-size:.88rem;font-weight:800;color:var(--ink)}
+    .info-banner-copy{font-size:.82rem;color:var(--muted);line-height:1.55;margin-top:.2rem}
+    .bank-box{margin-top:.7rem;display:grid;gap:.5rem}
+    .bank-row{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.65rem .8rem;background:#fff;border:1px solid #dbe4ff;border-radius:14px}
+    .bank-label{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .bank-value{font-size:.9rem;font-weight:800;color:var(--ink)}
+    .location-card{margin-top:1rem;padding:1rem;border-radius:18px;border:1px solid #dbe4ff;background:#f8fbff}
+    .location-card-title{font-size:.88rem;font-weight:800;color:var(--ink)}
+    .location-card-copy{font-size:.82rem;color:var(--muted);line-height:1.55;margin-top:.2rem}
     .actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:none;border-radius:14px;padding:.92rem 1rem;font-weight:800;cursor:pointer}
     .btn-primary{background:var(--blue);color:#fff}
@@ -99,8 +113,8 @@
   <div class="app">
     <div class="hero">
       <div class="eyebrow">Kanxi Collection</div>
-      <div class="title">Order Status</div>
-      <div class="subtitle">View your order progress and receipt details from the secure link sent to your phone.</div>
+      <div class="title">Receipt & Order Status</div>
+      <div class="subtitle">Track the order and keep a clean receipt view from the secure link sent to your phone.</div>
     </div>
 
     <div id="verifyCard" class="card verify-card">
@@ -124,13 +138,13 @@
   <script src="assets/store.js?v=16"></script>
   <script>
     const $ = s => document.querySelector(s);
-    const orderId = new URLSearchParams(location.search).get('order') || '';
-    const phoneFromUrl = ((new URLSearchParams(location.search).get('phone') || '').replace(/\D/g,'')).slice(-7);
-    const fullPhoneFromUrl = (new URLSearchParams(location.search).get('phone') || '').replace(/\D/g,'');
+    const query = new URLSearchParams(location.search);
+    const orderId = query.get('order') || '';
+    const receiptRef = (query.get('r') || '').trim();
+    const phoneFromUrl = ((query.get('phone') || '').replace(/\D/g,'')).slice(-7);
+    const fullPhoneFromUrl = (query.get('phone') || '').replace(/\D/g,'');
     const MVR = n => 'MVR ' + (+n || 0).toLocaleString();
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    const ORDER_FLOW = ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
-
     function showToast(msg){
       let t = document.getElementById('toast');
       if(!t){ t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; document.body.appendChild(t); }
@@ -152,6 +166,7 @@
         'Packing':['#f5f3ff','#7c3aed'],
         'Ready to Dispatch':['#f5f3ff','#7c3aed'],
         'Out for Delivery':['#eef2ff','#4f5cf0'],
+        'Payment Collected':['#eef2ff','#4f5cf0'],
         'Delivered':['#e8f7ee','#0f9f62'],
         'Returned':['#feeceb','#dc2626']
       };
@@ -161,10 +176,27 @@
       if(!ts) return '—';
       return new Date(ts).toLocaleString();
     }
+    function isCod(order){
+      return String(order && (order.payMethodKey || order.payMethod) || '').toLowerCase() === 'cod';
+    }
+    function activeBankTransfer(){
+      const settings = Store.getPaymentSettings ? Store.getPaymentSettings() : null;
+      const methods = settings && Array.isArray(settings.methods) ? settings.methods : [];
+      const transfer = methods.find(method => String(method && method.key || '') === 'transfer');
+      if(transfer && transfer.enabled === false) return null;
+      const details = settings && settings.bankTransfer || {};
+      if(!details.bankName && !details.accountNumber) return null;
+      return details;
+    }
+    function hasGeo(order){
+      const meta = order && order.addressMeta;
+      return !!(meta && meta.lat != null && meta.lng != null && !Number.isNaN(+meta.lat) && !Number.isNaN(+meta.lng));
+    }
     function statusPipe(order){
-      const idx = ORDER_FLOW.indexOf(order.status);
+      const flow = Store.getOrderFlow ? Store.getOrderFlow(order) : ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
+      const idx = flow.indexOf(order.status);
       const currentIndex = idx >= 0 ? idx : 0;
-      const currentStep = ORDER_FLOW[currentIndex] || order.status || 'Order Placed';
+      const currentStep = flow[currentIndex] || order.status || 'Order Placed';
       const completedCount = Math.max(1, currentIndex + 1);
       return `
         <div class="status-block">
@@ -173,13 +205,13 @@
               <div class="status-summary-copy">
                 <div class="status-summary-label">Order Progress</div>
                 <div class="status-summary-value">${esc(currentStep)}</div>
-                <div class="status-summary-meta">Step ${completedCount} of ${ORDER_FLOW.length}</div>
+                <div class="status-summary-meta">Step ${completedCount} of ${flow.length}</div>
               </div>
               <span class="status-chevron">⌄</span>
             </summary>
             <div class="status-mobile-body">
               <div class="status-mobile-list">
-                ${ORDER_FLOW.map((step, i) => `
+                ${flow.map((step, i) => `
                   <div class="status-mobile-step ${i < currentIndex ? 'done' : i === currentIndex ? 'active' : ''}">
                     <span class="status-mobile-dot"></span>
                     <div class="status-mobile-content">
@@ -191,10 +223,10 @@
             </div>
           </details>
           <div class="status-desktop">
-            <div class="pipe">${ORDER_FLOW.map((step, i) => `
+            <div class="pipe">${flow.map((step, i) => `
               <div class="step ${i < currentIndex ? 'done' : i === currentIndex ? 'active' : ''}">
                 <span class="step-dot"></span>
-                ${i < ORDER_FLOW.length - 1 ? `<span class="step-line"></span>` : ''}
+                ${i < flow.length - 1 ? `<span class="step-line"></span>` : ''}
                 ${esc(step)}
               </div>`).join('')}</div>
           </div>
@@ -214,12 +246,24 @@
       const subtotal = (order.items || []).reduce((sum, item) => sum + (+item.price || 0) * (+item.qty || 0), 0);
       const tax = Store.taxAmountFromInclusive ? Store.taxAmountFromInclusive(subtotal) : 0;
       const address = addressLines(order);
+      const bankTransfer = isCod(order) && order.payStatus !== 'Paid' ? activeBankTransfer() : null;
+      const needsLocationUpdate = !hasGeo(order) && !!receiptRef;
       $('#orderPanel').style.display = 'grid';
       $('#orderPanel').innerHTML = `
         <div class="card">
+          <div class="receipt-head">
+            <div>
+              <div class="receipt-brand">KANXI COLLECTION</div>
+              <div class="receipt-copy">Receipt ref ${esc(order.publicRef || '')}</div>
+            </div>
+            <div class="receipt-meta">
+              <div>Order ${esc(order.id)}</div>
+              <div>${timeLabel(order.date)}</div>
+            </div>
+          </div>
           <div class="top">
             <div>
-              <div class="mono">Order ${esc(order.id)}</div>
+              <div class="mono">Total Due</div>
               <div class="amount">${MVR(moneyTotal(order))}</div>
             </div>
             <span class="pill" style="background:${bg};color:${fg}">${esc(order.status)}</span>
@@ -231,6 +275,15 @@
             <div class="meta-item"><div class="meta-label">Phone</div><div class="meta-value">${esc(order.userPhone || '—')}</div></div>
           </div>
           ${statusPipe(order)}
+          ${bankTransfer ? `
+            <div class="info-banner">
+              <div class="info-banner-title">Cash on Delivery alternative payment</div>
+              <div class="info-banner-copy">This order is still unpaid. If the customer wants to complete payment by transfer, use the currently active bank transfer details below.</div>
+              <div class="bank-box">
+                <div class="bank-row"><div><div class="bank-label">Bank Name</div><div class="bank-value">${esc(bankTransfer.bankName || '—')}</div></div></div>
+                <div class="bank-row"><div><div class="bank-label">Account Number</div><div class="bank-value">${esc(bankTransfer.accountNumber || '—')}</div></div></div>
+              </div>
+            </div>` : ''}
         </div>
 
         <div class="card">
@@ -255,6 +308,14 @@
         <div class="card">
           <div class="section-title">Delivery Details</div>
           <div class="address-lines">${address.length ? address.map(line => `<div>${esc(line)}</div>`).join('') : '<div>No address details available.</div>'}</div>
+          ${needsLocationUpdate ? `
+            <div class="location-card">
+              <div class="location-card-title">Update Current Location</div>
+              <div class="location-card-copy">Your order does not have live geo location yet. Tap below to share your current location for delivery.</div>
+              <div class="actions">
+                <button class="btn btn-primary" type="button" onclick="shareCurrentLocation()">Update Current Location</button>
+              </div>
+            </div>` : ''}
           <div class="actions">
             <button class="btn btn-light" type="button" onclick="window.print()">Print Receipt</button>
             <a class="btn btn-primary" href="index.html">Continue Shopping</a>
@@ -263,9 +324,14 @@
       `;
     }
     function findOrderByPhone(phoneDigits){
-      if(!orderId) return null;
       const digits = String(phoneDigits || '').replace(/\D/g,'');
-      return Store.list('orders').find(order => order.id === orderId && phoneKey(order.userPhone).endsWith(digits));
+      const list = Store.list('orders');
+      if(receiptRef && Store.getOrderByPublicRef){
+        const byRef = Store.getOrderByPublicRef(receiptRef);
+        if(byRef && phoneKey(byRef.userPhone).endsWith(digits)) return byRef;
+      }
+      if(orderId) return list.find(order => order.id === orderId && phoneKey(order.userPhone).endsWith(digits));
+      return null;
     }
     function verifyOrder(){
       const digits = String($('#phoneInput').value || '').replace(/\D/g,'').slice(-7);
@@ -278,9 +344,39 @@
       renderOrder(order);
       $('#verifyCard').style.display = 'none';
     }
+    async function shareCurrentLocation(){
+      if(!receiptRef) return showToast('Missing receipt link');
+      if(!navigator.geolocation) return showToast('Geolocation not supported');
+      navigator.geolocation.getCurrentPosition(async pos => {
+        try{
+          const payload = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          };
+          try{
+            const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${payload.lat}&lon=${payload.lng}&zoom=18&addressdetails=1`, { headers:{ Accept:'application/json' } });
+            const data = await r.json();
+            const addr = data.address || {};
+            payload.line = data.display_name || `Near ${payload.lat.toFixed(4)}, ${payload.lng.toFixed(4)}`;
+            payload.city = addr.city || addr.town || addr.village || '';
+            payload.atoll = addr.state || addr.county || '';
+            payload.postcode = addr.postcode || '';
+            payload.country = addr.country || 'Maldives';
+          }catch(_){
+            payload.line = `Near ${payload.lat.toFixed(4)}, ${payload.lng.toFixed(4)}`;
+            payload.country = 'Maldives';
+          }
+          const order = await Store.updateOrderLocation(receiptRef, payload);
+          renderOrder(order);
+          showToast('Current location updated');
+        }catch(error){
+          showToast(error.message || 'Could not update location');
+        }
+      }, ()=>showToast('Could not get current location'), { enableHighAccuracy:true, timeout:10000 });
+    }
     function boot(){
       if(phoneFromUrl) $('#phoneInput').value = phoneFromUrl;
-      if(!orderId){
+      if(!orderId && !receiptRef){
         $('#verifyCard').innerHTML = '<div class="empty">Missing order link details.</div>';
         return;
       }
@@ -291,6 +387,11 @@
             if(order){
               renderOrder(order);
               $('#verifyCard').style.display = 'none';
+            }
+          }else if(receiptRef && Store.getOrderByPublicRef){
+            const order = Store.getOrderByPublicRef(receiptRef);
+            if(order){
+              $('#verifyCard').style.display = 'grid';
             }
           }
         });
