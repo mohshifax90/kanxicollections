@@ -57,7 +57,7 @@
     .chip:hover, .chip.active { background: var(--black); color: #fff; }
 
     /* ── SECTION ── */
-    .section { padding: 1.4rem 1rem 0.5rem; }
+    .section { padding: 1.25rem 1rem 0.2rem; }
     .deferred-section { content-visibility: auto; contain-intrinsic-size: 900px; }
     .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
     .section-head h2 { font-size: 1rem; font-weight: 700; letter-spacing: 0; }
@@ -66,10 +66,10 @@
     /* ── COLLECTIONS (big horizontal) ── */
     .h-scroll { display: flex; gap: 0.8rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 0.3rem; }
     .h-scroll::-webkit-scrollbar { display: none; }
-    .collection-card { flex-shrink: 0; width: 86%; aspect-ratio: 4/3.8; border-radius: 14px; overflow: hidden; position: relative; cursor: pointer; background: var(--gray-100); border:1px solid #e3e3e3; }
+    .collection-card { flex-shrink: 0; width: 86%; aspect-ratio: 4/3.8; border-radius: 14px; overflow: hidden; position: relative; cursor: pointer; background: var(--gray-100); }
     .collection-card:last-child { width: 78%; }
     .collection-card img { width: 100%; height: 100%; object-fit: cover; }
-    .collection-card .ctitle { position: absolute; bottom: 0.95rem; left: 0.95rem; right: 0.95rem; color: var(--ink); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.45rem; font-weight: 500; line-height: 1.08; display: inline-block; width: fit-content; max-width: calc(100% - 1.9rem); background: rgba(255,255,255,0.86); padding: 0.42rem 0.58rem; border-radius: 10px; backdrop-filter: blur(4px); }
+    .collection-card .ctitle { position: absolute; bottom: 0.9rem; left: 0.9rem; right: 0.9rem; color: #141414; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.18rem; font-weight: 500; line-height: 1.08; display: inline-block; width: fit-content; max-width: calc(100% - 1.8rem); background: rgba(255,255,255,0.2); padding: 0.44rem 0.62rem; border-radius: 12px; backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.26), 0 8px 24px rgba(16,24,40,0.12); border: 1px solid rgba(255,255,255,0.22); }
 
     /* ── SHOP BY BRAND ── */
     .brand-card { flex-shrink:0; width:82px; display:flex; flex-direction:column; align-items:stretch; gap:0.42rem; cursor:pointer; text-decoration:none; }
@@ -119,7 +119,7 @@
     .pcard-bookmark:active svg { transform: scale(1.25); }
     .pcard-price { font-size: 0.86rem; font-weight: 700; margin-top: 0.25rem; }
     .pcard-price .old { font-weight: 400; color: var(--gray-400); text-decoration: line-through; font-size: 0.76rem; margin-left: 0.3rem; }
-    .pcard-status { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+    .pcard-status { display:none; font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
     .pcard-status.fast { color: #c0392b; }
     .pcard-status.new { color: var(--accent); }
 
@@ -162,7 +162,7 @@
         font-size: 0.88rem;
         border-radius: 12px;
       }
-      .section { padding: 1.8rem 1.4rem 0.7rem; }
+      .section { padding: 1.55rem 1.4rem 0.3rem; }
       .section-head {
         margin-bottom: 1.15rem;
       }
@@ -178,7 +178,7 @@
         left: 1.1rem;
         right: 1.1rem;
         bottom: 1.05rem;
-        font-size: 1.6rem;
+        font-size: 1.34rem;
       }
       .brand-card { width: 92px; gap: 0.48rem; }
       .brand-logo { width: 92px; height: 92px; border-radius:14px !important; }
@@ -397,7 +397,7 @@
   }
 
   /* ── CMS-DRIVEN HOMEPAGE SECTIONS ── */
-  const section = (title, inner, seeAllHref, seeAllOnclick) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAllOnclick?`<button type="button" class="see-all" onclick="${seeAllOnclick}">See all</button>`:(seeAllHref?`<a class="see-all" href="${seeAllHref}">See all</a>`:'')}</div>${inner}</div>`;
+  const section = (title, inner, seeAllHref, seeAllKey) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAllKey?`<button type="button" class="see-all" data-section-key="${seeAllKey}">See all</button>`:(seeAllHref?`<a class="see-all" href="${seeAllHref}">See all</a>`:'')}</div>${inner}</div>`;
   const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   const chunk = (arr, size=3) => arr.reduce((rows, item, index) => {
     if(index % size === 0) rows.push([]);
@@ -468,7 +468,7 @@
     const sectionData = sections.find(section => section.id === key);
     if(!sectionData) return;
     const data = homepageSectionData(sectionData);
-    openHomeSectionSheet(sectionData.title || data.label, prodGrid(data.items || []));
+    openHomeSectionSheet(sectionData.title || data.label, `<div style="padding-bottom:0.75rem">${prodGrid(data.items || [])}</div>`);
   }
 
   function renderHomepage(){
@@ -515,7 +515,7 @@
     const dynamicSections = hpSections.map(sectionData => {
       const data = homepageSectionData(sectionData);
       if(!data.items || !data.items.length) return '';
-      return `<div class="deferred-section">${section(sectionData.title || data.label, prodTeaseRows(data.items), '', `openHomeSection(${JSON.stringify(sectionData.id)})`)}</div>`;
+      return `<div class="deferred-section">${section(sectionData.title || data.label, prodTeaseRows(data.items), '', sectionData.id)}</div>`;
     }).join('');
 
     document.getElementById('homeSections').innerHTML =
@@ -527,6 +527,13 @@
       document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
       c.classList.add('active');
     }));
+    document.querySelectorAll('.see-all[data-section-key]').forEach(btn => {
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openHomeSection(btn.dataset.sectionKey || '');
+      });
+    });
   }
 
   renderHomepage();

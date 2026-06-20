@@ -57,14 +57,18 @@ const Store = window.Store = (() => {
     { key:'volume', label:'Volume', hint:'e.g. 30ml, 50ml, 200ml' },
     { key:'shade',  label:'Shade',  hint:'colour-pick each shade' },
   ];
+  const CATEGORY_CARD_TYPES = [
+    { key:'square', label:'Square card' },
+    { key:'portrait', label:'Portrait card' },
+  ];
 
   function seed() {
     const cats = [
-      { id:'c_cloth', name:'Clothing', slug:'clothing', icon:'shirt', active:true, variantType:'size', brands:[], title:'Clothing & Apparel', description:'Curated fashion crafted from premium fabrics — tailored blazers, silk dresses and effortless co-ords designed to elevate your everyday wardrobe with timeless elegance.' },
-      { id:'c_skin',  name:'Skincare', slug:'skincare', icon:'sparkles', active:true, variantType:'volume', brands:[], title:'Skincare & Beauty', description:'Science-backed, clean formulas that nourish and glow. From brightening serums to deep hydration, discover skincare made to love your skin every single day.' },
-      { id:'c_make',  name:'Makeup',   slug:'makeup',   icon:'palette', active:true, variantType:'shade', brands:[], title:'Makeup & Colour', description:'Bold shades and silky textures for every look. Long-wear lipsticks, luminous foundations and blushes in colours made to flatter.' },
-      { id:'c_bags',  name:'Bags',     slug:'bags',     icon:'shopping-bag', active:true, variantType:'none', brands:[], title:'Bags & Accessories', description:'Handcrafted leather and canvas bags built to last. Structured totes, sleek crossbodies and weekend carryalls — timeless pieces for the modern individual.' },
-      { id:'c_watch', name:'Watches',  slug:'watches',  icon:'watch', active:true, variantType:'none', brands:[], title:'Watches & Timepieces', description:'Precision engineering meets refined design. From minimalist classics to bold complications, mark every moment with a Kanxi timepiece built to endure.' },
+      { id:'c_cloth', name:'Clothing', slug:'clothing', icon:'shirt', active:true, variantType:'size', cardType:'portrait', brands:[], title:'Clothing & Apparel', description:'Curated fashion crafted from premium fabrics — tailored blazers, silk dresses and effortless co-ords designed to elevate your everyday wardrobe with timeless elegance.' },
+      { id:'c_skin',  name:'Skincare', slug:'skincare', icon:'sparkles', active:true, variantType:'volume', cardType:'square', brands:[], title:'Skincare & Beauty', description:'Science-backed, clean formulas that nourish and glow. From brightening serums to deep hydration, discover skincare made to love your skin every single day.' },
+      { id:'c_make',  name:'Makeup',   slug:'makeup',   icon:'palette', active:true, variantType:'shade', cardType:'square', brands:[], title:'Makeup & Colour', description:'Bold shades and silky textures for every look. Long-wear lipsticks, luminous foundations and blushes in colours made to flatter.' },
+      { id:'c_bags',  name:'Bags',     slug:'bags',     icon:'shopping-bag', active:true, variantType:'none', cardType:'square', brands:[], title:'Bags & Accessories', description:'Handcrafted leather and canvas bags built to last. Structured totes, sleek crossbodies and weekend carryalls — timeless pieces for the modern individual.' },
+      { id:'c_watch', name:'Watches',  slug:'watches',  icon:'watch', active:true, variantType:'none', cardType:'square', brands:[], title:'Watches & Timepieces', description:'Precision engineering meets refined design. From minimalist classics to bold complications, mark every moment with a Kanxi timepiece built to endure.' },
     ];
     const subs = [
       { id:'s1', name:'Blazers & Jackets', categoryId:'c_cloth' },
@@ -593,6 +597,10 @@ const Store = window.Store = (() => {
     if(!db._v) db._v = VERSION;
     const catBrandMap={};
     (db.categories||[]).forEach(c=>{
+      c.icon = c.icon || 'shapes';
+      c.title = c.title || c.name || 'Category';
+      c.description = c.description || '';
+      c.cardType = c.cardType || (c.slug === 'clothing' ? 'portrait' : 'square');
       const seen={};
       const own=(c.brands||[]).filter(b=>(b.name||'').trim()).map(b=>({
         id:b.id||uid('br_'),
@@ -1012,7 +1020,7 @@ const Store = window.Store = (() => {
   }
 
   const api = {
-    ORDER_FLOW, COD_ORDER_FLOW, VARIANT_TYPES, PAYMENT_METHODS, DELIVERY_METHODS, uid, im, BLANK_IMAGE,
+    ORDER_FLOW, COD_ORDER_FLOW, VARIANT_TYPES, CATEGORY_CARD_TYPES, PAYMENT_METHODS, DELIVERY_METHODS, uid, im, BLANK_IMAGE,
     useLocalStorage: USE_LOCAL,
     phoneKey(value){ return String(value || '').replace(/\D/g,''); },
     all(){ return load(); },
@@ -1040,6 +1048,7 @@ const Store = window.Store = (() => {
     allBrands(){ return this.list('categories').flatMap(c=>(c.brands||[]).map(b=>({...b,categoryId:c.id,categoryName:c.name}))); },
     tagNames(ids=[]){ const t=load().tags; return ids.map(id=>(t.find(x=>x.id===id)||{}).name).filter(Boolean); },
     variantTypeLabel(k){ return (VARIANT_TYPES.find(v=>v.key===k)||{}).label || '—'; },
+    categoryCardTypeLabel(k){ return (CATEGORY_CARD_TYPES.find(v=>v.key===k)||{}).label || 'Square card'; },
 
     /* ── SKU ── */
     slug(s){ return (s||'').toString().toUpperCase().replace(/[^A-Z0-9]+/g,'').slice(0,8); },

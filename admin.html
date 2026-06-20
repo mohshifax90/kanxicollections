@@ -591,19 +591,20 @@
   function categories(){
     const cats=Store.list('categories');
     content.innerHTML = card('Categories', `<button onclick="editCat()" class="${btn.primary} ${btn.sm}">${ic('plus','w-4 h-4')} Add Category</button>`,
-      `<table class="w-full">${TH(['','Name','Slug','Variant','Brands','Subs','Products','Status',''])}<tbody>
+      `<table class="w-full">${TH(['','Name','Slug','Variant','Card','Brands','Subs','Products','Status',''])}<tbody>
       ${cats.map(c=>`<tr class="hover:bg-zinc-50">
         ${td(catIconHTML(c.icon))}${td('<b>'+c.name+'</b>')}${td(c.slug,'font-mono text-xs text-zinc-400')}
         ${td(pill(Store.variantTypeLabel(c.variantType||'none'),'gray'))}
+        ${td(pill(Store.categoryCardTypeLabel(c.cardType||'square'),'gray'))}
         ${td((c.brands&&c.brands.length)?`${c.brands.length} brands`:'<span class="text-zinc-300">—</span>')}
         ${td(Store.list('subcategories').filter(s=>s.categoryId===c.id).length)}
         ${td(Store.list('products').filter(p=>p.categoryId===c.id).length)}
         ${td(c.active?pill('Active','green'):pill('Hidden','gray'))}
-        ${td(actBtns(`editCat('${c.id}')`,`del('categories','${c.id}',categories)`))}</tr>`).join('')||empty(9)}
+        ${td(actBtns(`editCat('${c.id}')`,`del('categories','${c.id}',categories)`))}</tr>`).join('')||empty(10)}
       </tbody></table>`);
   }
   function editCat(id){
-    const c=id?Store.get('categories',id):{name:'',slug:'',icon:'shapes',active:true,variantType:'none',brands:[]};
+    const c=id?Store.get('categories',id):{name:'',slug:'',icon:'shapes',active:true,variantType:'none',cardType:'square',brands:[]};
     _brands=JSON.parse(JSON.stringify(c.brands||[]));
     _catIcon = catLucide(c.icon) || 'shapes';
     const sel='w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm';
@@ -612,7 +613,8 @@
       F.fg('Slug',F.input('c_slug',c.slug,'clothing'))+
       F.fg('Icon',`<div id="catIconGrid" class="flex flex-wrap gap-1.5">${CAT_ICONS.map(n=>`<button type="button" data-icon="${n}" onclick="pickCatIcon('${n}')" class="cat-ico-btn w-10 h-10 grid place-items-center rounded-lg border ${n===_catIcon?'border-kink bg-kink text-white':'border-zinc-200 text-zinc-600 hover:border-kink'}">${ic(n,'w-5 h-5')}</button>`).join('')}</div>`)+
       `<div class="flex gap-3"><div class="flex-1">${F.fg('Default variant type',`<select id="c_vtype" class="${sel}">${Store.VARIANT_TYPES.map(t=>`<option value="${t.key}" ${t.key===(c.variantType||'none')?'selected':''}>${t.label}</option>`).join('')}</select>`)}</div>
-        <div class="flex-1">${F.fg('Status',`<select id="c_active" class="${sel}"><option value="true" ${c.active?'selected':''}>Active</option><option value="false" ${!c.active?'selected':''}>Hidden</option></select>`)}</div></div>`+
+        <div class="flex-1">${F.fg('Product card size',`<select id="c_card_type" class="${sel}">${Store.CATEGORY_CARD_TYPES.map(t=>`<option value="${t.key}" ${t.key===((c.cardType)||'square')?'selected':''}>${t.label}</option>`).join('')}</select>`)}</div></div>`+
+      `<div class="flex gap-3"><div class="flex-1">${F.fg('Status',`<select id="c_active" class="${sel}"><option value="true" ${c.active?'selected':''}>Active</option><option value="false" ${!c.active?'selected':''}>Hidden</option></select>`)}</div><div class="flex-1"></div></div>`+
       `<div class="mb-2">${F.label('Brands')}<div id="brandList"></div>
         <button type="button" onclick="addBrand()" class="${btn.light} ${btn.sm} mt-2">${ic('plus','w-3.5 h-3.5')} Add brand</button>
         <p class="text-[0.72rem] text-zinc-400 mt-1.5">Brands in this category will be available when adding products.</p></div>`,
@@ -624,7 +626,7 @@
     b.classList.toggle('border-zinc-200',!on); b.classList.toggle('text-zinc-600',!on); }); }
   async function saveCat(id){ const name=$('#c_name').value.trim(); if(!name)return alert('Name required');
     const brands=_brands.filter(b=>(b.name||'').trim()).map(b=>({id:b.id||Store.uid('br_'),name:b.name.trim(),logo:b.logo||''}));
-    await Store.upsertNow('categories',{id:id||undefined,name,slug:$('#c_slug').value.trim()||name.toLowerCase().replace(/\s+/g,'-'),icon:_catIcon,variantType:$('#c_vtype').value,active:$('#c_active').value==='true',brands});
+    await Store.upsertNow('categories',{id:id||undefined,name,slug:$('#c_slug').value.trim()||name.toLowerCase().replace(/\s+/g,'-'),icon:_catIcon,variantType:$('#c_vtype').value,cardType:$('#c_card_type').value,active:$('#c_active').value==='true',brands});
     closeModal(); categories(); toast('Category saved'); }
 
   /* ════════ SUB-CATEGORIES ════════ */
