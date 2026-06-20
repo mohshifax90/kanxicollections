@@ -845,11 +845,19 @@
     const bs=Store.list('batches').slice().reverse();
     const totalUnits=bs.reduce((s,b)=>s+(+b.stock||0),0);
     const stockValue=bs.reduce((s,b)=>s+(+b.stock||0)*(+b.costPrice||0),0);
+    const estimatedTaxValue=bs.reduce((s,b)=>s+((Store.taxAmountFromInclusive ? Store.taxAmountFromInclusive(+b.sellingPrice||0) : 0) * (+b.stock||0)),0);
+    const estimatedProfitValue=bs.reduce((s,b)=>{
+      const qty=+b.stock||0;
+      const net = Store.priceExcludingTax ? Store.priceExcludingTax(+b.sellingPrice||0) : (+b.sellingPrice||0);
+      return s + ((net - (+b.costPrice||0)) * qty);
+    },0);
     content.innerHTML =
-      `<div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
+      `<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-5">
         <div class="bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex justify-between"><span class="text-xs uppercase tracking-wide text-zinc-400 font-semibold">Batches</span><span class="w-9 h-9 rounded-xl bg-kcream text-kacc grid place-items-center">${ic('boxes','w-5 h-5')}</span></div><div class="text-2xl font-extrabold mt-2">${bs.length}</div></div>
         <div class="bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex justify-between"><span class="text-xs uppercase tracking-wide text-zinc-400 font-semibold">Units in stock</span><span class="w-9 h-9 rounded-xl bg-kcream text-kacc grid place-items-center">${ic('layers','w-5 h-5')}</span></div><div class="text-2xl font-extrabold mt-2">${totalUnits}</div></div>
         <div class="bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex justify-between"><span class="text-xs uppercase tracking-wide text-zinc-400 font-semibold">Stock value (cost)</span><span class="w-9 h-9 rounded-xl bg-kcream text-kacc grid place-items-center">${ic('coins','w-5 h-5')}</span></div><div class="text-2xl font-extrabold mt-2">${MVR(stockValue)}</div></div>
+        <div class="bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex justify-between"><span class="text-xs uppercase tracking-wide text-zinc-400 font-semibold">Estimated Tax</span><span class="w-9 h-9 rounded-xl bg-kcream text-kacc grid place-items-center">${ic('receipt-text','w-5 h-5')}</span></div><div class="text-2xl font-extrabold mt-2">${MVR(estimatedTaxValue)}</div><div class="text-xs text-zinc-400 mt-1">Included in stock selling price</div></div>
+        <div class="bg-white border border-zinc-200 rounded-2xl p-5"><div class="flex justify-between"><span class="text-xs uppercase tracking-wide text-zinc-400 font-semibold">Profit Value</span><span class="w-9 h-9 rounded-xl bg-kcream text-kacc grid place-items-center">${ic('badge-dollar-sign','w-5 h-5')}</span></div><div class="text-2xl font-extrabold mt-2">${MVR(estimatedProfitValue)}</div><div class="text-xs text-zinc-400 mt-1">Net selling less cost</div></div>
       </div>`+
       card('Inventory — Product Batches',
       `<button onclick="editBatch()" class="${btn.primary} ${btn.sm}">${ic('plus','w-4 h-4')} Add Batch</button>`,

@@ -66,11 +66,10 @@
     /* ── COLLECTIONS (big horizontal) ── */
     .h-scroll { display: flex; gap: 0.8rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 0.3rem; }
     .h-scroll::-webkit-scrollbar { display: none; }
-    .collection-card { flex-shrink: 0; width: 86%; aspect-ratio: 4/4.4; border-radius: 14px; overflow: hidden; position: relative; cursor: pointer; background: var(--gray-100); border:1px solid #e3e3e3; }
+    .collection-card { flex-shrink: 0; width: 86%; aspect-ratio: 4/3.8; border-radius: 14px; overflow: hidden; position: relative; cursor: pointer; background: var(--gray-100); border:1px solid #e3e3e3; }
     .collection-card:last-child { width: 78%; }
     .collection-card img { width: 100%; height: 100%; object-fit: cover; }
-    .collection-card .ov { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 45%); }
-    .collection-card .ctitle { position: absolute; bottom: 1.2rem; left: 1.2rem; right: 1.2rem; color: #fff; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.7rem; font-weight: 400; line-height: 1.1; }
+    .collection-card .ctitle { position: absolute; bottom: 0.95rem; left: 0.95rem; right: 0.95rem; color: var(--ink); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.45rem; font-weight: 500; line-height: 1.08; display: inline-block; width: fit-content; max-width: calc(100% - 1.9rem); background: rgba(255,255,255,0.86); padding: 0.42rem 0.58rem; border-radius: 10px; backdrop-filter: blur(4px); }
 
     /* ── SHOP BY BRAND ── */
     .brand-card { flex-shrink:0; width:82px; display:flex; flex-direction:column; align-items:stretch; gap:0.42rem; cursor:pointer; text-decoration:none; }
@@ -176,10 +175,10 @@
       }
       .collection-card:last-child { width: 40%; }
       .collection-card .ctitle {
-        left: 1.35rem;
-        right: 1.35rem;
-        bottom: 1.3rem;
-        font-size: 1.85rem;
+        left: 1.1rem;
+        right: 1.1rem;
+        bottom: 1.05rem;
+        font-size: 1.6rem;
       }
       .brand-card { width: 92px; gap: 0.48rem; }
       .brand-logo { width: 92px; height: 92px; border-radius:14px !important; }
@@ -449,7 +448,7 @@
       const img = c.image || meta.image || '';
       const fallback = meta.label || (tag.find(t=>t.id===c.tagId)||{}).name || '';
       return `<a class="collection-card" href="${meta.href}">
-        <img alt="${c.caption||fallback}" ${imgAttrs('collection', i, img)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/><div class="ov"></div>
+        <img alt="${c.caption||fallback}" ${imgAttrs('collection', i, img)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/>
         <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
     }).join('')}</div>`;
 
