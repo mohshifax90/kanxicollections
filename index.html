@@ -26,6 +26,26 @@
 
     /* App frame (mobile-first, centered on desktop) */
     .app { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.08); }
+    body.pending #mainContent,
+    body.pending .shop-footer { display:none; }
+    .loading-shell { display:none; padding:0.9rem 1rem 1.4rem; }
+    body.pending .loading-shell { display:block; }
+    .skeleton { background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); background-size:400% 100%; animation:shimmer 1.2s ease infinite; border-radius:14px; }
+    .sk-chip-row { display:flex; gap:0.55rem; overflow:hidden; margin:0.1rem 0 1rem; }
+    .sk-chip { width:102px; height:40px; border-radius:12px; flex-shrink:0; }
+    .sk-title { height:20px; width:132px; margin-bottom:0.95rem; }
+    .sk-banner-row { display:flex; gap:0.8rem; overflow:hidden; margin-bottom:1.15rem; }
+    .sk-banner { width:86%; aspect-ratio:4/3.8; border-radius:14px; flex-shrink:0; }
+    .sk-banner.last { width:78%; }
+    .sk-brand-title { height:18px; width:150px; margin-bottom:0.8rem; }
+    .sk-brand-copy { height:16px; width:124px; margin-bottom:1rem; }
+    .sk-products-title { height:18px; width:136px; margin-bottom:0.9rem; }
+    .sk-product-row { display:flex; gap:0.8rem; overflow:hidden; }
+    .sk-product { width:43.5%; flex-shrink:0; }
+    .sk-product-img { aspect-ratio:1/1; border-radius:12px; margin-bottom:0.45rem; }
+    .sk-product-line { height:14px; border-radius:8px; margin-bottom:0.3rem; }
+    .sk-product-line.short { width:72%; }
+    @keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
 
     /* ── SHOP HEADER ── */
     .shop-head {
@@ -246,6 +266,35 @@
     <div class="menu-foot" id="menuFoot"></div>
   </div>
 
+  <div class="loading-shell">
+    <div class="sk-chip-row">
+      <div class="skeleton sk-chip"></div>
+      <div class="skeleton sk-chip"></div>
+      <div class="skeleton sk-chip"></div>
+      <div class="skeleton sk-chip"></div>
+    </div>
+    <div class="skeleton sk-title"></div>
+    <div class="sk-banner-row">
+      <div class="skeleton sk-banner"></div>
+      <div class="skeleton sk-banner last"></div>
+    </div>
+    <div class="skeleton sk-brand-title"></div>
+    <div class="skeleton sk-brand-copy"></div>
+    <div class="skeleton sk-products-title"></div>
+    <div class="sk-product-row">
+      <div class="sk-product">
+        <div class="skeleton sk-product-img"></div>
+        <div class="skeleton sk-product-line"></div>
+        <div class="skeleton sk-product-line short"></div>
+      </div>
+      <div class="sk-product">
+        <div class="skeleton sk-product-img"></div>
+        <div class="skeleton sk-product-line"></div>
+        <div class="skeleton sk-product-line short"></div>
+      </div>
+    </div>
+  </div>
+
   <main id="mainContent">
   <!-- ── CHIPS ── -->
   <div class="chip-row" id="homeMenu">
@@ -368,6 +417,7 @@
 <script src="assets/store.js?v=16"></script>
 <script src="assets/components.js?v=2"></script>
 <script>
+  document.body.classList.add('pending');
   /* ── PRODUCTS — live from admin Store ── */
   let productImgIndex = 0;
   const deferWork = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1200 }) : setTimeout(fn, 1));
@@ -535,9 +585,14 @@
         openHomeSection(btn.dataset.sectionKey || '');
       });
     });
+    document.body.classList.remove('pending');
   }
 
-  renderHomepage();
+  if (location.protocol !== 'file:') {
+    Store.syncFromCloud().finally(renderHomepage);
+  } else {
+    renderHomepage();
+  }
   window.addEventListener('kanxi:store-changed', renderHomepage);
   if (new URLSearchParams(location.search).get('menu') === '1') {
     requestAnimationFrame(() => openMenu());
