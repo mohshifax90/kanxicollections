@@ -61,7 +61,7 @@
     .deferred-section { content-visibility: auto; contain-intrinsic-size: 900px; }
     .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
     .section-head h2 { font-size: 1rem; font-weight: 700; letter-spacing: 0; }
-    .see-all { font-size: 0.84rem; font-weight: 600; color: var(--accent); cursor: pointer; }
+    .see-all { font-size: 0.84rem; font-weight: 600; color: var(--accent); cursor: pointer; background: none; border: 0; padding: 0; font-family: inherit; }
 
     /* ── COLLECTIONS (big horizontal) ── */
     .h-scroll { display: flex; gap: 0.8rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 0.3rem; }
@@ -397,7 +397,7 @@
   }
 
   /* ── CMS-DRIVEN HOMEPAGE SECTIONS ── */
-  const section = (title, inner, seeAllHref, seeAllOnclick) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAllHref||seeAllOnclick?`<a class="see-all" href="${seeAllHref || '#'}" ${seeAllOnclick?`onclick="${seeAllOnclick}; return false;"`:''}>See all</a>`:''}</div>${inner}</div>`;
+  const section = (title, inner, seeAllHref, seeAllOnclick) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAllOnclick?`<button type="button" class="see-all" onclick="${seeAllOnclick}">See all</button>`:(seeAllHref?`<a class="see-all" href="${seeAllHref}">See all</a>`:'')}</div>${inner}</div>`;
   const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   const chunk = (arr, size=3) => arr.reduce((rows, item, index) => {
     if(index % size === 0) rows.push([]);
