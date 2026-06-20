@@ -105,6 +105,7 @@
     }
     .pcard { cursor: pointer; }
     .pcard-img { position: relative; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: var(--gray-100); margin-bottom: 0.5rem; border:1px solid #e3e3e3; }
+    .pcard.card-portrait .pcard-img { aspect-ratio: 0.82 / 1.2; }
     .pcard-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s; }
     .pcard:hover .pcard-img img { transform: scale(1.04); }
     .pcard-badge { position: absolute; bottom: 0.55rem; left: 0.55rem; background: rgba(26,24,20,0.56); color: #fff; font-size: 0.66rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 5px; letter-spacing: 0.02em; backdrop-filter: blur(2px); }
@@ -380,11 +381,11 @@
     const imgAttr = imgAttrs('product', productImgIndex++, p.img);
     const old = p.old ? `<span class="old">MVR ${p.old.toLocaleString()}</span>` : '';
     const badge = p.badge ? `<span class="pcard-badge ${p.bgold?'gold':''}">${p.badge}</span>` : '';
-    return `<div class="pcard">
-      <a href="post.html?id=${p.id}&cat=${p.cat}">
-        <div class="pcard-img">
-          ${badge}
-          <img src="${p.img}" alt="${p.name}" ${imgAttr}/>
+      return `<div class="pcard ${p.cardType==='portrait'?'card-portrait':''}">
+        <a href="post.html?id=${p.id}&cat=${p.cat}">
+          <div class="pcard-img">
+            ${badge}
+            <img src="${p.img}" alt="${p.name}" ${imgAttr}/>
         </div>
       </a>
       <div class="pcard-name-row">

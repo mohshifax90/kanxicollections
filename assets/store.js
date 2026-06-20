@@ -1153,6 +1153,7 @@ const Store = window.Store = (() => {
       return { id:p.id, cat:cat.slug||'', name:p.name, brand:p.brand||'Kanxi Collection',
         price:this.priceOf(p), old:null, img:p.image, images:p.images||[p.image],
         badge:b?b.text:null, bgold:b?b.gold:false, status:s.text, sclass:s.cls,
+        cardType: cat.cardType || (cat.slug === 'clothing' ? 'portrait' : 'square'),
         variantType:p.variantType||'none', options:p.variants||[],
         sizes: (['size','volume'].includes(p.variantType)?vals:[]),
         colors: (p.variantType==='shade'?vals:[]),
