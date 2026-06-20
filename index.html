@@ -288,6 +288,17 @@
   <a class="cs-row" href="shop.html?cat=sale"><span>Sale</span><span class="cs-chev">›</span></a>
   <a class="cs-row" href="shop.html?cat=clothing"><span>All products</span></a>
 </div>
+<div class="cat-sheet-bg" id="homeSectionBg" onclick="closeHomeSectionSheet()"></div>
+<div class="cat-sheet" id="homeSectionSheet">
+  <div class="cs-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1rem 1rem;border-bottom:1px solid var(--line);gap:1rem;">
+    <h3 class="cs-title" id="homeSectionTitle" style="padding:0;border:none;text-align:left;flex:1;">Section</h3>
+    <button class="icon-btn" style="width:34px;height:34px;border:1px solid var(--line);border-radius:10px;" onclick="closeHomeSectionSheet()">✕</button>
+  </div>
+  <div class="section" style="padding-top:1rem;">
+    <div id="homeSectionBody"></div>
+  </div>
+</div>
 <style>
   .cat-sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;}
   .cat-sheet-bg.show{display:block;}
@@ -326,6 +337,16 @@
 <script>
   function openCats(){ document.getElementById('catBg').classList.add('show'); document.getElementById('catSheet').classList.add('show'); }
   function closeCats(){ document.getElementById('catBg').classList.remove('show'); document.getElementById('catSheet').classList.remove('show'); }
+  function openHomeSectionSheet(title, inner){
+    document.getElementById('homeSectionTitle').textContent = title || 'Section';
+    document.getElementById('homeSectionBody').innerHTML = inner || '';
+    document.getElementById('homeSectionBg').classList.add('show');
+    document.getElementById('homeSectionSheet').classList.add('show');
+  }
+  function closeHomeSectionSheet(){
+    document.getElementById('homeSectionBg').classList.remove('show');
+    document.getElementById('homeSectionSheet').classList.remove('show');
+  }
 
   /* ── PROFILE / MENU DRAWER ── */
   function openMenu(){ renderMenu(); document.getElementById('menuBg').classList.add('show'); document.getElementById('menuDrawer').classList.add('show'); }
@@ -427,6 +448,34 @@
       image:Store.imageForTag(linkValue) || ''
     };
   }
+  function homepageSectionData(section){
+    const limit = Math.max(2, +(section && section.limit || 8));
+    const type = section && section.sourceType || 'category';
+    if(type === 'bestsellers'){
+      return { items:Store.bestSellers(limit), href:'shop.html?tag=t3', label:'Best Sellers' };
+    }
+    if(type === 'offers'){
+      return { items:Store.offers(limit), href:'shop.html?tag=t2', label:'Offers' };
+    }
+    if(type === 'category'){
+      const cat = Store.categoryBySlug(section.sourceValue)||{};
+      return { items:Store.cardsBySlug(section.sourceValue).slice(0, limit), href:`shop.html?cat=${encodeURIComponent(section.sourceValue||'')}`, label:cat.name || 'Category' };
+    }
+    if(type === 'brand'){
+      const brand = Store.brandById(section.sourceValue)||{};
+      return { items:Store.productsByBrand(brand.name||'').slice(0, limit), href:`shop.html?brand=${encodeURIComponent(brand.name||'')}`, label:brand.name || 'Brand' };
+    }
+    const foundTag = Store.list('tags').find(t=>t.id===section.sourceValue)||{};
+    return { items:Store.productsByTag(section.sourceValue).slice(0, limit), href:`shop.html?tag=${encodeURIComponent(section.sourceValue||'')}`, label:foundTag.name || 'Tag' };
+  }
+  function openHomeSection(key){
+    const hp = Store.getHomepage();
+    const sections = Array.isArray(hp.sections) ? hp.sections : [];
+    const sectionData = sections.find(section => section.id === key);
+    if(!sectionData) return;
+    const data = homepageSectionData(sectionData);
+    openHomeSectionSheet(sectionData.title || data.label, prodGrid(data.items || []));
+  }
 
   function renderHomepage(){
     const hp = Store.getHomepage();
@@ -463,15 +512,23 @@
         <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
       : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
 
-    const best = Store.bestSellers(hp.bestsellers.limit||8);
-    const offers = Store.offers(hp.offers.limit||12);
     const more = Store.storeProducts().slice(0, 9).map(p => Store.card(p));
+    const hpSections = Array.isArray(hp.sections) && hp.sections.length
+      ? hp.sections.filter(section => section && section.enabled !== false)
+      : [
+          { id:'legacy_best', title:hp.bestsellers && hp.bestsellers.title || 'Best Sellers', sourceType:'bestsellers', sourceValue:'', limit:hp.bestsellers && hp.bestsellers.limit || 8, enabled:true },
+          { id:'legacy_offer', title:hp.offers && hp.offers.title || 'Offers', sourceType:'offers', sourceValue:'', limit:hp.offers && hp.offers.limit || 8, enabled:true }
+        ];
+    const dynamicSections = hpSections.map(sectionData => {
+      const data = homepageSectionData(sectionData);
+      if(!data.items || !data.items.length) return '';
+      return `<div class="deferred-section">${section(sectionData.title || data.label, prodTeaseRows(data.items), `javascript:openHomeSection(${JSON.stringify(sectionData.id)})`)}</div>`;
+    }).join('');
 
     document.getElementById('homeSections').innerHTML =
       section(hp.collections.title, collHTML) +
       section(hp.brands.title, brandHTML) +
-      `<div class="deferred-section">${section(hp.bestsellers.title, prodTeaseRows(best))}</div>` +
-      (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodTeaseRows(offers))}</div>` : '');
+      dynamicSections;
 
     document.getElementById('moreGrid').outerHTML = `<div class="tease-rows" id="moreGrid">${chunk(more, 3).map(row => `<div class="tease-row">${row.map(cardHTML).join('')}</div>`).join('')}</div>`;
 

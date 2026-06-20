@@ -337,8 +337,20 @@
     if(type==='category') return Store.list('categories').map(c=>`<option value="${c.slug}" ${c.slug===selected?'selected':''}>${esc(c.name)}</option>`).join('');
     return Store.list('tags').map(t=>`<option value="${t.id}" ${t.id===selected?'selected':''}>${esc(t.name)}</option>`).join('');
   }
+  function hpSectionOptions(type, selected){
+    if(type==='category') return Store.list('categories').map(c=>`<option value="${c.slug}" ${c.slug===selected?'selected':''}>${esc(c.name)}</option>`).join('');
+    if(type==='brand') return Store.allBrands().map(b=>`<option value="${b.id}" ${b.id===selected?'selected':''}>${esc(b.name)} · ${esc(b.categoryName||'')}</option>`).join('');
+    if(type==='tag') return Store.list('tags').map(t=>`<option value="${t.id}" ${t.id===selected?'selected':''}>${esc(t.name)}</option>`).join('');
+    return '';
+  }
   function homepage(){ _hp=JSON.parse(JSON.stringify(Store.getHomepage())); renderHP(); }
   function renderHP(){
+    if(!Array.isArray(_hp.sections) || !_hp.sections.length){
+      _hp.sections = [
+        { id:Store.uid('hs_'), title:_hp.bestsellers && _hp.bestsellers.title || 'Best Sellers', sourceType:'bestsellers', sourceValue:'', limit:_hp.bestsellers && _hp.bestsellers.limit || 8, enabled:true },
+        { id:Store.uid('hs_'), title:_hp.offers && _hp.offers.title || 'Offers', sourceType:'offers', sourceValue:'', limit:_hp.offers && _hp.offers.limit || 8, enabled:true },
+      ];
+    }
     const brands=Store.allBrands();
     const brandsById={}; brands.forEach(b=>brandsById[b.id]=b);
     const selectedBrands = `${_hp.brands.brandIds.length?`<div class="px-4 pt-4"><p class="text-xs text-zinc-400 mb-2">Featured order — drag or use arrows to reorder</p><div class="flex flex-wrap gap-2">${_hp.brands.brandIds.map((bid,i)=>{ const b=brandsById[bid]; if(!b)return ''; return `<div ondragover="dragOver(event)" ondrop="dropAt(event,'brand',${i})" class="flex items-center gap-1.5 border border-kacc bg-kcream/40 rounded-full pl-1.5 pr-2 py-1">${`<span draggable="true" ondragstart="dragStart(event,'brand',${i})" class="grid place-items-center text-zinc-400 cursor-grab active:cursor-grabbing" title="Drag to reorder">${ic('grip-vertical','w-3.5 h-3.5')}</span>`}${b.logo?`<img src="${b.logo}" class="w-5 h-5 rounded-full object-contain"/>`:''}<span class="text-xs font-semibold">${b.name}</span><div class="flex items-center gap-1 ml-1"><button onclick="moveBrand(${i},-1)" ${i===0?'disabled':''} class="text-zinc-400 hover:text-kink disabled:opacity-30">${ic('chevron-left','w-3 h-3')}</button><button onclick="moveBrand(${i},1)" ${i===_hp.brands.brandIds.length-1?'disabled':''} class="text-zinc-400 hover:text-kink disabled:opacity-30">${ic('chevron-right','w-3 h-3')}</button><button onclick="toggleBrand('${bid}')" class="text-zinc-400 hover:text-red-600">${ic('x','w-3 h-3')}</button></div></div>`; }).join('')}</div></div>`:''}`;
@@ -363,13 +375,52 @@
             <span class="text-sm font-medium">${b.name}</span><span class="text-[0.7rem] text-zinc-400 ml-auto">${b.categoryName}</span></div>`).join('')}</div>`
           :`<p class="p-5 text-sm text-zinc-400">No brands yet — add brands in <b>Categories</b> first.</p>`)+
       `<div class="h-4"></div>`+
-      /* Best Sellers */
-      card(`Section 3`, titleInput('_hp.bestsellers.title',_hp.bestsellers.title)+`<span class="text-xs text-zinc-400 ml-2">Top <input type="number" min="2" value="${_hp.bestsellers.limit||8}" onchange="_hp.bestsellers.limit=+this.value||8;renderHP()" class="w-14 px-2 py-1 border border-zinc-300 rounded text-xs"/> by sales</span>`,
-        autoPreview(Store.bestSellers(_hp.bestsellers.limit||8),true))+
-      `<div class="h-4"></div>`+
-      /* Offers */
-      card(`Section 4`, titleInput('_hp.offers.title',_hp.offers.title)+`<span class="text-xs text-zinc-400 ml-2">Show <input type="number" min="2" value="${_hp.offers.limit||12}" onchange="_hp.offers.limit=+this.value||12;renderHP()" class="w-14 px-2 py-1 border border-zinc-300 rounded text-xs"/></span>`,
-        autoPreview(Store.offers(_hp.offers.limit||12),false));
+      card(`Product Sections`,`<span class="text-xs text-zinc-400">Best Sellers, Offers, Skincare, Clothing, Tags, Brands, or any category section for home.</span>`,
+        `<div class="p-4 space-y-3">${(_hp.sections||[]).map(productSectionCard).join('')}</div>
+         <div class="px-4 pb-4"><button onclick="addHPSection()" class="${btn.light} ${btn.sm}">${ic('plus','w-4 h-4')} Add section</button></div>`);
+  }
+  function hpSectionData(section){
+    const type = section.sourceType || 'category';
+    const limit = Math.max(2, +(section.limit || 8));
+    if(type === 'bestsellers') return { items:Store.bestSellers(limit), href:'shop.html?tag=t3', label:'Best Sellers' };
+    if(type === 'offers') return { items:Store.offers(limit), href:'shop.html?tag=t2', label:'Offers' };
+    if(type === 'category'){
+      const cat = Store.categoryBySlug(section.sourceValue)||{};
+      return { items:Store.cardsBySlug(section.sourceValue).slice(0, limit), href:`shop.html?cat=${encodeURIComponent(section.sourceValue||'')}`, label:cat.name || 'Category' };
+    }
+    if(type === 'brand'){
+      const brand = Store.brandById(section.sourceValue)||{};
+      return { items:Store.productsByBrand(brand.name||'').slice(0, limit), href:`shop.html?brand=${encodeURIComponent(brand.name||'')}`, label:brand.name || 'Brand' };
+    }
+    const tag = Store.list('tags').find(t=>t.id===section.sourceValue)||{};
+    return { items:Store.productsByTag(section.sourceValue).slice(0, limit), href:`shop.html?tag=${encodeURIComponent(section.sourceValue||'')}`, label:tag.name || 'Tag' };
+  }
+  function productSectionCard(section,i){
+    const data = hpSectionData(section);
+    const needsTarget = !['bestsellers','offers'].includes(section.sourceType||'');
+    return `<div class="border border-zinc-200 rounded-xl p-3 space-y-3" ondragover="dragOver(event)" ondrop="dropAt(event,'section',${i})">
+      <div class="flex items-center gap-2">
+        <span draggable="true" ondragstart="dragStart(event,'section',${i})" class="bg-zinc-100 rounded-md w-7 h-7 grid place-items-center text-zinc-500 cursor-grab active:cursor-grabbing" title="Drag to reorder">${ic('grip-vertical','w-4 h-4')}</span>
+        <input value="${esc(section.title||'')}" oninput="_hp.sections[${i}].title=this.value" placeholder="${esc(data.label||'Section title')}" class="flex-1 px-2 py-1.5 border border-zinc-300 rounded text-xs outline-none focus:border-kink"/>
+        <label class="flex items-center gap-1 text-[0.72rem] text-zinc-500"><input type="checkbox" ${section.enabled!==false?'checked':''} onchange="_hp.sections[${i}].enabled=this.checked"/> Show</label>
+        <button onclick="_hp.sections.splice(${i},1);renderHP()" class="text-red-600">${ic('trash-2','w-4 h-4')}</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+        <select onchange="_hp.sections[${i}].sourceType=this.value; _hp.sections[${i}].sourceValue=''; renderHP()" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs">
+          <option value="bestsellers" ${(section.sourceType||'')==='bestsellers'?'selected':''}>Best Seller tag products</option>
+          <option value="offers" ${(section.sourceType||'')==='offers'?'selected':''}>Offer section</option>
+          <option value="category" ${(section.sourceType||'')==='category'?'selected':''}>Product Category</option>
+          <option value="tag" ${(section.sourceType||'')==='tag'?'selected':''}>Tag</option>
+          <option value="brand" ${(section.sourceType||'')==='brand'?'selected':''}>Brand</option>
+        </select>
+        ${needsTarget ? `<select onchange="_hp.sections[${i}].sourceValue=this.value; renderHP()" class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs">
+          <option value="">Choose target…</option>${hpSectionOptions(section.sourceType||'category', section.sourceValue||'')}
+        </select>` : `<div class="px-2 py-1.5 border border-zinc-200 rounded text-xs text-zinc-400 bg-zinc-50 grid place-items-center">${esc(data.label||'Auto')}</div>`}
+        <label class="flex items-center gap-2 px-2 py-1.5 border border-zinc-300 rounded text-xs">Show <input type="number" min="2" value="${section.limit||8}" onchange="_hp.sections[${i}].limit=Math.max(2,+this.value||8)" class="w-14 px-2 py-1 border border-zinc-300 rounded text-xs"/></label>
+        <a href="${data.href||'#'}" target="_blank" class="px-2 py-1.5 border border-zinc-200 rounded text-xs text-zinc-500 truncate ${data.href?'':'pointer-events-none opacity-40'}">View: ${esc(data.label||'Section')}</a>
+      </div>
+      ${autoPreview((data.items||[]).slice(0, Math.max(2, +(section.limit||8))), (section.sourceType||'')==='bestsellers')}
+    </div>`;
   }
   function menuCard(m,i){
     const label = m.label || (m.linkType==='category' ? ((Store.categoryBySlug(m.linkValue)||{}).name||'Category') : ((Store.list('tags').find(t=>t.id===m.linkValue)||{}).name||'Tag'));
@@ -392,7 +443,7 @@
   }
   function ccCard(c,i){ const meta=hpCardMeta(c), img=c.image||meta.image||'';
     return `<div class="border border-zinc-200 rounded-xl overflow-hidden" ondragover="dragOver(event)" ondrop="dropAt(event,'cc',${i})">
-      <div class="relative bg-zinc-100 overflow-hidden" style="width:100%;padding-top:110%">${img?`<img src="${img}" class="pointer-events-none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/>`:`<div class="absolute inset-0 grid place-items-center text-zinc-300">${ic('image','w-8 h-8')}</div>`}
+      <div class="relative bg-zinc-100 overflow-hidden" style="width:100%;aspect-ratio:${CC_ASPECT}">${img?`<img src="${img}" class="pointer-events-none" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/>`:`<div class="absolute inset-0 grid place-items-center text-zinc-300">${ic('image','w-8 h-8')}</div>`}
         <span draggable="true" ondragstart="dragStart(event,'cc',${i})" class="absolute top-1.5 left-1.5 bg-white/90 rounded-md w-7 h-7 grid place-items-center text-zinc-500 shadow cursor-grab active:cursor-grabbing" title="Drag to reorder">${ic('grip-vertical','w-4 h-4')}</span>
         <label class="absolute bottom-1.5 right-1.5 bg-white/90 rounded-lg px-2 py-1 text-[0.62rem] font-semibold cursor-pointer shadow">Upload<input type="file" accept="image/*" class="hidden" onchange="onCCImage(${i},this)"/></label>
         ${c.image?`<button onclick="adjustCCImage(${i})" class="absolute bottom-1.5 left-1.5 bg-white/90 rounded-lg px-2 py-1 text-[0.62rem] font-semibold shadow" title="Adjust image">Adjust</button>`:''}
@@ -417,6 +468,7 @@
     :'<p class="text-sm text-zinc-400">No items yet.</p>'}</div>`; }
   function addCC(){ _hp.collections.cards.push({id:Store.uid('cc_'),caption:'',tagId:'',linkType:'tag',linkValue:'',image:''}); renderHP(); }
   function addMenuItem(){ _hp.menu.items.push({id:Store.uid('hm_'),label:'',linkType:'category',linkValue:''}); renderHP(); }
+  function addHPSection(){ _hp.sections.push({id:Store.uid('hs_'), title:'', sourceType:'category', sourceValue:'', limit:8, enabled:true}); renderHP(); }
   function setBrandEnabled(id, enabled){
     const a=_hp.brands.brandIds;
     const i=a.indexOf(id);
@@ -440,7 +492,7 @@
   function dragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
   function dropAt(e,kind,i){ e.preventDefault(); if(!_dragFrom||_dragFrom.kind!==kind){ _dragFrom=null; return; }
     const from=_dragFrom.i, to=+i; _dragFrom=null; if(from===to) return;
-    const a = kind==='cc' ? _hp.collections.cards : kind==='menu' ? _hp.menu.items : _hp.brands.brandIds;
+    const a = kind==='cc' ? _hp.collections.cards : kind==='menu' ? _hp.menu.items : kind==='section' ? _hp.sections : _hp.brands.brandIds;
     const [m]=a.splice(from,1); a.splice(to,0,m); renderHP();
   }
   /* crop-resize an image to a target aspect (cover) so it fits the homepage card exactly */
@@ -496,7 +548,7 @@
     closeImageAdjust();
     if(done)done(data);
   }
-  const CC_ASPECT = 4/4.4; // homepage collection-card aspect
+  const CC_ASPECT = 4/3.8; // homepage collection-card aspect
   function onCCImage(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust homepage image',aspect:CC_ASPECT,outW:560,q:0.75,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); r.readAsDataURL(f); input.value=''; }
   function adjustCCImage(i){ const src=_hp.collections.cards[i]&&_hp.collections.cards[i].image; if(!src)return; openImageAdjust({src,title:'Adjust homepage image',aspect:CC_ASPECT,outW:560,q:0.75,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); }
   async function saveHP(){ try{ await Store.saveHomepage(_hp); toast('Homepage saved ✓'); }catch(e){ alert('Could not save — storage full. Use smaller images.'); } }

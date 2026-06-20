@@ -187,6 +187,12 @@ const Store = window.Store = (() => {
       brands: { title:'Shop by Brand', brandIds:[] },
       bestsellers: { title:'Best Sellers', limit:8 },
       offers: { title:'Offers', limit:8 },
+      sections: [
+        { id:uid('hs_'), title:'Best Sellers', sourceType:'bestsellers', sourceValue:'', limit:8, enabled:true },
+        { id:uid('hs_'), title:'Offers', sourceType:'offers', sourceValue:'', limit:8, enabled:true },
+        { id:uid('hs_'), title:'Skincare', sourceType:'category', sourceValue:'skincare', limit:8, enabled:true },
+        { id:uid('hs_'), title:'Clothing', sourceType:'category', sourceValue:'clothing', limit:8, enabled:true },
+      ],
     };
   }
 
@@ -628,6 +634,20 @@ const Store = window.Store = (() => {
         image:sanitizeImage(c.image)
       }));
     }
+    if(!Array.isArray(hp.sections) || !hp.sections.length){
+      hp.sections = [
+        { id:uid('hs_'), title:hp.bestsellers && hp.bestsellers.title || 'Best Sellers', sourceType:'bestsellers', sourceValue:'', limit:hp.bestsellers && hp.bestsellers.limit || 8, enabled:true },
+        { id:uid('hs_'), title:hp.offers && hp.offers.title || 'Offers', sourceType:'offers', sourceValue:'', limit:hp.offers && hp.offers.limit || 8, enabled:true },
+      ];
+    }
+    hp.sections = hp.sections.map(section => ({
+      id:section.id || uid('hs_'),
+      title:String(section.title || '').trim() || 'Homepage Section',
+      sourceType:section.sourceType || 'category',
+      sourceValue:section.sourceValue || '',
+      limit:Math.max(2, +(section.limit || 8)),
+      enabled:section.enabled !== false
+    }));
     db.products = (db.products||[]).map(p=>({
       ...p,
       image:sanitizeImage(p.image),
