@@ -549,8 +549,10 @@
     if(done)done(data);
   }
   const CC_ASPECT = 4/3.8; // homepage collection-card aspect
-  function onCCImage(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust homepage image',aspect:CC_ASPECT,outW:560,q:0.75,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); r.readAsDataURL(f); input.value=''; }
-  function adjustCCImage(i){ const src=_hp.collections.cards[i]&&_hp.collections.cards[i].image; if(!src)return; openImageAdjust({src,title:'Adjust homepage image',aspect:CC_ASPECT,outW:560,q:0.75,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); }
+  const CC_EXPORT_WIDTH = 1440;
+  const CC_EXPORT_QUALITY = 0.88;
+  function onCCImage(i,input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust homepage image',aspect:CC_ASPECT,outW:CC_EXPORT_WIDTH,q:CC_EXPORT_QUALITY,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); r.readAsDataURL(f); input.value=''; }
+  function adjustCCImage(i){ const src=_hp.collections.cards[i]&&_hp.collections.cards[i].image; if(!src)return; openImageAdjust({src,title:'Adjust homepage image',aspect:CC_ASPECT,outW:CC_EXPORT_WIDTH,q:CC_EXPORT_QUALITY,onApply:d=>{ _hp.collections.cards[i].image=d; renderHP(); }}); }
   async function saveHP(){ try{ await Store.saveHomepage(_hp); toast('Homepage saved ✓'); }catch(e){ alert('Could not save — storage full. Use smaller images.'); } }
 
   /* ════════ DASHBOARD ════════ */

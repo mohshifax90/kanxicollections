@@ -254,12 +254,6 @@
   <!-- ── HOMEPAGE SECTIONS (CMS-driven) ── -->
   <div id="homeSections"></div>
 
-  <!-- ── MORE FROM THIS SHOP ── -->
-  <div class="section deferred-section">
-    <div class="section-head"><h2>More from this shop</h2><span class="see-all">See all</span></div>
-    <div class="tease-rows" id="moreGrid"></div>
-  </div>
-
   <!-- ── FOOTER ── -->
   </main>
 
@@ -403,7 +397,7 @@
   }
 
   /* ── CMS-DRIVEN HOMEPAGE SECTIONS ── */
-  const section = (title, inner, seeAll) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAll?`<a class="see-all" href="${seeAll}">See all</a>`:''}</div>${inner}</div>`;
+  const section = (title, inner, seeAllHref, seeAllOnclick) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAllHref||seeAllOnclick?`<a class="see-all" href="${seeAllHref || '#'}" ${seeAllOnclick?`onclick="${seeAllOnclick}; return false;"`:''}>See all</a>`:''}</div>${inner}</div>`;
   const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   const chunk = (arr, size=3) => arr.reduce((rows, item, index) => {
     if(index % size === 0) rows.push([]);
@@ -417,7 +411,7 @@
   const prodGrid = arr => `<div class="grid-2">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   function imgAttrs(kind, index, url=''){
     if(kind==='collection'){
-      return responsiveAttrs(url, '(max-width: 520px) 86vw, 360px', 640, 704, index===0);
+      return responsiveAttrs(url, '(max-width: 520px) 86vw, 360px', 1440, 1368, index===0);
     }
     if(kind==='brand') return responsiveAttrs(url, '80px', 80, 80, false);
     return responsiveAttrs(url, '(max-width: 520px) 46vw, 220px', 320, 320, false);
@@ -512,7 +506,6 @@
         <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
       : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
 
-    const more = Store.storeProducts().slice(0, 9).map(p => Store.card(p));
     const hpSections = Array.isArray(hp.sections) && hp.sections.length
       ? hp.sections.filter(section => section && section.enabled !== false)
       : [
@@ -522,15 +515,13 @@
     const dynamicSections = hpSections.map(sectionData => {
       const data = homepageSectionData(sectionData);
       if(!data.items || !data.items.length) return '';
-      return `<div class="deferred-section">${section(sectionData.title || data.label, prodTeaseRows(data.items), `javascript:openHomeSection(${JSON.stringify(sectionData.id)})`)}</div>`;
+      return `<div class="deferred-section">${section(sectionData.title || data.label, prodTeaseRows(data.items), '', `openHomeSection(${JSON.stringify(sectionData.id)})`)}</div>`;
     }).join('');
 
     document.getElementById('homeSections').innerHTML =
       section(hp.collections.title, collHTML) +
       section(hp.brands.title, brandHTML) +
       dynamicSections;
-
-    document.getElementById('moreGrid').outerHTML = `<div class="tease-rows" id="moreGrid">${chunk(more, 3).map(row => `<div class="tease-row">${row.map(cardHTML).join('')}</div>`).join('')}</div>`;
 
     document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
       document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
