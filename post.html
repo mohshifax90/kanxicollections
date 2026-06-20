@@ -221,6 +221,27 @@
 
   const id = new URLSearchParams(location.search).get('id');
   let sp = null, c = null, imgs = [], selVar = null;
+  function variantGallery(variant){
+    const base = (c && c.images && c.images.length) ? c.images.slice() : [c && c.img].filter(Boolean);
+    if(!variant) return base;
+    const own = (Array.isArray(variant.images) ? variant.images : [variant.image]).filter(Boolean);
+    if(!own.length) return base;
+    const seen = new Set();
+    return own.concat(base).filter(src => {
+      const key = String(src || '');
+      if(!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  function setGallery(activeIndex=0){
+    imgs = variantGallery(selVar);
+    gi = Math.min(Math.max(0, activeIndex), Math.max(0, imgs.length - 1));
+    const mainImg = document.getElementById('mainImg');
+    mainImg.src = imgs[gi] || c.img;
+    mainImg.alt = c.name;
+    document.getElementById('dots').innerHTML = imgs.map((_,i)=>`<span class="gdot ${i===gi?'active':''}"></span>`).join('');
+  }
 
   function formatPrice(price, old){
     return 'MVR ' + Number(price || 0).toLocaleString() + (old ? `<span class="old">MVR ${Number(old).toLocaleString()}</span>` : '');
@@ -266,13 +287,9 @@
     sp = Store.get('products', id) || Store.storeProducts()[0] || null;
     if(!sp) return false;
     c = Store.card(sp);
-    imgs = (c.images && c.images.length) ? c.images : [c.img];
     selVar = (sp.variants || []).find(v => Store.availableStockOfVariant(sp.id, v.id) > 0) || (sp.variants && sp.variants[0]) || null;
     gi = 0;
-
-    const mainImg = document.getElementById('mainImg');
-    mainImg.src = imgs[0];
-    mainImg.alt = c.name;
+    setGallery(0);
     document.getElementById('pName').textContent = c.name;
     renderPrice();
     const detailWrap = document.getElementById('productDetails');
@@ -292,8 +309,6 @@
     }
     document.getElementById('ribbon').style.display = c.old ? '' : 'none';
 
-    document.getElementById('dots').innerHTML = imgs.map((_,i)=>`<span class="gdot ${i===0?'active':''}"></span>`).join('');
-
     const vt = sp.variantType || 'none';
     const opts = sp.variants || [];
     const shadeOpt = document.getElementById('shadeOpt');
@@ -308,7 +323,7 @@
       document.getElementById('shadeLabel').textContent = 'Shade:';
       document.getElementById('swatches').innerHTML = opts.map((v,i)=>{
         const st = Store.availableStockOfVariant(sp.id, v.id);
-        const preview = imgs[i] || imgs[0];
+        const preview = (Array.isArray(v.images) && v.images[0]) || v.image || c.img;
         const isActive = selVar && selVar.id === v.id;
         return `<div class="swatch ${isActive?'active':''} ${st===0?'sold':''} ${st>0 && st<=3?'low':''}" onclick="pickVar('${v.id}',this)">
           <div class="swatch-img">${preview?`<img src="${preview}" alt="${v.value}" loading="lazy" decoding="async"/>`:`<div class="swatch-color" style="background:${v.color||'#ddd'}"></div>`}</div>
@@ -351,6 +366,7 @@
     selVar = next;
     el.parentElement.querySelectorAll('.swatch,.size').forEach(x=>x.classList.remove('active'));
     el.classList.add('active');
+    setGallery(0);
     renderPrice();
     renderSelectionState();
   }
@@ -368,7 +384,7 @@
     if ((vt!=='none') && !selVar) { showToast('Please select an option'); return false; }
     const stock = activeVariantStock();
     if(stock <= 0){ showToast('This variant is out of stock'); return false; }
-    return addToCart({ id:id + (selVar?('_'+selVar.id):''), name:c.brand+' '+c.name, price:curPrice(), size:variantLabel, img:imgs[0] });
+    return addToCart({ id:id + (selVar?('_'+selVar.id):''), name:c.brand+' '+c.name, price:curPrice(), size:variantLabel, img:(variantGallery(selVar)[0] || c.img) });
   }
   function doBuyNow(){ if(doAddToCart()) setTimeout(()=>location.href='checkout.html', 500); }
   document.querySelector('.gmain').addEventListener('click', () => {

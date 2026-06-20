@@ -88,6 +88,17 @@
     .location-card{margin-top:1rem;padding:1rem;border-radius:18px;border:1px solid #dbe4ff;background:#f8fbff}
     .location-card-title{font-size:.88rem;font-weight:800;color:var(--ink)}
     .location-card-copy{font-size:.82rem;color:var(--muted);line-height:1.55;margin-top:.2rem}
+    .payment-panel{margin-top:1rem;padding:1rem;border-radius:18px;border:1px solid #e7eaf3;background:#fbfcff}
+    .payment-grid{display:grid;gap:.75rem;margin-top:.8rem}
+    .pay-option{border:1px solid var(--line);border-radius:16px;padding:.9rem;background:#fff;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem}
+    .pay-option.active{border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,92,240,.10)}
+    .pay-title{font-size:.92rem;font-weight:800;color:var(--ink)}
+    .pay-copy{font-size:.8rem;color:var(--muted);line-height:1.5;margin-top:.15rem}
+    .pay-dot{width:1.05rem;height:1.05rem;border-radius:999px;border:2px solid #cbd5e1;flex:0 0 auto;margin-top:.15rem}
+    .pay-option.active .pay-dot{border-color:var(--blue);background:var(--blue)}
+    .slip-box{display:grid;gap:.7rem;margin-top:.8rem}
+    .slip-thumb{width:100%;max-width:180px;aspect-ratio:4/3;border:1px dashed #cbd5e1;border-radius:16px;background:#fff;display:grid;place-items:center;overflow:hidden;cursor:pointer}
+    .slip-thumb img{width:100%;height:100%;object-fit:cover}
     .actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:none;border-radius:14px;padding:.92rem 1rem;font-weight:800;cursor:pointer}
     .btn-primary{background:var(--blue);color:#fff}
@@ -99,6 +110,13 @@
     .field input{width:100%;border:1px solid var(--line);border-radius:14px;padding:.92rem .95rem;background:#fff;outline:none}
     .field input:focus{border-color:var(--blue)}
     .helper{font-size:.8rem;color:var(--muted);line-height:1.5}
+    .otp-actions{display:flex;gap:.7rem;flex-wrap:wrap}
+    .otp-box{display:grid;gap:.7rem;padding:.85rem;border:1px solid #e7eaf3;border-radius:18px;background:#fbfcff}
+    .otp-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+    .otp-row strong{font-size:.92rem}
+    .otp-input{width:100%;border:1px solid var(--line);border-radius:14px;padding:.92rem .95rem;background:#fff;outline:none;text-align:center;font-size:1.1rem;font-weight:800;letter-spacing:.22em}
+    .otp-input:focus{border-color:var(--blue)}
+    .inline-btn{background:none;border:none;color:var(--blue);font-weight:700;padding:0;cursor:pointer}
     .empty{padding:1.6rem;text-align:center;color:var(--muted)}
     .toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%) translateY(2rem);background:#111827;color:#fff;padding:.82rem 1.15rem;border-radius:12px;font-size:.84rem;opacity:0;transition:.24s;z-index:20}
     .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
@@ -119,15 +137,7 @@
 
     <div id="verifyCard" class="card verify-card">
       <div class="section-title">Verify Order</div>
-      <div class="verify-copy">Enter the 7-digit mobile number used for the order if it is not already filled in from your SMS link.</div>
-      <div class="field">
-        <label for="phoneInput">Mobile Number</label>
-        <input id="phoneInput" inputmode="numeric" maxlength="7" placeholder="Enter 7-digit mobile number"/>
-      </div>
-      <div class="actions">
-        <button class="btn btn-primary" type="button" onclick="verifyOrder()">View Order</button>
-      </div>
-      <div class="helper">We only show receipt details for the phone number tied to this order.</div>
+      <div id="verifyCardInner"></div>
     </div>
 
     <div id="orderPanel" class="stack" style="display:none"></div>
@@ -143,6 +153,9 @@
     const receiptRef = (query.get('r') || '').trim();
     const phoneFromUrl = ((query.get('phone') || '').replace(/\D/g,'')).slice(-7);
     const fullPhoneFromUrl = (query.get('phone') || '').replace(/\D/g,'');
+    let verifyState = { mode:'legacy', step:'phone', requestId:'', order:null, phone:'' };
+    let selectedPaymentMethod = '';
+    let transferSlipImage = '';
     const MVR = n => 'MVR ' + (+n || 0).toLocaleString();
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     function showToast(msg){
@@ -153,7 +166,22 @@
       clearTimeout(window._toastTimer);
       window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2300);
     }
+    async function callOtpApi(path, payload){
+      const response = await fetch(path, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(payload)
+      });
+      let data = {};
+      try{ data = await response.json(); }catch(_){}
+      if(!response.ok) throw new Error(data.error || data.message || 'OTP request failed');
+      return data;
+    }
     function phoneKey(value){ return Store.phoneKey ? Store.phoneKey(value) : String(value || '').replace(/\D/g,''); }
+    function maskPhone(phone){
+      const digits = String(phone || '').replace(/\D/g,'');
+      return digits.length >= 7 ? `${digits.slice(0,3)} ${digits.slice(3)}` : digits;
+    }
     function moneyTotal(order){
       return (order.items || []).reduce((sum, item) => sum + (+item.price || 0) * (+item.qty || 0), 0) + (+order.shipping || 0);
     }
@@ -191,6 +219,55 @@
     function hasGeo(order){
       const meta = order && order.addressMeta;
       return !!(meta && meta.lat != null && meta.lng != null && !Number.isNaN(+meta.lat) && !Number.isNaN(+meta.lng));
+    }
+    function paymentChoices(order){
+      return Store.paymentOptionsForOrder ? Store.paymentOptionsForOrder(order) : [];
+    }
+    function paySubtitle(key){
+      if(key === 'transfer') return 'Upload transfer slip for admin verification.';
+      if(key === 'card') return 'Complete payment now with the active card method.';
+      if(key === 'paypal') return 'Complete payment now with the active PayPal method.';
+      return 'Complete payment using this active method.';
+    }
+    function renderVerifyCard(){
+      const order = verifyState.order;
+      if(verifyState.mode === 'otp' && order){
+        const copy = verifyState.step === 'phone'
+          ? 'For this secure payment link, send a one-time code to the mobile number on the order.'
+          : 'Enter the OTP sent to the mobile number on this order to unlock receipt details and payment options.';
+        $('#verifyCardInner').innerHTML = `
+          <div class="verify-copy">${copy}</div>
+          ${verifyState.step === 'phone' ? `
+            <div class="otp-box">
+              <div class="otp-row"><span>Send OTP to</span><strong>${esc(maskPhone(order.userPhone || ''))}</strong></div>
+              <div class="otp-actions">
+                <button class="btn btn-primary" type="button" onclick="sendOrderOtp()">Send OTP</button>
+              </div>
+            </div>` : `
+            <div class="otp-box">
+              <div class="otp-row"><strong>${esc(maskPhone(order.userPhone || ''))}</strong><button class="inline-btn" type="button" onclick="resetOrderOtp()">Edit</button></div>
+              <input id="otpInput" class="otp-input" inputmode="numeric" maxlength="6" placeholder="000000"/>
+              <div class="otp-actions">
+                <button class="btn btn-primary" type="button" onclick="verifyOrderOtp()">Verify OTP</button>
+                <button class="btn btn-light" type="button" onclick="sendOrderOtp(true)">Resend OTP</button>
+              </div>
+            </div>`}
+          <div class="helper">We only unlock order details for the customer tied to this order.</div>
+        `;
+        return;
+      }
+      $('#verifyCardInner').innerHTML = `
+        <div class="verify-copy">Enter the 7-digit mobile number used for the order if it is not already filled in from your SMS link.</div>
+        <div class="field">
+          <label for="phoneInput">Mobile Number</label>
+          <input id="phoneInput" inputmode="numeric" maxlength="7" placeholder="Enter 7-digit mobile number"/>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" type="button" onclick="verifyOrder()">View Order</button>
+        </div>
+        <div class="helper">We only show receipt details for the phone number tied to this order.</div>
+      `;
+      if(phoneFromUrl) document.getElementById('phoneInput').value = phoneFromUrl;
     }
     function statusPipe(order){
       const flow = Store.getOrderFlow ? Store.getOrderFlow(order) : ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
@@ -248,6 +325,8 @@
       const address = addressLines(order);
       const bankTransfer = isCod(order) && order.payStatus !== 'Paid' ? activeBankTransfer() : null;
       const needsLocationUpdate = !hasGeo(order) && !!receiptRef;
+      const payChoices = isCod(order) && order.payStatus !== 'Paid' ? paymentChoices(order) : [];
+      if(payChoices.length && !payChoices.some(method => method.key === selectedPaymentMethod)) selectedPaymentMethod = payChoices[0].key;
       $('#orderPanel').style.display = 'grid';
       $('#orderPanel').innerHTML = `
         <div class="card">
@@ -282,6 +361,31 @@
               <div class="bank-box">
                 <div class="bank-row"><div><div class="bank-label">Bank Name</div><div class="bank-value">${esc(bankTransfer.bankName || '—')}</div></div></div>
                 <div class="bank-row"><div><div class="bank-label">Account Number</div><div class="bank-value">${esc(bankTransfer.accountNumber || '—')}</div></div></div>
+              </div>
+            </div>` : ''}
+          ${payChoices.length ? `
+            <div class="payment-panel">
+              <div class="info-banner-title">Make Payment</div>
+              <div class="info-banner-copy">Choose any active payment method except Cash on Delivery.</div>
+              <div class="payment-grid">
+                ${payChoices.map(method => `
+                  <button class="pay-option ${method.key===selectedPaymentMethod?'active':''}" type="button" onclick="selectPublicPaymentMethod('${method.key}')">
+                    <div>
+                      <div class="pay-title">${esc(method.label)}</div>
+                      <div class="pay-copy">${esc(paySubtitle(method.key))}</div>
+                    </div>
+                    <span class="pay-dot"></span>
+                  </button>`).join('')}
+              </div>
+              ${selectedPaymentMethod === 'transfer' ? `
+                <div class="slip-box">
+                  <label class="slip-thumb" for="transferSlipInput">
+                    ${transferSlipImage ? `<img src="${esc(transferSlipImage)}" alt="Transfer slip"/>` : `<span class="pay-copy">Tap to upload transfer slip</span>`}
+                  </label>
+                  <input id="transferSlipInput" type="file" accept="image/*" style="display:none" onchange="onTransferSlipSelected(this)"/>
+                </div>` : ''}
+              <div class="actions">
+                <button class="btn btn-primary" type="button" onclick="submitPublicPayment()">Make Payment</button>
               </div>
             </div>` : ''}
         </div>
@@ -333,6 +437,37 @@
       if(orderId) return list.find(order => order.id === orderId && phoneKey(order.userPhone).endsWith(digits));
       return null;
     }
+    function selectPublicPaymentMethod(key){
+      selectedPaymentMethod = key;
+      if(key !== 'transfer') transferSlipImage = '';
+      if(verifyState.order) renderOrder(verifyState.order);
+    }
+    function onTransferSlipSelected(input){
+      const file = input.files && input.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = event => {
+        transferSlipImage = String(event.target && event.target.result || '');
+        if(verifyState.order) renderOrder(verifyState.order);
+      };
+      reader.readAsDataURL(file);
+      input.value = '';
+    }
+    async function submitPublicPayment(){
+      if(!receiptRef || !verifyState.order) return showToast('Missing payment link');
+      if(!selectedPaymentMethod) return showToast('Select a payment method');
+      if(selectedPaymentMethod === 'transfer' && !transferSlipImage) return showToast('Upload transfer slip');
+      try{
+        const order = await Store.convertOrderPaymentByRef(receiptRef, selectedPaymentMethod, { transferSlip: transferSlipImage });
+        verifyState.order = order;
+        transferSlipImage = '';
+        selectedPaymentMethod = '';
+        renderOrder(order);
+        showToast(order.payStatus === 'Paid' ? 'Payment completed' : 'Transfer submitted for verification');
+      }catch(error){
+        showToast(error.message || 'Could not complete payment');
+      }
+    }
     function verifyOrder(){
       const digits = String($('#phoneInput').value || '').replace(/\D/g,'').slice(-7);
       if(digits.length !== 7) return showToast('Enter the 7-digit mobile number');
@@ -343,6 +478,39 @@
       }
       renderOrder(order);
       $('#verifyCard').style.display = 'none';
+    }
+    async function sendOrderOtp(resend){
+      const order = verifyState.order;
+      if(!order) return;
+      try{
+        const payload = { phone_number: String(order.userPhone || '').replace(/\D/g,'') };
+        const data = await callOtpApi(resend && verifyState.requestId ? '/api/msgowl-resend-otp' : '/api/msgowl-send-otp', resend && verifyState.requestId ? { ...payload, request_id: verifyState.requestId } : payload);
+        verifyState.requestId = data.request_id || data.requestId || verifyState.requestId || '';
+        verifyState.step = 'otp';
+        renderVerifyCard();
+        showToast(resend ? 'OTP resent' : 'OTP sent');
+      }catch(error){
+        showToast(error.message || 'Could not send OTP');
+      }
+    }
+    function resetOrderOtp(){
+      verifyState.step = 'phone';
+      verifyState.requestId = '';
+      renderVerifyCard();
+    }
+    async function verifyOrderOtp(){
+      const order = verifyState.order;
+      if(!order) return;
+      const code = String(document.getElementById('otpInput')?.value || '').replace(/\D/g,'');
+      if(code.length !== 6) return showToast('Enter the 6-digit OTP');
+      try{
+        const data = await callOtpApi('/api/msgowl-verify-otp', { phone_number: String(order.userPhone || '').replace(/\D/g,''), code });
+        if(data.status !== true) return showToast(data.message || 'Invalid OTP');
+        renderOrder(order);
+        $('#verifyCard').style.display = 'none';
+      }catch(error){
+        showToast(error.message || 'Could not verify OTP');
+      }
     }
     async function shareCurrentLocation(){
       if(!receiptRef) return showToast('Missing receipt link');
@@ -375,7 +543,7 @@
       }, ()=>showToast('Could not get current location'), { enableHighAccuracy:true, timeout:10000 });
     }
     function boot(){
-      if(phoneFromUrl) $('#phoneInput').value = phoneFromUrl;
+      renderVerifyCard();
       if(!orderId && !receiptRef){
         $('#verifyCard').innerHTML = '<div class="empty">Missing order link details.</div>';
         return;
@@ -391,7 +559,8 @@
           }else if(receiptRef && Store.getOrderByPublicRef){
             const order = Store.getOrderByPublicRef(receiptRef);
             if(order){
-              $('#verifyCard').style.display = 'grid';
+              verifyState = { mode:'otp', step:'phone', requestId:'', order, phone:String(order.userPhone || '') };
+              renderVerifyCard();
             }
           }
         });

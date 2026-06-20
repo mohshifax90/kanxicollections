@@ -689,6 +689,8 @@
     const fg = (icon,text,inner)=>`<div class="mb-4">${lbl(icon,text)}${inner}</div>`;
     openModal(id?'Edit Product':'New Product',
       fg('shirt','Product name',F.input('p_name',p.name))+
+      `<div class="flex gap-3"><div class="flex-1">${fg('layout-grid','Category',`<select id="p_cat" onchange="onCatChange()" class="${sel}">${cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.name}</option>`).join('')}</select>`)}</div>
+        <div class="flex-1">${fg('list-tree','Sub-category',`<select id="p_sub" onchange="onProductSubChange()" class="${sel}"></select>`)}</div></div>`+
       fg('bookmark','Brand',`<select id="p_brand" class="${sel}"></select><p id="p_brand_hint" class="text-[0.72rem] text-zinc-400 mt-1.5"></p>`)+
       fg('image','Product Images',`
         <div id="imgList" class="flex flex-wrap gap-2 mb-2"></div>
@@ -697,11 +699,9 @@
           <input id="p_imgurl" placeholder="or paste image URL" class="flex-1 px-3 py-1.5 border border-zinc-300 rounded-lg text-xs outline-none focus:border-kink"/>
           <button type="button" onclick="addImgUrl()" class="${btn.light} ${btn.sm}">${ic('plus','w-3.5 h-3.5')} Add</button>
         </div>
-        <p class="text-[0.7rem] text-zinc-400 mt-1.5">First image is the primary. Uploads are auto-compressed.</p>`)+
+        <p class="text-[0.7rem] text-zinc-400 mt-1.5">First image is the primary product image. Uploads are auto-compressed.</p>`)+
       fg('align-left','Product description',`<textarea id="p_desc" placeholder="Short product description" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink min-h-[92px]">${esc(p.description||'')}</textarea>`)+
       fg('list','Product details',`<textarea id="p_details" placeholder="One detail per line" class="w-full px-3 py-2.5 border border-zinc-300 rounded-lg text-sm outline-none focus:border-kink min-h-[108px]">${esc((p.details||[]).join('\n'))}</textarea><p class="text-[0.72rem] text-zinc-400 mt-1.5">These show on the product page under Product Details.</p>`)+
-      `<div class="flex gap-3"><div class="flex-1">${fg('layout-grid','Category',`<select id="p_cat" onchange="onCatChange()" class="${sel}">${cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.name}</option>`).join('')}</select>`)}</div>
-        <div class="flex-1">${fg('list-tree','Sub-category',`<select id="p_sub" onchange="onProductSubChange()" class="${sel}"></select>`)}</div></div>`+
       `<div class="flex gap-3"><div class="flex-1">${fg('tag','Customer price',`<div class="px-3 py-2.5 border border-zinc-200 rounded-lg text-xs text-zinc-500 bg-zinc-50">Customer price comes from the active inventory batch.</div>`)}</div>
         <div class="flex-1">${fg('eye','Status',`<select id="p_status" class="${sel}"><option value="active" ${p.status==='active'?'selected':''}>Active</option><option value="draft" ${p.status==='draft'?'selected':''}>Draft</option></select>`)}</div></div>`+
       fg('tags','Tags',`<div id="p_tags" class="flex flex-wrap gap-2">${ts.map(t=>`<span data-id="${t.id}" onclick="this.classList.toggle('on')" class="tagchip cursor-pointer border border-zinc-300 rounded-full px-3 py-1 text-xs font-semibold ${(p.tags||[]).includes(t.id)?'on':''}">${t.name}</span>`).join('')}</div>`)+
@@ -787,10 +787,29 @@
         <input value="${esc(v.barcode||'')}" oninput="_vars[${i}].barcode=this.value" placeholder="Barcode" class="px-2 py-1.5 border border-zinc-300 rounded text-xs w-full outline-none focus:border-kink font-mono"/>
         <button type="button" onclick="scanVariantBarcode(${i})" class="${btn.light} ${btn.sm} shrink-0">${ic('scan-line','w-3.5 h-3.5')} Scan barcode</button>
       </div>
+      <div class="mt-2">
+        <div class="text-[0.68rem] font-bold tracking-wide uppercase text-kgray mb-1.5">Variant Images</div>
+        <div class="flex flex-wrap gap-2 mb-2">${((v.images&&v.images.length)?v.images:(v.image?[v.image]:[])).map((src,j)=>`<div class="relative">
+          <img src="${src}" class="w-16 h-16 object-cover rounded-lg border border-zinc-200"/>
+          ${j===0?'<span class="absolute bottom-0 inset-x-0 bg-kink/80 text-white text-[0.5rem] text-center py-0.5 rounded-b-lg">Primary</span>':''}
+          <button type="button" onclick="delVarImg(${i},${j})" class="absolute -top-2 -right-2 w-5 h-5 bg-white border border-zinc-300 rounded-full grid place-items-center text-zinc-500 hover:text-red-600 shadow-sm">${ic('x','w-3 h-3')}</button>
+        </div>`).join('') || '<p class="text-[0.68rem] text-zinc-400">No variant images yet.</p>'}</div>
+        <div class="flex gap-2 items-center">
+          <label class="${btn.light} ${btn.sm} cursor-pointer">${ic('upload','w-3.5 h-3.5')} Upload<input type="file" accept="image/*" multiple class="hidden" onchange="onVarImgFiles(${i},this)"/></label>
+          <input id="var_img_url_${i}" placeholder="or paste variant image URL" class="flex-1 px-2 py-1.5 border border-zinc-300 rounded text-xs outline-none focus:border-kink"/>
+          <button type="button" onclick="addVarImgUrl(${i})" class="${btn.light} ${btn.sm}">${ic('plus','w-3.5 h-3.5')} Add</button>
+        </div>
+      </div>
     </div>`).join('')
       || '<p class="text-xs text-zinc-400 py-1">No options yet — click "Add option".</p>'; }
-  function addVar(){ _vars.push({id:Store.uid('v_'),value:'',color:_vtype==='shade'?'#cccccc':null,barcode:''}); renderVars(); }
+  function addVar(){ _vars.push({id:Store.uid('v_'),value:'',color:_vtype==='shade'?'#cccccc':null,barcode:'',image:'',images:[]}); renderVars(); }
   function scanVariantBarcode(i){ startScan(text=>{ _vars[i].barcode=(text||'').trim(); renderVars(); toast('Barcode captured'); }); }
+  function delVarImg(i,j){ const list=(_vars[i].images||[]).slice(); list.splice(j,1); _vars[i].images=list; _vars[i].image=list[0]||''; renderVars(); }
+  function addVarImgUrl(i){ const el=document.getElementById(`var_img_url_${i}`); const v=(el&&el.value||'').trim(); if(v){ const list=Array.isArray(_vars[i].images)?_vars[i].images.slice():[]; list.push(v); _vars[i].images=list; _vars[i].image=list[0]||''; el.value=''; renderVars(); } }
+  function onVarImgFiles(i,input){
+    [...input.files].forEach(file=>{ const r=new FileReader(); r.onload=e=>compressImage(e.target.result,700,0.72,d=>{ const list=Array.isArray(_vars[i].images)?_vars[i].images.slice():[]; list.push(d); _vars[i].images=list; _vars[i].image=list[0]||''; renderVars(); }); r.readAsDataURL(file); });
+    input.value='';
+  }
   async function saveProduct(id){
     const name=$('#p_name').value.trim(); if(!name){ alert('Product name is required'); return; }
     const subId=$('#p_sub').value; if(!subId){ alert('Select a sub-category'); return; }
@@ -801,7 +820,8 @@
     const brandId=($('#p_brand').value||'').trim();
     const opts = _vtype==='none' ? [] : _vars.filter(v=>(v.value||'').trim()).map(v=>{
       const val=v.value.trim();
-      return { id:v.id||Store.uid('v_'), value:val, color:_vtype==='shade'?(v.color||'#cccccc'):null, sku:Store.skuFor(pid,{value:val}), barcode:(v.barcode||'').trim() };
+      const images=(Array.isArray(v.images)?v.images:[v.image]).filter(Boolean);
+      return { id:v.id||Store.uid('v_'), value:val, color:_vtype==='shade'?(v.color||'#cccccc'):null, sku:Store.skuFor(pid,{value:val}), barcode:(v.barcode||'').trim(), image:images[0]||'', images };
     });
     const primary = _imgs[0] || (Store.BLANK_IMAGE || '');
     const detailLines=$('#p_details').value.split('\n').map(s=>s.trim()).filter(Boolean);

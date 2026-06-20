@@ -86,8 +86,8 @@ const Store = window.Store = (() => {
     ];
 
     const V = (vals) => vals.map(v => typeof v==='string'
-      ? { id:uid('v_'), value:v, color:null, barcode:'' }
-      : { id:uid('v_'), value:v.value, color:v.color||null, barcode:v.barcode||'' });
+      ? { id:uid('v_'), value:v, color:null, barcode:'', image:'', images:[] }
+      : { id:uid('v_'), value:v.value, color:v.color||null, barcode:v.barcode||'', image:v.image||'', images:Array.isArray(v.images)?v.images.filter(Boolean):[] });
     const P = (id,name,brand,categoryId,subId,base,oldPrice,photo,tagIds,variantType,values,description='',details=[]) => ({
       id,name,brand,categoryId,subId,price:base,oldPrice:oldPrice||null,status:'active',tags:tagIds,
       image:im(photo,600),images:[im(photo,600)],photo,variantType,variants:V(values||[]),description,details
@@ -217,6 +217,10 @@ const Store = window.Store = (() => {
         delivered: 'Kanxi: Your order {{orderId}} has been delivered. Receipt: {{receiptLink}}'
       }
     };
+  }
+  function activePaymentMethods(settings){
+    const current = settings || defaultPaymentSettings();
+    return (current.methods || []).filter(method => method && method.enabled !== false);
   }
   function emptyCloudDb(){
     return {
@@ -448,6 +452,9 @@ const Store = window.Store = (() => {
     const publicLink = orderPublicLink(order);
     if(publicLink && !body.includes(publicLink)) body += ` View order: ${publicLink}`;
     if(publicLink && !orderHasGeo(order) && !/update current location/i.test(body)) body += ` Update current location: ${publicLink}`;
+    if(type === 'confirmed' && isCashOnDelivery(order) && order.payStatus !== 'Paid' && !/payment option|make payment|complete payment/i.test(body)){
+      body += ` Make payment: ${publicLink}`;
+    }
     if(type === 'out_for_delivery'){
       const otp = ensureDeliveryOtp(order);
       if(otp && !body.includes(otp)) body += ` Delivery OTP: ${otp}`;
@@ -630,6 +637,8 @@ const Store = window.Store = (() => {
       variants:(p.variants||[]).map(v=>({
         ...v,
         barcode:v.barcode || '',
+        image:sanitizeImage(v.image || ''),
+        images:(Array.isArray(v.images) ? v.images : [v.image]).map(sanitizeImage).filter(Boolean),
         sku:v.sku || ((p.id && v.value) ? `KNX-${String(p.id).replace(/-/g,'').toUpperCase()}-${String(v.value).toUpperCase().replace(/[^A-Z0-9]+/g,'').slice(0,8)}` : '')
       }))
     }));
@@ -1146,6 +1155,10 @@ const Store = window.Store = (() => {
       await saveNow(db);
       return db.paymentSettings;
     },
+    paymentOptionsForOrder(order){
+      const settings = load().paymentSettings || defaultPaymentSettings();
+      return activePaymentMethods(settings).filter(method => method.key !== 'cod');
+    },
     getDeliverySettings(){ return load().deliverySettings || defaultDeliverySettings(); },
     publicOrderLink(order){ return orderPublicLink(order); },
     getOrderFlow(order){ return orderFlowFor(order).slice(); },
@@ -1168,6 +1181,58 @@ const Store = window.Store = (() => {
         lat: patch && patch.lat != null ? patch.lat : existing.lat,
         lng: patch && patch.lng != null ? patch.lng : existing.lng
       });
+      await saveNow(db);
+      return order;
+    },
+    async convertOrderPaymentByRef(ref, methodKey, extras={}){
+      const db = load();
+      const order = findOrderByPublicRef(db, ref);
+      if(!order) throw new Error('Order not found');
+      const settings = db.paymentSettings || defaultPaymentSettings();
+      const method = activePaymentMethods(settings).find(entry => entry.key === methodKey && entry.key !== 'cod');
+      if(!method) throw new Error('Payment method is not active');
+      const payment = db.payments.find(entry => entry.orderId === order.id) || null;
+      const bankTransfer = settings.bankTransfer || defaultPaymentSettings().bankTransfer;
+      order.payMethodKey = method.key;
+      order.payMethod = method.label;
+      if(method.key === 'transfer'){
+        const slip = String(extras && extras.transferSlip || '').trim();
+        if(!slip) throw new Error('Upload transfer slip');
+        order.transferSlip = slip;
+        order.bankName = bankTransfer.bankName || '';
+        order.accountNumber = bankTransfer.accountNumber || '';
+        order.payStatus = 'Pending Slip Verification';
+        if(!['Delivered','Returned','Out for Delivery','Ready to Dispatch','Packing'].includes(order.status)){
+          order.status = 'Pending Slip Verification';
+        }
+        if(payment){
+          payment.method = method.label;
+          payment.status = 'Pending Slip Verification';
+          payment.slipImage = slip;
+          payment.bankName = order.bankName;
+          payment.accountNumber = order.accountNumber;
+          payment.verifiedAt = null;
+        }
+      }else{
+        order.transferSlip = '';
+        order.bankName = '';
+        order.accountNumber = '';
+        order.payStatus = 'Paid';
+        if(!['Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'].includes(order.status)){
+          order.status = 'Paid';
+        }
+        if(payment){
+          payment.method = method.label;
+          payment.status = 'Paid';
+          payment.slipImage = '';
+          payment.bankName = '';
+          payment.accountNumber = '';
+          payment.verifiedAt = Date.now();
+        }
+      }
+      syncOrderPaymentState(order);
+      ensureOrderStockState(db, order);
+      ensureOrderNotificationState(order);
       await saveNow(db);
       return order;
     },

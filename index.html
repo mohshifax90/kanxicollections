@@ -89,12 +89,20 @@
     /* ── PRODUCT CARDS ── */
     .prod-h-scroll .pcard { flex-shrink: 0; width: 42.5%; min-width: 42.5%; }
     .grid-2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 0.6rem; padding: 0.5rem 0 1rem; }
-    .more-grid {
-      display:grid;
-      grid-template-columns:repeat(3, 42.5%);
-      gap:1rem 0.8rem;
-      padding:0.5rem 0 1rem;
-      overflow:hidden;
+    .tease-rows { display: grid; gap: 1rem; padding: 0.5rem 0 1rem; }
+    .tease-row {
+      display: flex;
+      gap: 0.8rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      scroll-snap-type: x proximity;
+      padding-bottom: 0.25rem;
+    }
+    .tease-row::-webkit-scrollbar { display: none; }
+    .tease-row .pcard {
+      flex: 0 0 31.6%;
+      min-width: 31.6%;
+      scroll-snap-align: start;
     }
     .pcard { cursor: pointer; }
     .pcard-img { position: relative; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: var(--gray-100); margin-bottom: 0.5rem; border:1px solid #e3e3e3; }
@@ -186,11 +194,9 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 1.35rem 1rem;
       }
-      .more-grid {
-        grid-template-columns:repeat(3, 31.5%);
-        gap:1.35rem 1rem;
-        overflow:hidden;
-      }
+      .tease-rows { gap: 1.15rem; }
+      .tease-row { gap: 1rem; }
+      .tease-row .pcard { flex-basis: 31.2%; min-width: 31.2%; }
       .pcard-img { border-radius: 14px; }
       .pcard-name { font-size: 0.84rem; }
       .pcard-price { font-size: 0.9rem; }
@@ -252,7 +258,7 @@
   <!-- ── MORE FROM THIS SHOP ── -->
   <div class="section deferred-section">
     <div class="section-head"><h2>More from this shop</h2><span class="see-all">See all</span></div>
-    <div class="h-scroll prod-h-scroll" id="moreGrid"></div>
+    <div class="tease-rows" id="moreGrid"></div>
   </div>
 
   <!-- ── FOOTER ── -->
@@ -379,6 +385,15 @@
   /* ── CMS-DRIVEN HOMEPAGE SECTIONS ── */
   const section = (title, inner, seeAll) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAll?`<a class="see-all" href="${seeAll}">See all</a>`:''}</div>${inner}</div>`;
   const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
+  const chunk = (arr, size=3) => arr.reduce((rows, item, index) => {
+    if(index % size === 0) rows.push([]);
+    rows[rows.length - 1].push(item);
+    return rows;
+  }, []);
+  const prodTeaseRows = arr => {
+    if(!arr.length) return '<p style="color:#999;font-size:0.85rem">No items.</p>';
+    return `<div class="tease-rows">${chunk(arr, 3).map(row => `<div class="tease-row">${row.map(cardHTML).join('')}</div>`).join('')}</div>`;
+  };
   const prodGrid = arr => `<div class="grid-2">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
   function imgAttrs(kind, index, url=''){
     if(kind==='collection'){
@@ -456,10 +471,10 @@
     document.getElementById('homeSections').innerHTML =
       section(hp.collections.title, collHTML) +
       section(hp.brands.title, brandHTML) +
-      `<div class="deferred-section">${section(hp.bestsellers.title, prodScroll(best))}</div>` +
-      (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodScroll(offers))}</div>` : '');
+      `<div class="deferred-section">${section(hp.bestsellers.title, prodTeaseRows(best))}</div>` +
+      (offers.length ? `<div class="deferred-section">${section(hp.offers.title, prodTeaseRows(offers))}</div>` : '');
 
-    document.getElementById('moreGrid').innerHTML = more.map(cardHTML).join('');
+    document.getElementById('moreGrid').outerHTML = `<div class="tease-rows" id="moreGrid">${chunk(more, 3).map(row => `<div class="tease-row">${row.map(cardHTML).join('')}</div>`).join('')}</div>`;
 
     document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
       document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
