@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <title>Kanxi Collection — Sign in</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Playfair Display', 'serif']
+          },
+          colors: {
+            ink: '#1a1814',
+            line: '#efefef',
+            muted: '#6e6860',
+            cream: '#f5ede0',
+            accent: '#b89b7a'
+          },
+          boxShadow: {
+            shell: '0 0 40px rgba(0,0,0,0.08)'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing:antialiased; }
+    .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);background:#1a1814;color:#fff;padding:.8rem 1.4rem;border-radius:10px;font-size:.85rem;z-index:999;opacity:0;transition:all .3s;border-left:3px solid #b89b7a}
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+    .cta-primary{width:100%;border:none;border-radius:8px;background:#4294e8;color:#fff;padding:1rem 1.1rem;font-size:1rem;font-weight:700;cursor:pointer;transition:.18s}
+    .cta-primary:hover{background:#4250ec}
+    .cta-primary:disabled{background:#c7d2fe;color:#eef2ff;cursor:not-allowed}
+  </style>
+</head>
+<body class="bg-white text-ink">
+  <div class="mx-auto min-h-screen max-w-[480px] bg-white md:max-w-none md:shadow-none">
+    <header class="flex items-center border-b border-line px-4 py-4">
+      <button class="-ml-2 grid h-11 w-11 place-items-center rounded-full text-ink transition active:bg-slate-100" onclick="back()" aria-label="Go back">
+        <i data-lucide="chevron-left" class="h-5 w-5"></i>
+      </button>
+      <h1 id="phTitle" class="flex-1 pr-[34px] text-center text-[1.05rem] font-semibold">Sign in</h1>
+    </header>
+
+    <div class="px-[1.4rem] pb-10 pt-7">
+      <div class="mb-7 text-center">
+        <svg viewBox="415 270 325 375" xmlns="http://www.w3.org/2000/svg" class="mx-auto mb-2 h-16"><g transform="translate(0,1254) scale(0.1,-0.1)" stroke="none"><path fill="#1a1814" d="M4477 9643 c-17 -16 -1 -20 91 -26 183 -11 246 -49 285 -171 l22 -71 0 -1290 c0 -1377 1 -1360 -48 -1448 -23 -42 -81 -80 -137 -93 -19 -4 -75 -10 -124 -13 -58 -4 -91 -10 -94 -18 -3 -10 109 -13 537 -13 307 0 542 4 545 9 8 13 -19 21 -73 21 -73 0 -151 27 -186 65 -17 18 -40 57 -51 86 -18 52 -19 95 -22 1334 -2 856 1 1306 8 1360 6 46 21 102 36 132 21 44 34 56 80 79 37 18 78 28 129 33 42 3 76 11 78 16 2 11 -1065 20 -1076 8z"/><g transform="translate(6350,7900) scale(0.78) translate(-6350,-7900)"><path fill="#b89b7a" d="M6540 9635 c0 -11 11 -15 38 -15 47 0 103 -28 121 -61 21 -38 7 -89 -43 -156 -59 -79 -554 -594 -1010 -1050 l-371 -373 81 0 81 0 234 -246 c129 -135 234 -249 234 -252 0 -4 -26 -59 -57 -122 -170 -343 -170 -724 -1 -1065 61 -123 121 -204 227 -310 175 -174 377 -281 656 -346 121 -29 425 -37 568 -15 264 40 518 170 666 340 55 63 106 135 106 148 0 20 -27 5 -49 -27 -33 -49 -157 -165 -227 -212 -266 -181 -601 -236 -926 -154 -385 97 -665 363 -807 765 -78 220 -90 520 -31 752 11 42 22 79 23 81 6 6 225 -220 714 -739 l73 -78 325 0 c196 0 325 4 325 9 0 6 -21 12 -47 16 -139 17 -227 50 -322 119 -60 45 -558 558 -885 913 l-49 53 29 42 c47 70 164 181 249 236 269 176 642 210 967 88 253 -95 464 -300 514 -498 9 -38 21 -68 26 -68 10 0 6 176 -8 362 l-6 77 -47 30 c-169 108 -391 183 -624 212 -123 15 -406 6 -502 -15 -251 -56 -463 -165 -644 -331 l-44 -40 -76 82 c-42 45 -146 157 -231 248 -85 91 -156 172 -158 178 -1 7 271 285 605 618 465 464 626 619 687 659 125 84 213 117 339 129 37 3 69 11 70 16 1 7 -137 11 -395 13 -350 2 -398 0 -398 -13z"/></g></g></svg>
+        <div class="text-[1.1rem] font-bold uppercase tracking-[0.3em]" style="font-family:Georgia, 'Times New Roman', serif">Kanxi</div>
+        <div class="text-[0.6rem] uppercase tracking-[0.28em] text-muted">— Collection —</div>
+      </div>
+
+      <section id="step-phone">
+        <h2 class="mb-1 text-[1.4rem] font-semibold tracking-[-0.02em]">Welcome</h2>
+        <p class="mb-6 text-[0.92rem] leading-6 text-muted">Sign in with your mobile number. We'll send you a one-time code.</p>
+        <div class="mb-5">
+          <label class="mb-2 block text-[0.74rem] font-bold uppercase tracking-[0.05em] text-muted">Mobile number</label>
+          <div class="flex gap-2.5">
+            <div id="cc" data-code="+960" class="grid w-[92px] shrink-0 place-items-center rounded-[14px] border border-[#ede8e0] bg-[#f7f4ef] px-3 py-4 text-[0.98rem] font-semibold text-ink">
+              +960
+            </div>
+            <div class="min-w-0 flex-1">
+              <input id="phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="7" placeholder="7771234" class="w-full rounded-[14px] border border-[#ede8e0] bg-white px-4 py-4 text-[0.98rem] outline-none transition focus:border-ink"/>
+            </div>
+          </div>
+        </div>
+        <button class="cta-primary" onclick="sendOtp()">Send OTP</button>
+        <p class="mt-4 text-center text-[0.85rem] text-muted">By continuing you agree to our <a>Terms</a> & <a>Privacy</a>.</p>
+      </section>
+
+      <section id="step-otp" class="hidden">
+        <h2 class="mb-1 text-[1.4rem] font-semibold tracking-[-0.02em]">Verify number</h2>
+        <p class="mb-6 text-[0.92rem] leading-6 text-muted">Enter the 6-digit code sent to <b id="otpPhone"></b>.</p>
+        <div class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[#ede8e0] bg-[#faf7f2] px-4 py-3 text-[0.9rem]">
+          <b id="otpPhoneRow"></b>
+          <button type="button" class="font-medium text-accent" onclick="editOtpPhone()">Edit</button>
+        </div>
+        <div class="mb-4 rounded-xl bg-cream px-4 py-3 text-center text-[0.82rem] text-muted">Enter the verification code sent by SMS.</div>
+        <div class="mb-4">
+          <div id="otpInputs" class="grid grid-cols-6 gap-2.5">
+            <input maxlength="6" inputmode="numeric" autocomplete="one-time-code" name="one-time-code" pattern="[0-9]*" aria-label="OTP digit 1" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
+            <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 2" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
+            <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 3" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
+            <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 4" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
+            <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 5" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
+            <input maxlength="1" inputmode="numeric" pattern="[0-9]*" aria-label="OTP digit 6" class="h-14 w-full rounded-[14px] border border-[#ede8e0] bg-white text-center text-[1.2rem] font-semibold outline-none transition focus:border-ink focus:ring-4 focus:ring-black/5"/>
+          </div>
+        </div>
+        <button id="verifyBtn" class="w-full rounded-[14px] bg-ink px-4 py-4 text-base font-semibold text-white transition hover:bg-[#2c2721]" onclick="verifyOtp()">Verify</button>
+        <p class="mt-4 text-center text-[0.85rem] text-muted">Didn't get it? <a class="cursor-pointer font-medium text-accent" onclick="resendOtp()">Resend code</a></p>
+      </section>
+
+      <section id="step-profile" class="hidden">
+        <h2 class="mb-1 text-[1.4rem] font-semibold tracking-[-0.02em]">Complete profile</h2>
+        <p class="mb-6 text-[0.92rem] leading-6 text-muted">Tell us a little about you to personalise your Kanxi experience.</p>
+        <div class="space-y-4">
+          <div>
+            <label class="mb-2 block text-[0.74rem] font-bold uppercase tracking-[0.05em] text-muted">Full name</label>
+            <input id="pf_name" placeholder="Aishath Ibrahim" class="w-full rounded-[14px] border border-[#ede8e0] px-4 py-4 text-[0.98rem] outline-none transition focus:border-ink"/>
+          </div>
+          <div>
+            <label class="mb-2 block text-[0.74rem] font-bold uppercase tracking-[0.05em] text-muted">Gender</label>
+            <div id="genderRow" class="grid grid-cols-3 gap-2">
+              <button type="button" class="gender-opt rounded-[14px] border border-[#ede8e0] px-3 py-3 text-sm font-medium" data-g="Female" onclick="pickGender(this)">Female</button>
+              <button type="button" class="gender-opt rounded-[14px] border border-[#ede8e0] px-3 py-3 text-sm font-medium" data-g="Male" onclick="pickGender(this)">Male</button>
+              <button type="button" class="gender-opt rounded-[14px] border border-[#ede8e0] px-3 py-3 text-sm font-medium" data-g="Other" onclick="pickGender(this)">Other</button>
+            </div>
+          </div>
+          <div>
+            <label class="mb-2 block text-[0.74rem] font-bold uppercase tracking-[0.05em] text-muted">Date of birth</label>
+            <input id="pf_dob" type="date" class="w-full rounded-[14px] border border-[#ede8e0] px-4 py-4 text-[0.98rem] outline-none transition focus:border-ink"/>
+          </div>
+          <div>
+            <label class="mb-2 block text-[0.74rem] font-bold uppercase tracking-[0.05em] text-muted">Address</label>
+            <button class="mb-4 flex w-full items-center justify-center gap-2 rounded-[14px] border border-accent bg-cream px-4 py-3.5 text-sm font-semibold text-ink transition hover:bg-accent hover:text-white" onclick="useLocation()">
+              <i data-lucide="locate-fixed" class="h-4 w-4"></i>
+              <span id="locLabel">Fetch current location</span>
+            </button>
+            <div class="space-y-4">
+              <div class="relative">
+                <i data-lucide="map-pinned" class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+                <input id="ad_line" placeholder="House / Street address" class="w-full rounded-[14px] border border-[#ede8e0] py-4 pl-10 pr-4 text-[0.98rem] outline-none transition focus:border-ink"/>
+              </div>
+              <div class="flex gap-2.5">
+                <div class="relative min-w-0 flex-1">
+                  <i data-lucide="map" class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+                  <input id="ad_city" placeholder="City / Island" class="w-full rounded-[14px] border border-[#ede8e0] py-4 pl-10 pr-4 text-[0.98rem] outline-none transition focus:border-ink"/>
+                </div>
+                <div class="relative w-[120px] shrink-0">
+                  <i data-lucide="mailbox" class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+                  <input id="ad_post" placeholder="Postcode" class="w-full rounded-[14px] border border-[#ede8e0] py-4 pl-10 pr-4 text-[0.98rem] outline-none transition focus:border-ink"/>
+                </div>
+              </div>
+              <div class="relative">
+                <i data-lucide="flag" class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+                <input id="ad_country" placeholder="Country" value="Maldives" class="w-full rounded-[14px] border border-[#ede8e0] py-4 pl-10 pr-4 text-[0.98rem] outline-none transition focus:border-ink"/>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="mt-6 w-full rounded-[14px] bg-ink px-4 py-4 text-base font-semibold text-white transition hover:bg-[#2c2721]" onclick="saveProfile()">Save & Continue</button>
+        <div class="mt-4 text-center"><a class="cursor-pointer text-[0.85rem] text-muted underline" onclick="saveProfile(true)">Skip for now</a></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="assets/icons.js?v=2"></script>
+  <script src="assets/supabase-config.js?v=2"></script>
+  <script src="assets/store.js?v=16"></script>
+  <script>
+    const $ = s => document.querySelector(s);
+    const params = new URLSearchParams(location.search);
+    const redirect = params.get('redirect') || 'index.html';
+    const returnTo = params.get('return') || '';
+    let phoneFull = '', phoneForOtp = '', existingUser = null, gender = '', geo = null, otpRequestId = null, otpVerifying = false, otpAutoVerifyTimer = 0;
+
+    function showToast(m){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t);} t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
+    let _iconRAF = 0;
+    function icons(){
+      if(!window.lucide) return;
+      cancelAnimationFrame(_iconRAF);
+      _iconRAF = requestAnimationFrame(() => lucide.createIcons());
+    }
+    function back(){
+      if(!$('#step-otp').classList.contains('hidden')){ showStep('phone'); return; }
+      if(!$('#step-profile').classList.contains('hidden')){ showStep('otp'); return; }
+      const hasHistory = window.history.length > 1;
+      const ref = document.referrer || '';
+      const sameOrigin = ref && new URL(ref, location.href).origin === location.origin;
+      const samePage = ref && new URL(ref, location.href).pathname === location.pathname;
+      if(hasHistory && sameOrigin && !samePage){
+        history.back();
+        return;
+      }
+      if(returnTo){
+        location.href = returnTo;
+        return;
+      }
+      location.href = redirect;
+    }
+    function showStep(s){
+      ['phone','otp','profile'].forEach(x=>$('#step-'+x).classList.toggle('hidden', x!==s));
+      $('#phTitle').textContent = s==='phone'?'Sign in':s==='otp'?'Verify':'Your profile';
+      icons();
+    }
+
+    function setButtonLoading(btn, loading, text){
+      if(!btn) return;
+      if(loading){
+        btn.dataset.label = btn.textContent;
+        btn.textContent = text || 'Please wait...';
+        btn.disabled = true;
+        btn.classList.add('opacity-60');
+      }else{
+        btn.textContent = btn.dataset.label || text || btn.textContent;
+        btn.disabled = false;
+        btn.classList.remove('opacity-60');
+      }
+    }
+
+    async function callOtpApi(path, payload){
+      const res = await fetch(path, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error || data.message || 'OTP request failed');
+      return data;
+    }
+
+    const otpInputs = [...document.querySelectorAll('#otpInputs input')];
+    const phoneInput = $('#phone');
+
+    if(phoneInput){
+      phoneInput.addEventListener('input', ()=>{
+        phoneInput.value = phoneInput.value.replace(/\D/g,'').slice(0, 7);
+      });
+    }
+
+    function clearOtpInputs(){
+      otpInputs.forEach(inp=>inp.value='');
+      otpInputs[0]?.focus();
+    }
+
+    function fillOtpInputs(value){
+      const digits = String(value || '').replace(/\D/g,'').slice(0, 6).split('');
+      otpInputs.forEach((inp, i)=>{ inp.value = digits[i] || ''; });
+      if(digits.length < otpInputs.length) otpInputs[digits.length]?.focus();
+      else otpInputs[otpInputs.length - 1]?.focus();
+      maybeAutoVerifyOtp();
+    }
+
+    function maybeAutoVerifyOtp(){
+      const code = otpInputs.map(i=>i.value).join('');
+      clearTimeout(otpAutoVerifyTimer);
+      if(code.length === 6 && !otpVerifying){
+        otpAutoVerifyTimer = setTimeout(()=>verifyOtp(true), 120);
+      }
+    }
+
+    function editOtpPhone(){
+      clearTimeout(otpAutoVerifyTimer);
+      otpVerifying = false;
+      showStep('phone');
+      $('#phone').value = phoneFull.replace(/\D/g,'').slice(-7);
+      $('#phone').focus();
+    }
+
+    async function sendOtp(){
+      const num = $('#phone').value.replace(/\D/g,'').slice(0, 7);
+      $('#phone').value = num;
+      if(num.length !== 7) return showToast('Enter a valid 7-digit mobile number');
+      phoneFull = ($('#cc')?.dataset.code || '+960') + ' ' + num;
+      phoneForOtp = phoneFull.replace(/\D/g,'');
+      existingUser = Store.findUserByPhone(phoneFull);
+      $('#otpPhone').textContent = phoneFull;
+      $('#otpPhoneRow').textContent = phoneFull;
+      const btn = document.querySelector('#step-phone button');
+      setButtonLoading(btn, true, 'Sending...');
+      try{
+        const data = await callOtpApi('/api/msgowl-send-otp', { phone_number: phoneForOtp });
+        otpRequestId = data.id || otpRequestId;
+        showStep('otp');
+        clearOtpInputs();
+        otpInputs[0]?.focus();
+        showToast('OTP sent');
+      }catch(error){
+        showToast(error.message);
+      }finally{
+        setButtonLoading(btn, false);
+      }
+    }
+
+    async function resendOtp(){
+      if(!phoneForOtp) return sendOtp();
+      const link = document.querySelector('#step-otp a');
+      const oldText = link.textContent;
+      link.textContent = 'Sending...';
+      link.style.pointerEvents = 'none';
+      try{
+        const payload = otpRequestId ? { phone_number: phoneForOtp, id: otpRequestId } : { phone_number: phoneForOtp };
+        const data = await callOtpApi(otpRequestId ? '/api/msgowl-resend-otp' : '/api/msgowl-send-otp', payload);
+        otpRequestId = data.id || otpRequestId;
+        clearOtpInputs();
+        otpInputs[0]?.focus();
+        showToast('OTP resent');
+      }catch(error){
+        showToast(error.message);
+      }finally{
+        link.textContent = oldText;
+        link.style.pointerEvents = '';
+      }
+    }
+
+    otpInputs.forEach((inp,i)=>{
+      inp.addEventListener('input',()=>{
+        const digits = inp.value.replace(/\D/g,'');
+        if(!digits){ inp.value = ''; return; }
+        if(digits.length > 1){
+          fillOtpInputs(digits);
+          return;
+        }
+        inp.value = digits;
+        if(inp.value && i < otpInputs.length - 1) otpInputs[i+1].focus();
+        maybeAutoVerifyOtp();
+      });
+      inp.addEventListener('keydown',e=>{ if(e.key==='Backspace' && !inp.value && i>0) otpInputs[i-1].focus(); });
+      inp.addEventListener('paste',e=>{
+        const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+        const digits = pasted.replace(/\D/g,'');
+        if(digits.length > 1){
+          e.preventDefault();
+          fillOtpInputs(digits);
+        }
+      });
+    });
+
+    async function verifyOtp(auto){
+      if(otpVerifying) return;
+      const code = otpInputs.map(i=>i.value).join('');
+      if(code.length !== 6) return auto ? null : showToast('Enter the 6-digit code');
+      otpVerifying = true;
+      const btn = $('#verifyBtn');
+      setButtonLoading(btn, true, 'Verifying...');
+      try{
+        const data = await callOtpApi('/api/msgowl-verify-otp', { phone_number: phoneForOtp, code });
+        if(data.status !== true) return showToast(data.message || 'Invalid code');
+        existingUser = Store.findUserByPhone(phoneFull) || existingUser;
+        if(existingUser){ Store.login(existingUser); showToast('Welcome back, '+(existingUser.name||'')); setTimeout(()=>location.href=redirect, 700); }
+        else { showStep('profile'); }
+      }catch(error){
+        showToast(error.message);
+      }finally{
+        otpVerifying = false;
+        setButtonLoading(btn, false);
+      }
+    }
+
+    function pickGender(el){
+      document.querySelectorAll('.gender-opt').forEach(g=>{
+        g.classList.remove('bg-ink','text-white','border-ink');
+      });
+      el.classList.add('bg-ink','text-white','border-ink');
+      gender = el.dataset.g;
+    }
+
+    async function useLocation(){
+      if(!navigator.geolocation) return showToast('Geolocation not supported');
+      $('#locLabel').textContent = 'Locating...';
+      navigator.geolocation.getCurrentPosition(async pos=>{
+        geo = { lat:pos.coords.latitude, lng:pos.coords.longitude };
+        $('#locLabel').textContent = 'Location found - filling address...';
+        try{
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${geo.lat}&lon=${geo.lng}&zoom=18&addressdetails=1`,{headers:{'Accept':'application/json'}});
+          const d = await r.json(); const a = d.address || {};
+          $('#ad_line').value = [a.house_number,a.road||a.neighbourhood||a.suburb].filter(Boolean).join(' ') || d.display_name?.split(',').slice(0,2).join(',') || '';
+          $('#ad_city').value = a.city||a.town||a.village||a.county||'';
+          $('#ad_post').value = a.postcode||'';
+          $('#ad_country').value = a.country||'Maldives';
+          $('#locLabel').textContent = 'Location added';
+          showToast('Address auto-filled from location');
+        }catch(e){
+          $('#ad_line').value = `Near ${geo.lat.toFixed(4)}, ${geo.lng.toFixed(4)}`;
+          $('#locLabel').textContent = 'Coordinates saved';
+          showToast('Saved coordinates — please complete address');
+        }
+      }, err=>{
+        $('#locLabel').textContent = 'Fetch current location';
+        showToast(err.code===1?'Location permission denied':'Could not get location');
+      }, {enableHighAccuracy:true, timeout:10000});
+    }
+
+    function saveProfile(skip){
+      const name = $('#pf_name').value.trim();
+      if(!skip && !name) return showToast('Please enter your name');
+      existingUser = Store.findUserByPhone(phoneFull) || existingUser;
+      const addresses = [];
+      const line = $('#ad_line').value.trim();
+      if(line || geo){
+        addresses.push({ id:Store.uid('a_'), label:'Home', line, city:$('#ad_city').value.trim(), postcode:$('#ad_post').value.trim(),
+          country:$('#ad_country').value.trim()||'Maldives', lat:geo?.lat, lng:geo?.lng, isDefault:true,
+          deliveryType:'standard', deliveryInfo:{ boatName:'', contactNumber:'', departureTime:'', note:'' } });
+      }
+      const user = Store.upsert('users', { id:existingUser&&existingUser.id, name:name||'Kanxi Customer', phone:phoneFull, gender, dob:$('#pf_dob').value, createdAt:(existingUser&&existingUser.createdAt)||Date.now(), addresses });
+      Store.login(user);
+      showToast(existingUser ? 'Account updated' : 'Account created');
+      setTimeout(()=>location.href=redirect, 700);
+    }
+
+    icons();
+  </script>
+  <script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>

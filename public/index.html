@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <title>Kanxi Collection — Shop</title>
+  <meta name="description" content="Shop Kanxi Collection for fashion, beauty, skincare, accessories, and lifestyle products in the Maldives. Discover new arrivals and bestsellers.">
+  <link rel="canonical" href="https://kanxicollection.com/">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #1a1814; --white: #fff;
+      --gray-100: #f8f5f1; --gray-200: #ede8e0;
+      --gray-400: #b0a898; --gray-600: #6e6860;
+      --accent: #b89b7a; --accent-light: #f0e8dc; --cream: #f5ede0;
+      --ink: #1a1814; --muted: #8b8b8b; --line: #efefef;
+      --app-shell-width: 480px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: #e9e9e9; -webkit-font-smoothing: antialiased; }
+    a { text-decoration: none; color: inherit; }
+    ::selection { background: var(--accent); color: #fff; }
+
+    /* App frame (mobile-first, centered on desktop) */
+    .app { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.08); }
+    body.pending #mainContent,
+    body.pending .shop-footer { display:none; }
+    .loading-shell { display:none; padding:0.9rem 1rem 1.4rem; }
+    body.pending .loading-shell { display:block; }
+    .skeleton { background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); background-size:400% 100%; animation:shimmer 1.2s ease infinite; border-radius:14px; }
+    .sk-chip-row { display:flex; gap:0.55rem; overflow:hidden; margin:0.1rem 0 1rem; }
+    .sk-chip { width:102px; height:40px; border-radius:12px; flex-shrink:0; }
+    .sk-title { height:20px; width:132px; margin-bottom:0.95rem; }
+    .sk-banner-row { display:flex; gap:0.8rem; overflow:hidden; margin-bottom:1.15rem; }
+    .sk-banner { width:86%; aspect-ratio:4/3.8; border-radius:14px; flex-shrink:0; }
+    .sk-banner.last { width:78%; }
+    .sk-brand-title { height:18px; width:150px; margin-bottom:0.8rem; }
+    .sk-brand-copy { height:16px; width:124px; margin-bottom:1rem; }
+    .sk-products-title { height:18px; width:136px; margin-bottom:0.9rem; }
+    .sk-product-row { display:flex; gap:0.8rem; overflow:hidden; }
+    .sk-product { width:43.5%; flex-shrink:0; }
+    .sk-product-img { aspect-ratio:1/1; border-radius:12px; margin-bottom:0.45rem; }
+    .sk-product-line { height:14px; border-radius:8px; margin-bottom:0.3rem; }
+    .sk-product-line.short { width:72%; }
+    @keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
+
+    /* ── SHOP HEADER ── */
+    .shop-head {
+      position: sticky; top: 0; z-index: 50; background: #fff;
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.8rem 1rem; border-bottom: 1px solid var(--line);
+    }
+    .icon-btn { background: none; border: none; cursor: pointer; font-size: 1.3rem; color: var(--ink); line-height: 1; display: flex; align-items: center; justify-content: center; }
+    .bag-btn { display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.15s; width: 30px; height: 30px; background: url('assets/bag-main.svg') center/contain no-repeat; }
+    .bag-btn:hover { transform: scale(1.08); }
+    .bag-btn img { display: none; }
+    .menu-btn { width: 30px; height: 30px; padding: 0; }
+    .menu-btn svg { width: 30px; height: 30px; stroke-width: 2.1; display: block; }
+    .heart-btn svg { width: 27px; height: 27px; fill: var(--black); transition: fill 0.2s, transform 0.15s; display: block; }
+    .heart-btn:hover svg { fill: var(--accent); transform: scale(1.08); }
+    .heart-btn.saved svg { fill: #e0413b; }
+    .shop-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--cream); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1px solid var(--gray-200); }
+    .shop-avatar svg { height: 24px; width: auto; }
+    .shop-name { font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; display: flex; align-items: center; gap: 4px; }
+    .shop-name .verified { color: var(--accent); font-size: 0.85rem; }
+    .shop-head .spacer { flex: 1; }
+    .cart-dot { position: absolute; top: -5px; right: -7px; background: var(--accent); color: #fff; font-size: 0.58rem; font-weight: 700; border-radius: 50%; min-width: 15px; height: 15px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+    .cart-wrap { position: relative; }
+
+    /* ── CHIPS ── */
+    .chip-row { display: flex; gap: 0.5rem; padding: 0.7rem 1rem 0.9rem; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); }
+    .chip-row::-webkit-scrollbar { display: none; }
+    .chip { flex-shrink: 0; background: #f0f0f0; border: none; border-radius: 12px; padding: 0.55rem 1.1rem; font-size: 0.85rem; font-weight: 600; color: var(--ink); cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; transition: background 0.2s; }
+    .chip:hover, .chip.active { background: var(--black); color: #fff; }
+
+    /* ── SECTION ── */
+    .section { padding: 1.25rem 1rem 0.2rem; }
+    .deferred-section { content-visibility: auto; contain-intrinsic-size: 900px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .section-head h2 { font-size: 1rem; font-weight: 700; letter-spacing: 0; }
+    .see-all { font-size: 0.84rem; font-weight: 600; color: var(--accent); cursor: pointer; background: none; border: 0; padding: 0; font-family: inherit; }
+
+    /* ── COLLECTIONS (big horizontal) ── */
+    .h-scroll { display: flex; gap: 0.8rem; overflow-x: auto; scrollbar-width: none; padding-bottom: 0.3rem; }
+    .h-scroll::-webkit-scrollbar { display: none; }
+    .collection-card { flex-shrink: 0; width: 86%; aspect-ratio: 4/3.8; border-radius: 14px; overflow: hidden; position: relative; cursor: pointer; background: var(--gray-100); }
+    .collection-card:last-child { width: 78%; }
+    .collection-card img { width: 100%; height: 100%; object-fit: cover; }
+    .collection-card .ctitle { position: absolute; bottom: 0.9rem; left: 0.9rem; right: 0.9rem; color: #141414; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.18rem; font-weight: 500; line-height: 1.08; display: inline-block; width: fit-content; max-width: calc(100% - 1.8rem); background: rgba(255,255,255,0.2); padding: 0.44rem 0.62rem; border-radius: 12px; backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.26), 0 8px 24px rgba(16,24,40,0.12); border: 1px solid rgba(255,255,255,0.22); }
+
+    /* ── SHOP BY BRAND ── */
+    .brand-card { flex-shrink:0; width:82px; display:flex; flex-direction:column; align-items:stretch; gap:0.42rem; cursor:pointer; text-decoration:none; }
+    .brand-logo { width:82px; height:82px; aspect-ratio:1/1; border-radius:12px !important; border:1px solid #e3e3e3; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .brand-logo img { width:100%; height:100%; object-fit:contain; padding:2px; display:block; transition:transform 0.35s; }
+    .brand-card:hover .brand-logo img { transform:scale(1.04); }
+    .brand-logo span { font-weight:800; color:var(--accent); font-size:1.1rem; }
+    .brand-name { font-size:0.7rem; font-weight:500; line-height:1.25; color:var(--ink); text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* ── SHOP BY SIZE (horizontal) ── */
+    .size-card { flex-shrink: 0; width: 44%; aspect-ratio: 3/3.4; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer; background: var(--gray-100); border:1px solid #e3e3e3; }
+    .size-card img { width: 100%; height: 100%; object-fit: cover; }
+    .size-card .ov { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 55%); }
+    .size-card .slabel { position: absolute; bottom: 0.9rem; left: 1rem; color: #fff; font-size: 1.3rem; font-weight: 400; }
+
+    /* ── PRODUCT CARDS ── */
+    .prod-h-scroll .pcard { flex-shrink: 0; width: 42.5%; min-width: 42.5%; }
+    .grid-2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 0.6rem; padding: 0.5rem 0 1rem; }
+    .tease-rows { display: grid; gap: 1rem; padding: 0.5rem 0 1rem; }
+    .tease-row {
+      display: flex;
+      gap: 0.8rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      scroll-snap-type: x proximity;
+      padding-bottom: 0.25rem;
+    }
+    .tease-row::-webkit-scrollbar { display: none; }
+    .tease-row .pcard {
+      flex: 0 0 43.5%;
+      min-width: 43.5%;
+      scroll-snap-align: start;
+    }
+    .pcard { cursor: pointer; }
+    .pcard-img { position: relative; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: var(--gray-100); margin-bottom: 0.5rem; border:1px solid #e3e3e3; }
+    .pcard.card-portrait .pcard-img { aspect-ratio: 0.82 / 1.2; }
+    .pcard-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s; }
+    .pcard:hover .pcard-img img { transform: scale(1.04); }
+    .pcard-badge { position: absolute; bottom: 0.55rem; left: 0.55rem; background: rgba(26,24,20,0.56); color: #fff; font-size: 0.66rem; font-weight: 700; padding: 0.25rem 0.55rem; border-radius: 5px; letter-spacing: 0.02em; backdrop-filter: blur(2px); }
+    .pcard-badge.gold { background: rgba(26,24,20,0.56); }
+    .pcard-save { position: absolute; top: 0.55rem; right: 0.55rem; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.92); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+    .pcard-save.saved { color: var(--accent); }
+    .pcard-name-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+    .pcard-name { font-size: 0.78rem; font-weight: 400; line-height: 1.32; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .pcard-bookmark { background: none; border: none; cursor: pointer; flex-shrink: 0; line-height: 1; padding: 1px 0 0; }
+    .pcard-bookmark svg { width: 19px; height: 19px; fill: var(--accent); transition: fill 0.2s, transform 0.15s; display: block; }
+    .pcard-bookmark.saved svg { fill: #e0413b; }
+    .pcard-bookmark:active svg { transform: scale(1.25); }
+    .pcard-price { font-size: 0.86rem; font-weight: 700; margin-top: 0.25rem; }
+    .pcard-price .old { font-weight: 400; color: var(--gray-400); text-decoration: line-through; font-size: 0.76rem; margin-left: 0.3rem; }
+    .pcard-status { display:none; font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+    .pcard-status.fast { color: #c0392b; }
+    .pcard-status.new { color: var(--accent); }
+
+    /* ── FOOTER ── */
+    .shop-footer { padding: 2rem 1rem 3rem; text-align: center; border-top: 1px solid var(--line); margin-top: 1.5rem; }
+    .shop-footer .flinks { display: flex; flex-wrap: wrap; gap: 0.9rem; justify-content: center; margin-bottom: 0.9rem; }
+    .shop-footer a { font-size: 0.76rem; color: var(--gray-600); }
+    .shop-footer .copy { font-size: 0.72rem; color: var(--gray-400); }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(4rem); background: var(--black); color: #fff; padding: 0.8rem 1.4rem; border-radius: 10px; font-size: 0.85rem; z-index: 999; opacity: 0; transition: all 0.3s; border-left: 3px solid var(--accent); max-width: 90%; }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    @media (min-width: 520px) {
+      body { padding: 0; background: #fff; }
+      .app { border-radius: 0; overflow: hidden; min-height: 100vh; box-shadow: none; }
+    }
+    @media (min-width: 768px) {
+      :root { --app-shell-width: 960px; }
+      body { padding: 0; background: #fff; }
+      .app {
+        max-width: 960px;
+        border-radius: 0;
+        min-height: 100vh;
+        box-shadow: none;
+      }
+      .shop-head {
+        padding: 1rem 1.4rem;
+        gap: 0.9rem;
+      }
+      .shop-avatar { width: 40px; height: 40px; }
+      .shop-avatar svg { height: 28px; }
+      .shop-name { font-size: 1.06rem; }
+      .chip-row {
+        padding: 0.8rem 1.4rem 1rem;
+        gap: 0.7rem;
+      }
+      .chip {
+        padding: 0.62rem 1.2rem;
+        font-size: 0.88rem;
+        border-radius: 12px;
+      }
+      .section { padding: 1.55rem 1.4rem 0.3rem; }
+      .section-head {
+        margin-bottom: 1.15rem;
+      }
+      .section-head h2 { font-size: 1.08rem; }
+      .see-all { font-size: 0.88rem; }
+      .h-scroll { gap: 1rem; }
+      .collection-card {
+        width: 44%;
+        border-radius: 16px;
+      }
+      .collection-card:last-child { width: 40%; }
+      .collection-card .ctitle {
+        left: 1.1rem;
+        right: 1.1rem;
+        bottom: 1.05rem;
+        font-size: 1.34rem;
+      }
+      .brand-card { width: 92px; gap: 0.48rem; }
+      .brand-logo { width: 92px; height: 92px; border-radius:14px !important; }
+      .brand-name { font-size: 0.74rem; }
+      .size-card {
+        width: 28%;
+        border-radius: 14px;
+      }
+      .size-card .slabel { font-size: 1.36rem; }
+      .prod-h-scroll .pcard { width: 31.5%; min-width: 31.5%; }
+      .grid-2 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.35rem 1rem;
+      }
+      .tease-rows { gap: 1.15rem; }
+      .tease-row { gap: 1rem; }
+      .tease-row .pcard { flex-basis: 30.6%; min-width: 30.6%; }
+      .pcard-img { border-radius: 14px; }
+      .pcard-name { font-size: 0.84rem; }
+      .pcard-price { font-size: 0.9rem; }
+      .pcard-status { font-size: 0.8rem; }
+      .shop-footer {
+        padding: 2.4rem 1.4rem 3rem;
+        margin-top: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SHOP HEADER ── -->
+  <header class="shop-head">
+    <button class="icon-btn" title="Back" onclick="history.back()">‹</button>
+    <div class="shop-avatar">
+      <svg viewBox="415 270 325 375" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(0,1254) scale(0.1,-0.1)" stroke="none">
+          <path fill="#1a1814" d="M4477 9643 c-17 -16 -1 -20 91 -26 183 -11 246 -49 285 -171 l22 -71 0 -1290 c0 -1377 1 -1360 -48 -1448 -23 -42 -81 -80 -137 -93 -19 -4 -75 -10 -124 -13 -58 -4 -91 -10 -94 -18 -3 -10 109 -13 537 -13 307 0 542 4 545 9 8 13 -19 21 -73 21 -73 0 -151 27 -186 65 -17 18 -40 57 -51 86 -18 52 -19 95 -22 1334 -2 856 1 1306 8 1360 6 46 21 102 36 132 21 44 34 56 80 79 37 18 78 28 129 33 42 3 76 11 78 16 2 11 -1065 20 -1076 8z"/>
+          <g transform="translate(6350,7900) scale(0.78) translate(-6350,-7900)">
+          <path fill="#b89b7a" d="M6540 9635 c0 -11 11 -15 38 -15 47 0 103 -28 121 -61 21 -38 7 -89 -43 -156 -59 -79 -554 -594 -1010 -1050 l-371 -373 81 0 81 0 234 -246 c129 -135 234 -249 234 -252 0 -4 -26 -59 -57 -122 -170 -343 -170 -724 -1 -1065 61 -123 121 -204 227 -310 175 -174 377 -281 656 -346 121 -29 425 -37 568 -15 264 40 518 170 666 340 55 63 106 135 106 148 0 20 -27 5 -49 -27 -33 -49 -157 -165 -227 -212 -266 -181 -601 -236 -926 -154 -385 97 -665 363 -807 765 -78 220 -90 520 -31 752 11 42 22 79 23 81 6 6 225 -220 714 -739 l73 -78 325 0 c196 0 325 4 325 9 0 6 -21 12 -47 16 -139 17 -227 50 -322 119 -60 45 -558 558 -885 913 l-49 53 29 42 c47 70 164 181 249 236 269 176 642 210 967 88 253 -95 464 -300 514 -498 9 -38 21 -68 26 -68 10 0 6 176 -8 362 l-6 77 -47 30 c-169 108 -391 183 -624 212 -123 15 -406 6 -502 -15 -251 -56 -463 -165 -644 -331 l-44 -40 -76 82 c-42 45 -146 157 -231 248 -85 91 -156 172 -158 178 -1 7 271 285 605 618 465 464 626 619 687 659 125 84 213 117 339 129 37 3 69 11 70 16 1 7 -137 11 -395 13 -350 2 -398 0 -398 -13z"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <span class="shop-name">kanxi.collection</span>
+    <div class="spacer"></div>
+    <button class="icon-btn heart-btn" title="Wishlist" onclick="this.classList.toggle('saved')"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+    <button class="icon-btn cart-wrap" title="Checkout" onclick="location.href='checkout.html'">
+      <span class="bag-btn"><img src="assets/bag-main.svg" alt="Bag"/></span>
+      <span class="cart-dot cart-count" style="display:none">0</span>
+    </button>
+    <button class="icon-btn menu-btn" title="Menu" onclick="openMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg></button>
+  </header>
+
+  <!-- ── PROFILE / HAMBURGER MENU ── -->
+  <div class="menu-bg" id="menuBg" onclick="closeMenu()"></div>
+  <div class="menu-drawer" id="menuDrawer">
+    <div class="menu-profile" id="menuProfile"></div>
+    <nav class="menu-nav">
+      <a class="menu-item" href="account.html?tab=details"><span class="mi-ic" id="ic-user"></span><span>Profile Details</span><span class="mi-chev">›</span></a>
+      <a class="menu-item" href="account.html?tab=orders"><span class="mi-ic" id="ic-orders"></span><span>My Orders</span><span class="mi-chev">›</span></a>
+      <a class="menu-item" href="account.html?tab=offers"><span class="mi-ic" id="ic-offers"></span><span>Offers</span><span class="mi-chev">›</span></a>
+    </nav>
+    <div class="menu-foot" id="menuFoot"></div>
+  </div>
+
+  <div class="loading-shell">
+    <div class="sk-chip-row">
+      <div class="skeleton sk-chip"></div>
+      <div class="skeleton sk-chip"></div>
+      <div class="skeleton sk-chip"></div>
+      <div class="skeleton sk-chip"></div>
+    </div>
+    <div class="skeleton sk-title"></div>
+    <div class="sk-banner-row">
+      <div class="skeleton sk-banner"></div>
+      <div class="skeleton sk-banner last"></div>
+    </div>
+    <div class="skeleton sk-brand-title"></div>
+    <div class="skeleton sk-brand-copy"></div>
+    <div class="skeleton sk-products-title"></div>
+    <div class="sk-product-row">
+      <div class="sk-product">
+        <div class="skeleton sk-product-img"></div>
+        <div class="skeleton sk-product-line"></div>
+        <div class="skeleton sk-product-line short"></div>
+      </div>
+      <div class="sk-product">
+        <div class="skeleton sk-product-img"></div>
+        <div class="skeleton sk-product-line"></div>
+        <div class="skeleton sk-product-line short"></div>
+      </div>
+    </div>
+  </div>
+
+  <main id="mainContent">
+  <!-- ── CHIPS ── -->
+  <div class="chip-row" id="homeMenu">
+    <button class="chip active" onclick="openCats()">Categories ▾</button>
+  </div>
+
+  <!-- ── HOMEPAGE SECTIONS (CMS-driven) ── -->
+  <div id="homeSections"></div>
+
+  <!-- ── FOOTER ── -->
+  </main>
+
+  <footer class="shop-footer">
+    <div class="flinks">
+      <a href="#">About</a><a href="#">Shipping</a><a href="#">Returns</a>
+      <a href="#">Help</a><a href="#">Privacy</a><a href="#">Contact</a>
+      <a href="admin.html">Admin</a>
+    </div>
+    <p class="copy">© 2026 Kanxi Collection · Malé, Maldives</p>
+  </footer>
+
+</div>
+
+<!-- ── CATEGORIES SHEET ── -->
+<div class="cat-sheet-bg" id="catBg" onclick="closeCats()"></div>
+<div class="cat-sheet" id="catSheet">
+  <div class="cs-handle"></div>
+  <h3 class="cs-title">Categories</h3>
+  <a class="cs-row" href="shop.html?cat=clothing"><span>Clothing</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=skincare"><span>Skincare</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=makeup"><span>Makeup</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=bags"><span>Bags</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=watches"><span>Watches</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=new"><span>New Arrivals</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=sale"><span>Sale</span><span class="cs-chev">›</span></a>
+  <a class="cs-row" href="shop.html?cat=clothing"><span>All products</span></a>
+</div>
+<div class="cat-sheet-bg" id="homeSectionBg" onclick="closeHomeSectionSheet()"></div>
+<div class="cat-sheet" id="homeSectionSheet">
+  <div class="cs-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1rem 1rem;border-bottom:1px solid var(--line);gap:1rem;">
+    <h3 class="cs-title" id="homeSectionTitle" style="padding:0;border:none;text-align:left;flex:1;">Section</h3>
+    <button class="icon-btn" style="width:34px;height:34px;border:1px solid var(--line);border-radius:10px;" onclick="closeHomeSectionSheet()">✕</button>
+  </div>
+  <div class="section" style="padding-top:1rem;">
+    <div id="homeSectionBody"></div>
+  </div>
+</div>
+<style>
+  .cat-sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;}
+  .cat-sheet-bg.show{display:block;}
+  .cat-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:var(--app-shell-width);background:#fff;z-index:301;border-radius:18px 18px 0 0;transition:transform 0.3s ease;max-height:80vh;overflow-y:auto;padding-bottom:1.5rem;}
+  .cat-sheet.show{transform:translateX(-50%) translateY(0);}
+  .cs-handle{width:40px;height:4px;background:#ddd;border-radius:2px;margin:0.7rem auto 0;}
+  .cs-title{text-align:center;font-size:1.15rem;font-weight:800;padding:0.7rem 1rem 1rem;border-bottom:1px solid var(--line);}
+  .cs-row{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.3rem;border-bottom:1px solid #f5f5f5;font-size:1rem;font-weight:500;color:var(--ink);}
+  .cs-row:hover{background:#fafafa;}
+  .cs-chev{color:var(--muted);font-size:1.1rem;}
+  @media(min-width:520px){ .cat-sheet{border-radius:18px 18px 20px 20px;} }
+
+  /* ── PROFILE MENU DRAWER ── */
+  .menu-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:310;}
+  .menu-bg.show{display:block;}
+  .menu-drawer{position:fixed;top:0;right:max(0px, calc((100vw - var(--app-shell-width)) / 2));transform:translateX(calc(100% + 24px));width:84%;max-width:380px;height:100%;background:#fff;z-index:311;transition:transform 0.3s ease, opacity 0.25s ease, visibility 0.25s ease;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,0.15);opacity:0;visibility:hidden;pointer-events:none;}
+  .menu-drawer.show{transform:translateX(0);opacity:1;visibility:visible;pointer-events:auto;}
+  .menu-profile{padding:1.6rem 1.3rem 1.3rem;background:var(--cream);}
+  .mp-row{display:flex;align-items:center;gap:0.9rem;}
+  .mp-av{width:52px;height:52px;border-radius:50%;background:#fff;border:1px solid var(--gray-200);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent);font-size:1.2rem;overflow:hidden;flex-shrink:0;}
+  .mp-name{font-size:1.05rem;font-weight:800;}
+  .mp-sub{font-size:0.82rem;color:var(--gray-600);}
+  .mp-signin{display:inline-block;margin-top:0.9rem;background:var(--black);color:#fff;padding:0.6rem 1.2rem;border-radius:10px;font-size:0.85rem;font-weight:700;}
+  .menu-nav{flex:1;padding:0.5rem 0;overflow-y:auto;}
+  .menu-item{display:flex;align-items:center;gap:0.9rem;padding:1rem 1.3rem;font-size:0.98rem;font-weight:500;border-bottom:1px solid #f5f5f5;color:var(--ink);}
+  .menu-item:hover{background:#fafafa;}
+  .menu-item .mi-chev{margin-left:auto;color:var(--gray-400);}
+  .menu-item .mi-ic{width:22px;height:22px;color:var(--accent);display:flex;}
+  .menu-item .mi-ic svg{width:22px;height:22px;}
+  .menu-foot{padding:1.1rem 1.3rem;border-top:1px solid var(--line);}
+  .btn-logout{width:100%;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:#fdecea;color:#c0392b;border:none;border-radius:10px;padding:0.9rem;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+  .btn-logout:hover{background:#c0392b;color:#fff;}
+  .menu-close{position:absolute;top:1rem;left:-44px;width:36px;height:36px;border-radius:50%;background:#fff;border:none;font-size:1.1rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+</style>
+<script src="assets/icons.js?v=2"></script>
+<script>
+  function openCats(){ document.getElementById('catBg').classList.add('show'); document.getElementById('catSheet').classList.add('show'); }
+  function closeCats(){ document.getElementById('catBg').classList.remove('show'); document.getElementById('catSheet').classList.remove('show'); }
+  function openHomeSectionSheet(title, inner){
+    document.getElementById('homeSectionTitle').textContent = title || 'Section';
+    document.getElementById('homeSectionBody').innerHTML = inner || '';
+    document.getElementById('homeSectionBg').classList.add('show');
+    document.getElementById('homeSectionSheet').classList.add('show');
+  }
+  function closeHomeSectionSheet(){
+    document.getElementById('homeSectionBg').classList.remove('show');
+    document.getElementById('homeSectionSheet').classList.remove('show');
+  }
+
+  /* ── PROFILE / MENU DRAWER ── */
+  function openMenu(){ renderMenu(); document.getElementById('menuBg').classList.add('show'); document.getElementById('menuDrawer').classList.add('show'); }
+  function closeMenu(){ document.getElementById('menuBg').classList.remove('show'); document.getElementById('menuDrawer').classList.remove('show'); }
+  function doLogout(){ if(typeof Store!=='undefined') Store.logout(); closeMenu(); location.reload(); }
+  function renderMenu(){
+    const u = (typeof Store!=='undefined') ? Store.currentUser() : null;
+    const initials = u && u.name ? u.name.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase() : '';
+    const menuReturn = encodeURIComponent('index.html?menu=1');
+    document.getElementById('menuProfile').innerHTML = u
+      ? `<div class="mp-row"><div class="mp-av">${initials||'👤'}</div><div><div class="mp-name">${u.name||'Kanxi Customer'}</div><div class="mp-sub">${u.phone||''}</div></div></div>`
+      : `<div class="mp-row"><div class="mp-av">👤</div><div><div class="mp-name">Welcome</div><div class="mp-sub">Sign in to your account</div></div></div><a class="mp-signin" href="login.html?redirect=account.html&return=${menuReturn}">Sign in / Register</a>`;
+    document.getElementById('menuFoot').innerHTML = u
+      ? `<button class="btn-logout" onclick="doLogout()"><i data-lucide="log-out" style="width:18px;height:18px"></i> Logout</button>`
+      : '';
+    // icons
+    const set=(id,name)=>{ const el=document.getElementById(id); if(el) el.innerHTML=`<i data-lucide="${name}"></i>`; };
+    set('ic-user','user-round'); set('ic-orders','package'); set('ic-offers','tag'); set('ic-heart','heart');
+    if(window.lucide) lucide.createIcons();
+  }
+</script>
+
+<script src="assets/supabase-config.js?v=2"></script>
+<script src="assets/store.js?v=16"></script>
+<script src="assets/components.js?v=2"></script>
+<script>
+  document.body.classList.add('pending');
+  /* ── PRODUCTS — live from admin Store ── */
+  let productImgIndex = 0;
+  const deferWork = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1200 }) : setTimeout(fn, 1));
+  function responsiveAttrs(url, sizes, width, height, eager){
+    if(!url || url.indexOf('data:image/') === 0 || url.indexOf('images.unsplash.com/') === -1){
+      return `src="${url}" width="${width}" height="${height}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'} decoding="async" sizes="${sizes}"`;
+    }
+    return `src="${url}" width="${width}" height="${height}" ${eager ? 'loading="eager" fetchpriority="high"' : 'loading="lazy" fetchpriority="low"'} decoding="async" sizes="${sizes}"`;
+  }
+  function cardHTML(p) {
+    const imgAttr = imgAttrs('product', productImgIndex++, p.img);
+    const old = p.old ? `<span class="old">MVR ${p.old.toLocaleString()}</span>` : '';
+    const badge = p.badge ? `<span class="pcard-badge ${p.bgold?'gold':''}">${p.badge}</span>` : '';
+      return `<div class="pcard ${p.cardType==='portrait'?'card-portrait':''}">
+        <a href="post.html?id=${p.id}&cat=${p.cat}">
+          <div class="pcard-img">
+            ${badge}
+            <img src="${p.img}" alt="${p.name}" ${imgAttr}/>
+        </div>
+      </a>
+      <div class="pcard-name-row">
+        <a href="post.html?id=${p.id}&cat=${p.cat}" class="pcard-name">${p.name}</a>
+        <button class="pcard-bookmark" onclick="toggleSave(this)" title="Wishlist"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+      </div>
+      <div class="pcard-price">MVR ${p.price.toLocaleString()}${old}</div>
+      <div class="pcard-status ${p.sclass||''}">${p.status}</div>
+    </div>`;
+  }
+
+  /* ── CMS-DRIVEN HOMEPAGE SECTIONS ── */
+  const section = (title, inner, seeAllHref, seeAllKey) => `<div class="section"><div class="section-head"><h2>${title}</h2>${seeAllKey?`<button type="button" class="see-all" data-section-key="${seeAllKey}">See all</button>`:(seeAllHref?`<a class="see-all" href="${seeAllHref}">See all</a>`:'')}</div>${inner}</div>`;
+  const prodScroll = arr => `<div class="h-scroll prod-h-scroll">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
+  const chunk = (arr, size=3) => arr.reduce((rows, item, index) => {
+    if(index % size === 0) rows.push([]);
+    rows[rows.length - 1].push(item);
+    return rows;
+  }, []);
+  const prodTeaseRows = arr => {
+    if(!arr.length) return '<p style="color:#999;font-size:0.85rem">No items.</p>';
+    return `<div class="tease-rows">${chunk(arr, 3).map(row => `<div class="tease-row">${row.map(cardHTML).join('')}</div>`).join('')}</div>`;
+  };
+  const prodGrid = arr => `<div class="grid-2">${arr.map(cardHTML).join('')||'<p style="color:#999;font-size:0.85rem">No items.</p>'}</div>`;
+  function imgAttrs(kind, index, url=''){
+    if(kind==='collection'){
+      return responsiveAttrs(url, '(max-width: 520px) 86vw, 360px', 1440, 1368, index===0);
+    }
+    if(kind==='brand') return responsiveAttrs(url, '80px', 80, 80, false);
+    return responsiveAttrs(url, '(max-width: 520px) 46vw, 220px', 320, 320, false);
+  }
+
+  function hpLinkMeta(linkType, linkValue, tag, categoryBySlug, brandsById){
+    if(linkType==='category'){
+      const cat = categoryBySlug[linkValue];
+      return {
+        href:`shop.html?cat=${encodeURIComponent(linkValue)}`,
+        label:(cat&&cat.name) || 'Category',
+        image:(Store.cardsBySlug(linkValue)[0]||{}).img || ''
+      };
+    }
+    if(linkType==='brand'){
+      const brand = brandsById[linkValue];
+      const name = brand ? brand.name : '';
+      return {
+        href:`shop.html?brand=${encodeURIComponent(name)}`,
+        label:name || 'Brand',
+        image:(Store.productsByBrand(name)[0]||{}).img || (brand&&brand.logo) || ''
+      };
+    }
+    const t = tag.find(x=>x.id===linkValue) || {};
+    return {
+      href:`shop.html?tag=${encodeURIComponent(linkValue)}`,
+      label:t.name || 'Collection',
+      image:Store.imageForTag(linkValue) || ''
+    };
+  }
+  function homepageSectionData(section){
+    const limit = Math.max(2, +(section && section.limit || 8));
+    const type = section && section.sourceType || 'category';
+    if(type === 'bestsellers'){
+      return { items:Store.bestSellers(limit), href:'shop.html?tag=t3', label:'Best Sellers' };
+    }
+    if(type === 'offers'){
+      return { items:Store.offers(limit), href:'shop.html?tag=t2', label:'Offers' };
+    }
+    if(type === 'category'){
+      const cat = Store.categoryBySlug(section.sourceValue)||{};
+      return { items:Store.cardsBySlug(section.sourceValue).slice(0, limit), href:`shop.html?cat=${encodeURIComponent(section.sourceValue||'')}`, label:cat.name || 'Category' };
+    }
+    if(type === 'brand'){
+      const brand = Store.brandById(section.sourceValue)||{};
+      return { items:Store.productsByBrand(brand.name||'').slice(0, limit), href:`shop.html?brand=${encodeURIComponent(brand.name||'')}`, label:brand.name || 'Brand' };
+    }
+    const foundTag = Store.list('tags').find(t=>t.id===section.sourceValue)||{};
+    return { items:Store.productsByTag(section.sourceValue).slice(0, limit), href:`shop.html?tag=${encodeURIComponent(section.sourceValue||'')}`, label:foundTag.name || 'Tag' };
+  }
+  function openHomeSection(key){
+    const hp = Store.getHomepage();
+    const sections = Array.isArray(hp.sections) ? hp.sections : [];
+    const sectionData = sections.find(section => section.id === key);
+    if(!sectionData) return;
+    const data = homepageSectionData(sectionData);
+    openHomeSectionSheet(sectionData.title || data.label, `<div style="padding-bottom:0.75rem">${prodGrid(data.items || [])}</div>`);
+  }
+
+  function renderHomepage(){
+    const hp = Store.getHomepage();
+    const tag = Store.list('tags');
+    const categoryBySlug = {};
+    Store.list('categories').forEach(c=>categoryBySlug[c.slug]=c);
+    const brandsById = {};
+    Store.allBrands().forEach(b=>brandsById[b.id]=b);
+
+    document.getElementById('homeMenu').innerHTML =
+      `<button class="chip active" onclick="openCats()">Categories ▾</button>` +
+      (hp.menu.items||[]).map(item=>{
+        const meta = hpLinkMeta(item.linkType, item.linkValue, tag, categoryBySlug, brandsById);
+        return `<button class="chip" onclick="location.href='${meta.href}'">${item.label || meta.label}</button>`;
+      }).join('');
+
+    const collHTML = `<div class="h-scroll">${hp.collections.cards.map((c, i)=>{
+      const meta = hpLinkMeta(c.linkType || 'tag', c.linkValue || c.tagId || '', tag, categoryBySlug, brandsById);
+      const img = c.image || meta.image || '';
+      const fallback = meta.label || (tag.find(t=>t.id===c.tagId)||{}).name || '';
+      return `<a class="collection-card" href="${meta.href}">
+        <img alt="${c.caption||fallback}" ${imgAttrs('collection', i, img)} style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/>
+        <div class="ctitle">${(c.caption||fallback).replace(/ /,'<br/>')}</div></a>`;
+    }).join('')}</div>`;
+
+    const configuredBrandIds = (hp.brands && Array.isArray(hp.brands.brandIds)) ? hp.brands.brandIds : [];
+    const allBrands = Store.allBrands();
+    const brandList = configuredBrandIds.length
+      ? configuredBrandIds.map(id => brandsById[id]).filter(Boolean)
+      : allBrands;
+    const brandHTML = brandList.length ? `<div class="h-scroll">${brandList.map((b, i)=>`
+      <a class="brand-card" href="shop.html?brand=${encodeURIComponent(b.name)}">
+        <div class="brand-logo">${b.logo?`<img alt="${b.name}" ${imgAttrs('brand', i, b.logo)}/>`:`<span>${(b.name||'?').slice(0,2).toUpperCase()}</span>`}</div>
+        <span class="brand-name">${b.name}</span></a>`).join('')}</div>`
+      : `<p style="color:#999;font-size:0.85rem;padding:0 0 0.5rem">No brands added yet.</p>`;
+
+    const hpSections = Array.isArray(hp.sections) && hp.sections.length
+      ? hp.sections.filter(section => section && section.enabled !== false)
+      : [
+          { id:'legacy_best', title:hp.bestsellers && hp.bestsellers.title || 'Best Sellers', sourceType:'bestsellers', sourceValue:'', limit:hp.bestsellers && hp.bestsellers.limit || 8, enabled:true },
+          { id:'legacy_offer', title:hp.offers && hp.offers.title || 'Offers', sourceType:'offers', sourceValue:'', limit:hp.offers && hp.offers.limit || 8, enabled:true }
+        ];
+    const dynamicSections = hpSections.map(sectionData => {
+      const data = homepageSectionData(sectionData);
+      if(!data.items || !data.items.length) return '';
+      return `<div class="deferred-section">${section(sectionData.title || data.label, prodTeaseRows(data.items), '', sectionData.id)}</div>`;
+    }).join('');
+
+    document.getElementById('homeSections').innerHTML =
+      section(hp.collections.title, collHTML) +
+      section(hp.brands.title, brandHTML) +
+      dynamicSections;
+
+    document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    }));
+    document.querySelectorAll('.see-all[data-section-key]').forEach(btn => {
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openHomeSection(btn.dataset.sectionKey || '');
+      });
+    });
+    document.body.classList.remove('pending');
+  }
+
+  if (location.protocol !== 'file:') {
+    Store.syncFromCloud().finally(renderHomepage);
+  } else {
+    renderHomepage();
+  }
+  window.addEventListener('kanxi:store-changed', renderHomepage);
+  if (new URLSearchParams(location.search).get('menu') === '1') {
+    requestAnimationFrame(() => openMenu());
+  }
+
+  function toggleSave(btn) {
+    const on = btn.classList.toggle('saved');
+    showToast(on ? '♥ Added to wishlist' : 'Removed from wishlist');
+  }
+
+</script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
