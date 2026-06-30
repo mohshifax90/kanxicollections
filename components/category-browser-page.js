@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 
 const SORT_OPTIONS = [
@@ -12,6 +13,8 @@ const SORT_OPTIONS = [
 ];
 
 export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [selectedSlug, setSelectedSlug] = useState(initialSlug || categories[0]?.slug || "");
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState("all");
   const [brandFilter, setBrandFilter] = useState([]);
@@ -23,6 +26,8 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
   const [menuOpen, setMenuOpen] = useState("");
   const [draftBrandFilter, setDraftBrandFilter] = useState([]);
   const [draftTypeFilter, setDraftTypeFilter] = useState([]);
+  const categoryMenuRef = useRef(null);
+  const sortMenuRef = useRef(null);
 
   const selectedCategory =
     categories.find((category) => category.slug === selectedSlug) || categories[0] || null;
@@ -77,6 +82,9 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
     setDraftBrandFilter([]);
     setDraftTypeFilter([]);
     setSortBy("featured");
+    if (slug && pathname !== `/category/${slug}`) {
+      router.push(`/category/${slug}`);
+    }
   }
 
   function openFilters() {
@@ -130,6 +138,35 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (initialSlug && initialSlug !== selectedSlug) {
+      setSelectedSlug(initialSlug);
+      setSelectedSubcategoryId("all");
+      setBrandFilter([]);
+      setTypeFilter([]);
+      setDraftBrandFilter([]);
+      setDraftTypeFilter([]);
+      setSortBy("featured");
+    }
+  }, [initialSlug, selectedSlug]);
+
+  useEffect(() => {
+    function handlePointerDown(event) {
+      const target = event.target;
+      if (menuOpen === "category" && categoryMenuRef.current && !categoryMenuRef.current.contains(target)) {
+        setMenuOpen("");
+        return;
+      }
+      if (menuOpen === "sort" && sortMenuRef.current && !sortMenuRef.current.contains(target)) {
+        setMenuOpen("");
+      }
+    }
+
+    if (!menuOpen) return undefined;
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [menuOpen]);
+
   return (
     <section className="category-browser">
       <div className="category-browser-layout">
@@ -169,25 +206,35 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
         </aside>
 
         <div className="category-browser-content">
-          <div className="category-filter-strip">
-            <div className={`category-filter-chip category-filter-chip--menu${menuOpen === "category" ? " open" : ""}`}>
+          <div className="category-browser-toolbar">
+            <div className="category-filter-strip">
+            <div
+              ref={categoryMenuRef}
+              className={`category-filter-chip category-filter-chip--menu${menuOpen === "category" ? " open" : ""}`}
+            >
               <button type="button" className="category-filter-trigger" onClick={() => setMenuOpen((current) => (current === "category" ? "" : "category"))}>
                 <span>{selectedCategory?.name || "Category"}</span>
               </button>
               {menuOpen === "category" ? (
                 <div className="category-filter-menu">
                   {categories.map((category) => (
-                    <button
-                      type="button"
+                    <Link
+                      href={`/category/${category.slug}`}
                       key={category.id || category.slug}
                       className={`category-filter-option${selectedSlug === category.slug ? " active" : ""}`}
                       onClick={() => {
-                        selectCategory(category.slug);
+                        setSelectedSlug(category.slug);
+                        setSelectedSubcategoryId("all");
+                        setBrandFilter([]);
+                        setTypeFilter([]);
+                        setDraftBrandFilter([]);
+                        setDraftTypeFilter([]);
+                        setSortBy("featured");
                         setMenuOpen("");
                       }}
                     >
                       {category.name}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               ) : null}
@@ -197,7 +244,10 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
               <span>Filters</span>
             </button>
 
-            <div className={`category-filter-chip category-filter-chip--menu${menuOpen === "sort" ? " open" : ""}`}>
+            <div
+              ref={sortMenuRef}
+              className={`category-filter-chip category-filter-chip--menu${menuOpen === "sort" ? " open" : ""}`}
+            >
               <button type="button" className="category-filter-trigger" onClick={() => setMenuOpen((current) => (current === "sort" ? "" : "sort"))}>
                 <span>{selectedSortLabel}</span>
               </button>
@@ -219,35 +269,36 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
                 </div>
               ) : null}
             </div>
-          </div>
-
-          <div className="category-browser-meta">
-            <strong>
-              {useSubcategoryRail && selectedSubcategoryId !== "all"
-                ? subcategoryItems.find((item) => item.id === selectedSubcategoryId)?.name || selectedCategory?.name || "Category"
-                : selectedCategory?.name || "Category"}
-            </strong>
-            <span>{filteredProducts.length} items</span>
-          </div>
-
-          <div className="category-browser-grid">
-          {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} compact />
-            ))}
-          </div>
-
-          {!filteredProducts.length ? (
-            <div className="category-browser-empty">
-              <p>No products match the current filters.</p>
-              <Link href="/category" onClick={() => { setBrandFilter("all"); setTypeFilter("all"); }}>
-                Reset filters
-              </Link>
             </div>
-          ) : null}
+
+            <div className="category-browser-meta">
+              <strong>
+                {useSubcategoryRail && selectedSubcategoryId !== "all"
+                  ? subcategoryItems.find((item) => item.id === selectedSubcategoryId)?.name || selectedCategory?.name || "Category"
+                  : selectedCategory?.name || "Category"}
+              </strong>
+              <span>{filteredProducts.length} items</span>
+            </div>
+          </div>
+
+          <div className="category-browser-scroll">
+            <div className="category-browser-grid">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} compact />
+              ))}
+            </div>
+
+            {!filteredProducts.length ? (
+              <div className="category-browser-empty">
+                <p>No products match the current filters.</p>
+                <Link href="/category" onClick={() => { setBrandFilter([]); setTypeFilter([]); }}>
+                  Reset filters
+                </Link>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
-
-      {menuOpen ? <button type="button" className="category-filter-screen" onClick={() => setMenuOpen("")} aria-label="Close menu" /> : null}
 
       {filterOpen ? (
         <div className="filter-sheet-layer" role="dialog" aria-modal="true" aria-label="Filters">
