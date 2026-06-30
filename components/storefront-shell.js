@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Grid2x2, Heart, House, Search, ShoppingBag, UserRound } from "lucide-react";
+import { Search, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Home", icon: House },
-  { href: "/category", label: "Category", icon: Grid2x2 },
-  { href: "/wishlist", label: "Wishlist", icon: Heart },
-  { href: "/account", label: "Account", icon: UserRound },
+  { href: "/", label: "Home", icon: "/assets/nav-home.svg" },
+  { href: "/category", label: "Category", icon: "/assets/nav-categories.svg" },
+  { href: "/wishlist", label: "Wishlist", icon: "/assets/nav-heart.svg" },
+  { href: "/account", label: "Account", icon: "/assets/nav-profile.svg" },
 ];
 
 export function StorefrontShell({ active = "/", children, brand = "kanxi.collection", logo = "" }) {
@@ -43,11 +43,10 @@ export function StorefrontShell({ active = "/", children, brand = "kanxi.collect
         <nav className="bottom-nav" aria-label="Bottom navigation">
           {NAV_ITEMS.map((item) => {
             const isActive = active === item.href;
-            const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href} className={`bottom-link${isActive ? " active" : ""}`}>
                 <span className="bottom-icon" aria-hidden="true">
-                  <Icon />
+                  <img src={item.icon} alt="" className="bottom-icon-image" />
                 </span>
                 <span>{item.label}</span>
               </Link>

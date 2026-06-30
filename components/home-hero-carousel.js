@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 export function HomeHeroCarousel({ slides = [] }) {
   const safeSlides = useMemo(() => (Array.isArray(slides) && slides.length ? slides : []), [slides]);
@@ -31,11 +32,17 @@ export function HomeHeroCarousel({ slides = [] }) {
         <img src={current.image} alt={current.title} width="960" height="1120" className="hero-image" />
         <div className="hero-overlay" />
         <div className="hero-copy">
-          <p>{current.eyebrow}</p>
+          <p className="hero-kicker">{current.eyebrow}</p>
           <h1>{current.title}</h1>
-          <div className="hero-meta">
-            <span>{current.subtitle}</span>
-            <strong>{current.progress}</strong>
+          <p className="hero-subtitle">{current.subtitle}</p>
+          <div className="hero-actions">
+            <Link href="/category" className="hero-cta">
+              Shop Now
+            </Link>
+            <div className="hero-meta">
+              <span>{safeSlides.length > 1 ? "Featured Drop" : "New Season"}</span>
+              <strong>{current.progress}</strong>
+            </div>
           </div>
         </div>
       </article>

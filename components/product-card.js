@@ -5,7 +5,6 @@ export function ProductCard({ product, compact = false }) {
     <Link href={`/product/${product.id}`} className={`product-card${compact ? " compact" : ""}`}>
       <div className="product-visual">
         <img src={product.image} alt={product.name} width="320" height="320" loading="lazy" />
-        {product.tag ? <span className="product-tag">{product.tag}</span> : null}
       </div>
       <div className="product-copy">
         <p className="product-brand">{product.brand}</p>
@@ -16,19 +15,7 @@ export function ProductCard({ product, compact = false }) {
           {product.discountPercent ? <em>{product.discountPercent}%</em> : null}
         </div>
         {product.oldPrice ? <p className="product-old-price">MVR {Math.round(product.oldPrice)}</p> : null}
-        <div className="product-stats">
-          <span>♡ {product.likes}</span>
-          <span>★ {product.rating}</span>
-          <span>({product.reviews})</span>
-        </div>
-        <div className="product-perks">
-          <span className="product-pill">COD</span>
-          {product.perks.map((perk) => (
-            <span className="product-pill" key={perk}>
-              {perk}
-            </span>
-          ))}
-        </div>
+        {product.tag ? <p className="product-tagline">{product.tag}</p> : null}
       </div>
     </Link>
   );
