@@ -1,8 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
+
+const SORT_OPTIONS = [
+  { value: "featured", label: "Featured" },
+  { value: "price_low", label: "Price: Low" },
+  { value: "price_high", label: "Price: High" },
+  { value: "name", label: "Name" },
+];
 
 export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
   const [selectedSlug, setSelectedSlug] = useState(initialSlug || categories[0]?.slug || "");
@@ -13,6 +20,7 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterTab, setFilterTab] = useState("brand");
   const [filterSearch, setFilterSearch] = useState("");
+  const [menuOpen, setMenuOpen] = useState("");
   const [draftBrandFilter, setDraftBrandFilter] = useState([]);
   const [draftTypeFilter, setDraftTypeFilter] = useState([]);
 
@@ -111,6 +119,16 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
       .toLowerCase()
       .includes(filterSearch.trim().toLowerCase()),
   );
+  const selectedSortLabel = SORT_OPTIONS.find((option) => option.value === sortBy)?.label || "Sort";
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      if (event.key === "Escape") setMenuOpen("");
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <section className="category-browser">
@@ -152,34 +170,55 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
 
         <div className="category-browser-content">
           <div className="category-filter-strip">
+            <div className={`category-filter-chip category-filter-chip--menu${menuOpen === "category" ? " open" : ""}`}>
+              <button type="button" className="category-filter-trigger" onClick={() => setMenuOpen((current) => (current === "category" ? "" : "category"))}>
+                <span>{selectedCategory?.name || "Category"}</span>
+              </button>
+              {menuOpen === "category" ? (
+                <div className="category-filter-menu">
+                  {categories.map((category) => (
+                    <button
+                      type="button"
+                      key={category.id || category.slug}
+                      className={`category-filter-option${selectedSlug === category.slug ? " active" : ""}`}
+                      onClick={() => {
+                        selectCategory(category.slug);
+                        setMenuOpen("");
+                      }}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
             <button type="button" className="category-filter-chip" onClick={openFilters}>
               <span>Filters</span>
             </button>
 
-            <label className="category-filter-chip">
-              <span>Sort</span>
-              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-                <option value="featured">Featured</option>
-                <option value="price_low">Price: Low</option>
-                <option value="price_high">Price: High</option>
-                <option value="name">Name</option>
-              </select>
-            </label>
-
-            <label className="category-filter-chip">
-              <span>Brand</span>
-              <select
-                value={brandFilter[0] || "all"}
-                onChange={(event) => setBrandFilter(event.target.value === "all" ? [] : [event.target.value])}
-              >
-                <option value="all">All</option>
-                {brandOptions.map((brand) => (
-                  <option value={brand} key={brand}>
-                    {brand}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className={`category-filter-chip category-filter-chip--menu${menuOpen === "sort" ? " open" : ""}`}>
+              <button type="button" className="category-filter-trigger" onClick={() => setMenuOpen((current) => (current === "sort" ? "" : "sort"))}>
+                <span>{selectedSortLabel}</span>
+              </button>
+              {menuOpen === "sort" ? (
+                <div className="category-filter-menu">
+                  {SORT_OPTIONS.map((option) => (
+                    <button
+                      type="button"
+                      key={option.value}
+                      className={`category-filter-option${sortBy === option.value ? " active" : ""}`}
+                      onClick={() => {
+                        setSortBy(option.value);
+                        setMenuOpen("");
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="category-browser-meta">
@@ -207,6 +246,8 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
           ) : null}
         </div>
       </div>
+
+      {menuOpen ? <button type="button" className="category-filter-screen" onClick={() => setMenuOpen("")} aria-label="Close menu" /> : null}
 
       {filterOpen ? (
         <div className="filter-sheet-layer" role="dialog" aria-modal="true" aria-label="Filters">

@@ -178,10 +178,10 @@ const Store = window.Store = (() => {
     return {
       header: { logo:'' },
       collections: { title:'Collections', cards:[
-        { id:uid('cc_'), caption:'New Season', tagId:'t1', linkType:'tag', linkValue:'t1', image:'' },
-        { id:uid('cc_'), caption:'On Sale', tagId:'t2', linkType:'tag', linkValue:'t2', image:'' },
-        { id:uid('cc_'), caption:'Bestsellers', tagId:'t3', linkType:'tag', linkValue:'t3', image:'' },
-        { id:uid('cc_'), caption:'Limited Edition', tagId:'t4', linkType:'tag', linkValue:'t4', image:'' },
+        { id:uid('cc_'), caption:'New Season', tagId:'t1', linkType:'tag', linkValue:'t1', image:'', overlayColor:'#121016' },
+        { id:uid('cc_'), caption:'On Sale', tagId:'t2', linkType:'tag', linkValue:'t2', image:'', overlayColor:'#121016' },
+        { id:uid('cc_'), caption:'Bestsellers', tagId:'t3', linkType:'tag', linkValue:'t3', image:'', overlayColor:'#121016' },
+        { id:uid('cc_'), caption:'Limited Edition', tagId:'t4', linkType:'tag', linkValue:'t4', image:'', overlayColor:'#121016' },
       ]},
       menu: { items:[
         { id:uid('hm_'), label:'Clothing', linkType:'category', linkValue:'clothing' },
@@ -643,7 +643,8 @@ const Store = window.Store = (() => {
         tagId:c.tagId||'',
         linkType:c.linkType || (c.categorySlug ? 'category' : (c.brandId ? 'brand' : 'tag')),
         linkValue:c.linkValue || c.categorySlug || c.brandId || c.tagId || '',
-        image:sanitizeImage(c.image)
+        image:sanitizeImage(c.image),
+        overlayColor: String(c.overlayColor || '#121016').trim() || '#121016'
       }));
     }
     if(!Array.isArray(hp.sections) || !hp.sections.length){

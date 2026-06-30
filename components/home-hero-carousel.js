@@ -1,7 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+
+function toRgb(color) {
+  const value = String(color || "").trim();
+  const hex = value.startsWith("#") ? value.slice(1) : value;
+  if (hex.length === 3) {
+    const [r, g, b] = hex.split("");
+    return `${parseInt(r + r, 16)}, ${parseInt(g + g, 16)}, ${parseInt(b + b, 16)}`;
+  }
+  if (hex.length === 6) {
+    return `${parseInt(hex.slice(0, 2), 16)}, ${parseInt(hex.slice(2, 4), 16)}, ${parseInt(hex.slice(4, 6), 16)}`;
+  }
+  return "18, 16, 22";
+}
 
 export function HomeHeroCarousel({ slides = [] }) {
   const safeSlides = useMemo(() => (Array.isArray(slides) && slides.length ? slides : []), [slides]);
@@ -19,6 +31,7 @@ export function HomeHeroCarousel({ slides = [] }) {
 
   const current = safeSlides[index];
   const next = safeSlides[(index + 1) % safeSlides.length] || current;
+  const overlayRgb = toRgb(current.overlayColor);
 
   return (
     <div className="hero-carousel">
@@ -30,21 +43,17 @@ export function HomeHeroCarousel({ slides = [] }) {
 
       <article className="hero-card hero-card--active" key={`${index}-${current.image}`}>
         <img src={current.image} alt={current.title} width="960" height="1120" className="hero-image" />
-        <div className="hero-overlay" />
-        <div className="hero-copy">
-          <p className="hero-kicker">{current.eyebrow}</p>
-          <h1>{current.title}</h1>
-          <p className="hero-subtitle">{current.subtitle}</p>
-          <div className="hero-actions">
-            <Link href="/category" className="hero-cta">
-              Shop Now
-            </Link>
-            <div className="hero-meta">
-              <span>{safeSlides.length > 1 ? "Featured Drop" : "New Season"}</span>
-              <strong>{current.progress}</strong>
-            </div>
+        <div
+          className="hero-overlay"
+          style={{
+            background: `linear-gradient(180deg, rgba(${overlayRgb}, 0) 0%, rgba(${overlayRgb}, 0.08) 22%, rgba(${overlayRgb}, 0.28) 44%, rgba(${overlayRgb}, 0.62) 68%, rgba(${overlayRgb}, 1) 100%)`,
+          }}
+        />
+        {current.title ? (
+          <div className="hero-copy">
+            <h1>{current.title}</h1>
           </div>
-        </div>
+        ) : null}
       </article>
     </div>
   );

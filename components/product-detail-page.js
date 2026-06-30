@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Bookmark, Send } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 import { ProductCard } from "@/components/product-card";
 
@@ -10,6 +11,7 @@ export function ProductDetailPage({ product, related = [] }) {
   const router = useRouter();
   const { addItem } = useCart();
   const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.[0]?.id || null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [qty, setQty] = useState(1);
 
   const selectedVariant = useMemo(
@@ -17,12 +19,22 @@ export function ProductDetailPage({ product, related = [] }) {
     [product.variants, selectedVariantId],
   );
   const selectedGallery = selectedVariant?.gallery?.length ? selectedVariant.gallery : product.gallery || [product.image];
-  const selectedImage = selectedGallery[0] || product.image;
+  const selectedImage = selectedGallery[selectedImageIndex] || selectedGallery[0] || product.image;
   const primaryImage = product.image || selectedImage;
   const selectedPrice = Number(selectedVariant?.price || product.basePrice || product.price || 0);
   const selectedStock = Number(selectedVariant?.stock ?? product.baseStock ?? product.stockTotal ?? 0);
   const variantLabel = selectedVariant ? `${product.variantType}: ${selectedVariant.value}` : "Default";
   const isClothing = product.categorySlug === "clothing";
+  const optionLabel =
+    product.variantType === "shade"
+      ? "Color"
+      : product.variantType === "size"
+        ? "Size"
+        : product.variantType === "volume"
+          ? "Volume"
+          : product.variantType === "none"
+            ? ""
+            : "Options";
 
   const addCurrentToCart = (redirect = false) => {
     if (selectedStock <= 0) return;
@@ -61,30 +73,51 @@ export function ProductDetailPage({ product, related = [] }) {
           width="900"
           height="1100"
         />
+        {selectedGallery.length > 1 ? (
+          <div className="detail-gallery-dots" aria-hidden="true">
+            {selectedGallery.map((image, index) => (
+              <span key={image} className={`detail-gallery-dot${index === selectedImageIndex ? " active" : ""}`} />
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="detail-copy">
         <div className="detail-title-row">
           <div>
             <h1>{product.name}</h1>
-            <p className="detail-brand-line">{product.brand}</p>
+            <p className="detail-brand-line">
+              From {product.brand}
+              {selectedStock > 0 ? " · In stock" : " · Out of stock"}
+            </p>
           </div>
-          <div className="detail-rating">★ {product.rating}</div>
+          <div className="detail-actions">
+            <button type="button" className="detail-action-button" aria-label="Share product">
+              <Send />
+            </button>
+            <button type="button" className="detail-action-button" aria-label="Save product">
+              <Bookmark />
+            </button>
+          </div>
         </div>
         <div className="detail-price-row">
           <strong>MVR {Math.round(selectedPrice)}</strong>
           {product.oldPrice ? <span>MVR {Math.round(product.oldPrice)}</span> : null}
           {product.discountPercent ? <em>{product.discountPercent}%</em> : null}
         </div>
-        {product.description ? <p className="page-copy">{product.description}</p> : null}
       </div>
 
       {selectedGallery.length > 1 ? (
         <div className="detail-thumb-row">
           {selectedGallery.map((image, index) => (
-            <div className={`detail-thumb${index === 0 ? " active" : ""}`} key={image}>
+            <button
+              type="button"
+              className={`detail-thumb${index === selectedImageIndex ? " active" : ""}`}
+              key={image}
+              onClick={() => setSelectedImageIndex(index)}
+            >
               <img src={image} alt={`${product.name} ${index + 1}`} width="84" height="84" />
-            </div>
+            </button>
           ))}
         </div>
       ) : null}
@@ -92,10 +125,10 @@ export function ProductDetailPage({ product, related = [] }) {
       {product.variants?.length ? (
         <section className="detail-section">
           <div className="detail-section-head">
-            <h2>{product.variantType === "shade" ? "Shade" : product.variantType === "volume" ? "Volume" : "Options"}</h2>
+            <h2>{optionLabel}</h2>
             <span>{selectedStock > 0 ? `${selectedStock} left` : "Out of stock"}</span>
           </div>
-          <div className="variant-grid">
+          <div className={`variant-grid${product.variantType === "shade" ? " variant-grid--swatch" : ""}`}>
             {product.variants.map((variant) => (
               <button
                 type="button"
@@ -104,6 +137,7 @@ export function ProductDetailPage({ product, related = [] }) {
                 onClick={() => {
                   setSelectedVariantId(variant.id);
                   setQty(1);
+                  setSelectedImageIndex(0);
                 }}
                 disabled={variant.stock <= 0}
               >
@@ -131,20 +165,21 @@ export function ProductDetailPage({ product, related = [] }) {
         </div>
       </section>
 
-      {product.details?.length ? (
+      {product.description || product.details?.length ? (
         <section className="detail-section">
           <div className="detail-section-head">
             <h2>Product details</h2>
           </div>
+          {product.description ? <p className="detail-description">{product.description}</p> : null}
           <ul className="detail-bullets">
-            {product.details.map((item) => (
+            {(product.details || []).map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
         </section>
       ) : null}
 
-      <div className="detail-cta-row">
+      <div className="detail-buybar">
         <button type="button" className="secondary-cta" onClick={() => addCurrentToCart(false)} disabled={selectedStock <= 0}>
           Add to bag
         </button>

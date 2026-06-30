@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  ChevronRight,
   CreditCard,
   Landmark,
   LocateFixed,
@@ -578,7 +577,7 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
               <p>{savedUser ? "Select a saved address or add a guest address" : "Login with OTP or continue as guest"}</p>
             )}
           </div>
-          <ChevronRight />
+          <span className="checkout-address-arrow">›</span>
         </section>
 
         <div className="checkout-layout">
@@ -680,20 +679,25 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
               </div>
             </section>
 
+            <div className="checkout-bar checkout-bar--inline">
+              <div className="checkout-bar-total">
+                <span>Order total</span>
+                <strong>{formatPrice(total)}</strong>
+              </div>
+              <button
+                className="primary-cta full"
+                type="button"
+                disabled={!items.length || submitting}
+                onClick={addressReady ? handlePlaceOrder : () => setSheetOpen(true)}
+              >
+                {addressReady ? (submitting ? "Placing order..." : "Place Order") : "Select Address"}
+              </button>
+            </div>
+
             {error ? <p className="error-text">{error}</p> : null}
           </div>
         </div>
       </section>
-
-      <div className="checkout-bar">
-        <div className="checkout-bar-total">
-          <span>Order total</span>
-          <strong>{formatPrice(total)}</strong>
-        </div>
-        <button className="primary-cta full" type="button" disabled={!items.length || submitting} onClick={handlePlaceOrder}>
-          {addressReady ? (submitting ? "Placing order..." : "Place Order") : "Select Address"}
-        </button>
-      </div>
 
       <div className={`checkout-sheet-backdrop${sheetOpen ? " show" : ""}`} onClick={() => setSheetOpen(false)} />
       <div className={`checkout-sheet${sheetOpen ? " show" : ""}`}>
@@ -725,7 +729,6 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
                 className={`saved-address-card${selectedAddressId === address.id ? " active" : ""}`}
                 onClick={() => {
                   setSelectedAddressId(address.id);
-                  setSheetOpen(false);
                 }}
               >
                 <strong>{address.label || "Address"}</strong>
@@ -733,6 +736,9 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
               </button>
             ))}
             <div className="checkout-sheet-footer">
+              <button type="button" className="primary-cta" onClick={() => setSheetOpen(false)} disabled={!selectedAddressId}>
+                Use Address
+              </button>
               <button type="button" className="secondary-cta" onClick={logoutSession}>
                 Log out
               </button>
