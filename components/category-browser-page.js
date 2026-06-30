@@ -6,6 +6,7 @@ import { ProductCard } from "@/components/product-card";
 
 export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
   const [selectedSlug, setSelectedSlug] = useState(initialSlug || categories[0]?.slug || "");
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState("all");
   const [brandFilter, setBrandFilter] = useState([]);
   const [typeFilter, setTypeFilter] = useState([]);
   const [sortBy, setSortBy] = useState("featured");
@@ -17,13 +18,27 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
 
   const selectedCategory =
     categories.find((category) => category.slug === selectedSlug) || categories[0] || null;
+  const useSubcategoryRail = Boolean(initialSlug && selectedCategory);
+  const subcategoryItems = useMemo(() => {
+    if (!useSubcategoryRail) return [];
+    return [{ id: "all", name: "All", image: selectedCategory?.image || "" }, ...((selectedCategory?.subcategories || []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      image: item.image || "",
+    })) || [])];
+  }, [selectedCategory, useSubcategoryRail]);
 
   const brandOptions = useMemo(() => {
     const values = Array.from(
-      new Set((selectedCategory?.products || []).map((product) => product.brand).filter(Boolean)),
+      new Set(
+        (selectedCategory?.products || [])
+          .filter((product) => !useSubcategoryRail || selectedSubcategoryId === "all" || product.subcategoryId === selectedSubcategoryId)
+          .map((product) => product.brand)
+          .filter(Boolean),
+      ),
     );
     return values;
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedSubcategoryId, useSubcategoryRail]);
 
   const typeOptions = useMemo(() => {
     const values = Array.from(
@@ -34,6 +49,7 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
 
   const filteredProducts = useMemo(() => {
     const list = (selectedCategory?.products || []).filter((product) => {
+      if (useSubcategoryRail && selectedSubcategoryId !== "all" && product.subcategoryId !== selectedSubcategoryId) return false;
       if (brandFilter.length && !brandFilter.includes(product.brand)) return false;
       if (typeFilter.length && !typeFilter.includes(product.subcategoryName)) return false;
       return true;
@@ -43,10 +59,11 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
     if (sortBy === "price_high") return [...list].sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
     if (sortBy === "name") return [...list].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
     return list;
-  }, [selectedCategory, brandFilter, typeFilter, sortBy]);
+  }, [selectedCategory, brandFilter, typeFilter, sortBy, selectedSubcategoryId, useSubcategoryRail]);
 
   function selectCategory(slug) {
     setSelectedSlug(slug);
+    setSelectedSubcategoryId("all");
     setBrandFilter([]);
     setTypeFilter([]);
     setDraftBrandFilter([]);
@@ -99,17 +116,33 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
     <section className="category-browser">
       <div className="category-browser-layout">
         <aside className="category-rail" aria-label="Categories">
-          {categories.map((category) => {
-            const isActive = category.slug === selectedCategory?.slug;
+          {(useSubcategoryRail ? subcategoryItems : categories).map((category) => {
+            const isActive = useSubcategoryRail
+              ? category.id === selectedSubcategoryId
+              : category.slug === selectedCategory?.slug;
             return (
               <button
-                key={category.id}
+                key={category.id || category.slug}
                 type="button"
                 className={`category-rail-item${isActive ? " active" : ""}`}
-                onClick={() => selectCategory(category.slug)}
+                onClick={() => {
+                  if (useSubcategoryRail) {
+                    setSelectedSubcategoryId(category.id);
+                    setBrandFilter([]);
+                    setTypeFilter([]);
+                    setDraftBrandFilter([]);
+                    setDraftTypeFilter([]);
+                  } else {
+                    selectCategory(category.slug);
+                  }
+                }}
               >
                 <span className="category-rail-thumb">
-                  {category.image ? <img src={category.image} alt="" /> : category.icon || "✦"}
+                  {category.image ? (
+                    <img src={category.image} alt="" />
+                  ) : (
+                    <span className="category-rail-initial">{String(category.name || "A").charAt(0)}</span>
+                  )}
                 </span>
                 <span className="category-rail-label">{category.name}</span>
               </button>
@@ -150,7 +183,11 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
           </div>
 
           <div className="category-browser-meta">
-            <strong>{selectedCategory?.name || "Category"}</strong>
+            <strong>
+              {useSubcategoryRail && selectedSubcategoryId !== "all"
+                ? subcategoryItems.find((item) => item.id === selectedSubcategoryId)?.name || selectedCategory?.name || "Category"
+                : selectedCategory?.name || "Category"}
+            </strong>
             <span>{filteredProducts.length} items</span>
           </div>
 

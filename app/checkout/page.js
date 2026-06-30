@@ -8,7 +8,7 @@ export default async function CheckoutRoute() {
   const data = await getCheckoutData();
 
   return (
-    <StorefrontShell brand={data.brand} logo={data.logo}>
+    <StorefrontShell active="/checkout" brand={data.brand} logo={data.logo}>
       <CheckoutPage
         paymentMethods={data.paymentMethods}
         deliveryMethods={data.deliveryMethods}

@@ -18,9 +18,11 @@ export function ProductDetailPage({ product, related = [] }) {
   );
   const selectedGallery = selectedVariant?.gallery?.length ? selectedVariant.gallery : product.gallery || [product.image];
   const selectedImage = selectedGallery[0] || product.image;
+  const primaryImage = product.image || selectedImage;
   const selectedPrice = Number(selectedVariant?.price || product.basePrice || product.price || 0);
   const selectedStock = Number(selectedVariant?.stock ?? product.baseStock ?? product.stockTotal ?? 0);
   const variantLabel = selectedVariant ? `${product.variantType}: ${selectedVariant.value}` : "Default";
+  const isClothing = product.categorySlug === "clothing";
 
   const addCurrentToCart = (redirect = false) => {
     if (selectedStock <= 0) return;
@@ -29,7 +31,8 @@ export function ProductDetailPage({ product, related = [] }) {
       variantId: selectedVariant?.id || null,
       name: product.name,
       brand: product.brand,
-      image: selectedImage,
+      image: primaryImage,
+      primaryImage,
       qty,
       price: selectedPrice,
       stock: selectedStock,
@@ -50,8 +53,14 @@ export function ProductDetailPage({ product, related = [] }) {
         </div>
       </div>
 
-      <div className="detail-gallery-card">
-        <img src={selectedImage} alt={product.name} className="detail-hero-image" width="900" height="1100" />
+      <div className={`detail-gallery-card${isClothing ? " detail-gallery-card--clothing" : ""}`}>
+        <img
+          src={selectedImage}
+          alt={product.name}
+          className={`detail-hero-image${isClothing ? " detail-hero-image--clothing" : ""}`}
+          width="900"
+          height="1100"
+        />
       </div>
 
       <div className="detail-copy">

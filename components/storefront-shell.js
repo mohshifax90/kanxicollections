@@ -1,29 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { Search, ShoppingBag } from "lucide-react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Search, UserRound } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
+import { useStorefrontData } from "@/components/storefront-data-provider";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", icon: "/assets/nav-home.svg" },
   { href: "/category", label: "Category", icon: "/assets/nav-categories.svg" },
   { href: "/wishlist", label: "Wishlist", icon: "/assets/nav-heart.svg" },
-  { href: "/account", label: "Account", icon: "/assets/nav-profile.svg" },
+  { href: "/checkout", label: "Bag", icon: "/assets/nav-bag.svg" },
 ];
 
 export function StorefrontShell({ active = "/", children, brand = "kanxi.collection", logo = "" }) {
+  const router = useRouter();
   const { count } = useCart();
+  const { bootstrap } = useStorefrontData();
+  const resolvedBrand = bootstrap?.brand || brand;
+  const resolvedLogo = bootstrap?.logo || logo;
+
+  useEffect(() => {
+    NAV_ITEMS.forEach((item) => router.prefetch(item.href));
+    (bootstrap?.categories || []).slice(0, 8).forEach((category) => {
+      if (category?.slug) router.prefetch(`/category/${category.slug}`);
+    });
+  }, [bootstrap, router]);
 
   return (
     <main className="app-frame">
       <div className="screen-shell">
         <header className="topbar">
           <div className="brand-lockup">
-            <Link href="/" className="brand-wordmark" aria-label={brand}>
-              {logo ? (
-                <img src={logo} alt={brand} className="brand-logo-image" />
+            <Link href="/" className="brand-wordmark" aria-label={resolvedBrand}>
+              {resolvedLogo ? (
+                <img src={resolvedLogo} alt={resolvedBrand} className="brand-logo-image" />
               ) : (
-                brand
+                resolvedBrand
               )}
             </Link>
           </div>
@@ -31,9 +45,8 @@ export function StorefrontShell({ active = "/", children, brand = "kanxi.collect
             <button className="icon-button" aria-label="Search">
               <Search />
             </button>
-            <Link href="/checkout" className="icon-button bag-button" aria-label="Bag">
-              <ShoppingBag aria-hidden="true" />
-              {count ? <span className="bag-count">{count}</span> : null}
+            <Link href="/account" className="icon-button" aria-label="Account">
+              <UserRound aria-hidden="true" />
             </Link>
           </div>
         </header>
@@ -47,6 +60,7 @@ export function StorefrontShell({ active = "/", children, brand = "kanxi.collect
               <Link key={item.href} href={item.href} className={`bottom-link${isActive ? " active" : ""}`}>
                 <span className="bottom-icon" aria-hidden="true">
                   <img src={item.icon} alt="" className="bottom-icon-image" />
+                  {item.href === "/checkout" && count ? <span className="bottom-badge">{count}</span> : null}
                 </span>
                 <span>{item.label}</span>
               </Link>
