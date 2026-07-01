@@ -132,20 +132,25 @@ async function reverseLookup(lat, lng) {
 
 export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTransfer }) {
   const { items, subtotal, updateQty, removeItem, clear } = useCart();
-  const availablePayments = paymentMethods.length
-    ? paymentMethods
+  const [checkoutConfig, setCheckoutConfig] = useState({
+    paymentMethods,
+    deliveryMethods,
+    bankTransfer: bankTransfer || { bankName: "", accountNumber: "" },
+  });
+  const availablePayments = checkoutConfig.paymentMethods.length
+    ? checkoutConfig.paymentMethods
     : [
         { key: "transfer", label: "Bank Transfer" },
         { key: "cod", label: "Cash on Delivery" },
       ];
-  const availableDelivery = deliveryMethods.length
-    ? deliveryMethods
+  const availableDelivery = checkoutConfig.deliveryMethods.length
+    ? checkoutConfig.deliveryMethods
     : [
         { key: "address", label: "Address", rate: 0 },
         { key: "self_pickup", label: "Self Pickup", rate: 0 },
       ];
 
-  const [selectedPayment, setSelectedPayment] = useState(availablePayments[0]?.key || "transfer");
+  const [selectedPayment, setSelectedPayment] = useState(paymentMethods[0]?.key || "transfer");
   const [placedOrder, setPlacedOrder] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -160,6 +165,32 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
   const [otpBusy, setOtpBusy] = useState(false);
   const [loadingUser, setLoadingUser] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCheckoutConfig() {
+      try {
+        const response = await fetch("/api/storefront?view=checkout", { cache: "force-cache" });
+        const data = await response.json();
+        if (!response.ok || cancelled) return;
+        setCheckoutConfig({
+          paymentMethods: Array.isArray(data?.paymentMethods) ? data.paymentMethods : [],
+          deliveryMethods: Array.isArray(data?.deliveryMethods) ? data.deliveryMethods : [],
+          bankTransfer: data?.bankTransfer || { bankName: "", accountNumber: "" },
+        });
+        setSelectedPayment((current) => {
+          const nextMethods = Array.isArray(data?.paymentMethods) ? data.paymentMethods : [];
+          return nextMethods.some((method) => method.key === current) ? current : nextMethods[0]?.key || current;
+        });
+      } catch {}
+    }
+
+    loadCheckoutConfig();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const shippingMethod = useMemo(() => {
     const deliveryType =
@@ -648,7 +679,7 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
                         </span>
                         <div>
                           <strong>{method.label}</strong>
-                          <p>{method.key === "transfer" && bankTransfer?.accountNumber ? bankTransfer.accountNumber : "Available at checkout"}</p>
+                          <p>{method.key === "transfer" && checkoutConfig.bankTransfer?.accountNumber ? checkoutConfig.bankTransfer.accountNumber : "Available at checkout"}</p>
                         </div>
                       </div>
                       <span className="choice-dot" />

@@ -16,6 +16,9 @@ export function StorefrontDataProvider({ children, initialBootstrap = null }) {
   const [state, setState] = useState(() => buildInitialState(initialBootstrap));
 
   useEffect(() => {
+    if (initialBootstrap) {
+      return undefined;
+    }
     let cancelled = false;
 
     async function loadBootstrap() {

@@ -1,4 +1,4 @@
-import { getProductDetail, getStorefrontBootstrap } from "@/lib/storefront-data";
+import { getCheckoutData, getProductDetail, getStoreShellData } from "@/lib/storefront-data";
 
 export async function GET(request) {
   const view = request.nextUrl.searchParams.get("view") || "bootstrap";
@@ -12,6 +12,11 @@ export async function GET(request) {
     return Response.json(data);
   }
 
-  const data = await getStorefrontBootstrap();
+  if (view === "checkout") {
+    const data = await getCheckoutData();
+    return Response.json(data);
+  }
+
+  const data = await getStoreShellData();
   return Response.json(data);
 }

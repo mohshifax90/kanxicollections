@@ -2,7 +2,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Poppins } from "next/font/google";
 import { CartProvider } from "@/components/cart-provider";
 import { StorefrontDataProvider } from "@/components/storefront-data-provider";
-import { getStorefrontBootstrap } from "@/lib/storefront-data";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -17,16 +16,14 @@ export const metadata = {
   description: "Kanxi Collection storefront rebuilt with Next.js.",
 };
 
-export default async function RootLayout({ children }) {
-  const initialBootstrap = await getStorefrontBootstrap();
-
+export default function RootLayout({ children }) {
   return (
     <html lang="en" className={poppins.variable}>
       <body>
-        <StorefrontDataProvider initialBootstrap={initialBootstrap}>
+        <StorefrontDataProvider>
           <CartProvider>
             {children}
-            <SpeedInsights />
+            {process.env.NODE_ENV === "production" ? <SpeedInsights /> : null}
           </CartProvider>
         </StorefrontDataProvider>
       </body>

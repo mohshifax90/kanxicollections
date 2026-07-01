@@ -1,12 +1,14 @@
 import { StorefrontCategoryRoute } from "@/components/storefront-category-route";
 import { StorefrontShell } from "@/components/storefront-shell";
+import { getCategoryBrowser } from "@/lib/storefront-data";
 
 export const revalidate = 30;
 
-export default function CategoryPage() {
+export default async function CategoryPage() {
+  const initialData = await getCategoryBrowser();
   return (
     <StorefrontShell active="/category">
-      <StorefrontCategoryRoute />
+      <StorefrontCategoryRoute initialData={initialData} />
     </StorefrontShell>
   );
 }

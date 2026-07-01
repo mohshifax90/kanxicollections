@@ -14,9 +14,10 @@ const Store = window.Store = (() => {
   const CAN_SYNC_CLOUD = !IS_FILE;
   const IS_ADMIN_PAGE = /admin\.html$/i.test(location.pathname);
   const PUBLIC_SITE_ORIGIN = IS_FILE || IS_LOCALHOST ? 'https://kanxicollection.com' : location.origin;
+  const STOREFRONT_SYNC_ORIGIN = IS_LOCALHOST ? 'http://127.0.0.1:9002' : location.origin;
   const DEFER_CLOUD_BOOT = false;
   const REALTIME_ENABLED = CAN_SYNC_CLOUD;
-  const USE_CLOUD_CACHE = USE_LOCAL;
+  const USE_CLOUD_CACHE = !USE_LOCAL;
   const SUPABASE_JS_SRC = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const uid = (p='') => p + Math.random().toString(36).slice(2,8);
   const BLANK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 600'%3E%3Crect width='600' height='600' fill='%23f4f4f5'/%3E%3Cpath d='M185 374l77-96 54 64 33-40 66 72H185z' fill='%23d4d4d8'/%3E%3Ccircle cx='238' cy='223' r='36' fill='%23e4e4e7'/%3E%3C/svg%3E";
@@ -30,11 +31,19 @@ const Store = window.Store = (() => {
   let lastCloudHash = '';
   let pendingCloudHash = '';
   let cloudDb = null;
+  let memoryLocalDb = null;
+  let memoryCloudCache = null;
   let cloudLoaded = false;
   let cloudBootTimer = null;
   let realtimeStarted = false;
   let realtimeClientPromise = null;
   let realtimeChannel = null;
+
+  function withUpdatedAt(db, ts=Date.now()){
+    if(!db || typeof db !== 'object') return db;
+    db._updatedAt = Math.max(+(db._updatedAt || 0), +ts || Date.now());
+    return db;
+  }
 
   const ORDER_FLOW = ['Pending Payment','Pending Slip Verification','Paid','Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Delivered','Returned'];
   const COD_ORDER_FLOW = ['Order Accepted','Packing','Ready to Dispatch','Out for Delivery','Payment Collected','Delivered','Returned'];
@@ -577,8 +586,15 @@ const Store = window.Store = (() => {
     };
   }
 
-  function readLocal(){ try{ return JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){ return null; } }
+  function readLocal(){
+    if(USE_LOCAL) return memoryLocalDb;
+    try{ return JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){ return null; }
+  }
   function writeLocal(db){
+    if(USE_LOCAL){
+      memoryLocalDb = db;
+      return;
+    }
     try{
       localStorage.setItem(KEY, JSON.stringify(db));
     }catch(error){
@@ -750,10 +766,15 @@ const Store = window.Store = (() => {
   }
   function cloudConfig(){ return window.KANXI_SUPABASE || {}; }
   function readCloudCache(){
+    if(USE_LOCAL) return memoryCloudCache;
     if(!USE_CLOUD_CACHE) return null;
     try{ return JSON.parse(localStorage.getItem(CLOUD_CACHE_KEY)||'null'); }catch(_){ return null; }
   }
   function writeCloudCache(db){
+    if(USE_LOCAL){
+      memoryCloudCache = db;
+      return;
+    }
     if(!USE_CLOUD_CACHE) return;
     try{ localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(db)); }catch(_){}
   }
@@ -776,6 +797,18 @@ const Store = window.Store = (() => {
     return text ? JSON.parse(text) : null;
   }
   function cloudRow(){ const cfg=cloudConfig(); return { table:cfg.table||'kanxi_site_data', id:cfg.rowId||'main' }; }
+  async function syncStorefrontRoutes(clean){
+    const res = await fetch(`${STOREFRONT_SYNC_ORIGIN}/api/storefront-sync`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ data: clean })
+    });
+    const text = await res.text();
+    let payload = null;
+    try{ payload = text ? JSON.parse(text) : null; }catch(_){}
+    if(!res.ok) throw new Error(payload && (payload.error || payload.message) || text || `Storefront sync failed (${res.status})`);
+    return payload || { ok:true };
+  }
   async function saveCloudNow(db){
     const row=cloudRow();
     const clean=normalize(db), raw=JSON.stringify(clean);
@@ -784,7 +817,11 @@ const Store = window.Store = (() => {
     emitSync('saving');
     pendingCloudHash = raw;
     try{
-      await cloudFetch('POST', '', { id:row.id, data:clean, updated_at:new Date().toISOString() });
+      try{
+        await syncStorefrontRoutes(clean);
+      }catch(syncError){
+        await cloudFetch('POST', '', { id:row.id, data:clean, updated_at:new Date().toISOString() });
+      }
       lastCloudHash = raw;
       pendingCloudHash = '';
       emitSync('saved');
@@ -902,11 +939,15 @@ const Store = window.Store = (() => {
     writeCloudCache(db);
     pendingCloudHash = raw;
     try{
-      await cloudFetch('POST', '', {
-        id: row.id,
-        data: db,
-        updated_at: new Date().toISOString()
-      });
+      try{
+        await syncStorefrontRoutes(db);
+      }catch(syncError){
+        await cloudFetch('POST', '', {
+          id: row.id,
+          data: db,
+          updated_at: new Date().toISOString()
+        });
+      }
     }catch(error){
       pendingCloudHash = '';
       console.warn('Kanxi Supabase save failed:', error.message);
@@ -923,14 +964,14 @@ const Store = window.Store = (() => {
     saveTimer = setTimeout(()=>pushCloud(db), 400);
   }
   function save(db){
-    const clean=normalize(db);
+    const clean=withUpdatedAt(normalize(db));
     if(USE_LOCAL) writeLocal(clean);
     cloudDb = clean;
     writeCloudCache(clean);
     queueCloudSave(clean);
   }
   function saveNow(db){
-    const clean = normalize(db);
+    const clean = withUpdatedAt(normalize(db));
     if(USE_LOCAL) writeLocal(clean);
     cloudDb = clean;
     writeCloudCache(clean);
@@ -961,9 +1002,15 @@ const Store = window.Store = (() => {
     const localDb = USE_LOCAL ? normalize(readCloudCache() || (looksLikeSeededDemo(readLocal()) ? null : readLocal()) || emptyCloudDb()) : load();
     if(USE_LOCAL) writeLocal(localDb);
     const db=normalize(data.data), cloudRaw=JSON.stringify(db), localRaw=JSON.stringify(localDb), liveRaw=JSON.stringify(cloudDb||localDb);
+    const remoteUpdatedAt = Math.max(+(db._updatedAt || 0), +(Date.parse(data.updated_at || '') || 0));
+    const localUpdatedAt = +(localDb && localDb._updatedAt || 0);
     if(pendingCloudHash && cloudRaw!==pendingCloudHash && liveRaw===pendingCloudHash){
       emitSync('loaded', { pending:true });
       return { ok:true, pending:true };
+    }
+    if(USE_LOCAL && localRaw !== cloudRaw && localUpdatedAt && remoteUpdatedAt && localUpdatedAt > remoteUpdatedAt){
+      emitSync('loaded', { localPreferred:true });
+      return { ok:true, localPreferred:true };
     }
     lastCloudHash = cloudRaw;
     if(cloudRaw!==localRaw){

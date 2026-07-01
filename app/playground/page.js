@@ -1,14 +1,11 @@
 import { PlaceholderPage } from "@/components/placeholder-page";
 import { StorefrontShell } from "@/components/storefront-shell";
-import { getStorefrontData } from "@/lib/storefront-data";
 
 export const revalidate = 30;
 
-export default async function PlaygroundPage() {
-  const data = await getStorefrontData();
-
+export default function PlaygroundPage() {
   return (
-    <StorefrontShell active="/playground" brand={data.brand} logo={data.logo}>
+    <StorefrontShell active="/playground">
       <PlaceholderPage
         title="Playground"
         copy="This route is ready for promos, game mechanics, and rewards modules styled to the new storefront direction."

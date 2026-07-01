@@ -20,7 +20,11 @@ export function ProductDetailPage({ product, related = [] }) {
     () => product.variants?.find((variant) => variant.id === selectedVariantId) || null,
     [product.variants, selectedVariantId],
   );
-  const selectedGallery = selectedVariant?.gallery?.length ? selectedVariant.gallery : product.gallery || [product.image];
+  const hasVisualVariantType = product.variantType === "shade";
+  const selectedGallery =
+    hasVisualVariantType && selectedVariant?.gallery?.length
+      ? selectedVariant.gallery
+      : product.gallery || [product.image];
   const selectedImage = selectedGallery[selectedImageIndex] || selectedGallery[0] || product.image;
   const primaryImage = product.image || selectedImage;
   const selectedPrice = Number(selectedVariant?.price || product.basePrice || product.price || 0);
@@ -38,6 +42,7 @@ export function ProductDetailPage({ product, related = [] }) {
             ? ""
             : "Options";
   const logo = bootstrap?.logo || "";
+  const hasVisualVariants = hasVisualVariantType && Boolean(product.variants?.some((variant) => variant.image));
 
   const addCurrentToCart = (redirect = false) => {
     if (selectedStock <= 0) return;
@@ -140,10 +145,10 @@ export function ProductDetailPage({ product, related = [] }) {
         {product.variants?.length ? (
           <section className="detail-section">
             <div className="detail-section-head">
-              <h2>{optionLabel}</h2>
+              <h2>{optionLabel}{selectedVariant ? `: ${selectedVariant.value}` : ""}</h2>
               <span>{selectedStock > 0 ? `${selectedStock} left` : "Out of stock"}</span>
             </div>
-            <div className={`variant-grid${product.variantType === "shade" ? " variant-grid--swatch" : ""}`}>
+            <div className={`variant-grid${product.variantType === "shade" ? " variant-grid--swatch" : ""}${hasVisualVariants ? " variant-grid--preview" : ""}`}>
               {product.variants.map((variant) => (
                 <button
                   type="button"
@@ -156,9 +161,9 @@ export function ProductDetailPage({ product, related = [] }) {
                   }}
                   disabled={variant.stock <= 0}
                 >
-                  {variant.image ? <img src={variant.image} alt="" className="variant-chip-image" /> : null}
-                  {variant.color && !variant.image ? <span className="shade-dot" style={{ background: variant.color }} /> : null}
-                  <span>{variant.value}</span>
+                  {hasVisualVariantType && variant.image ? <img src={variant.image} alt="" className="variant-chip-image" /> : null}
+                  {variant.color && (!hasVisualVariantType || !variant.image) ? <span className="shade-dot" style={{ background: variant.color }} /> : null}
+                  <span className="variant-chip-label">{variant.value}</span>
                 </button>
               ))}
             </div>
@@ -180,6 +185,15 @@ export function ProductDetailPage({ product, related = [] }) {
             </button>
           </div>
         </section>
+
+        <div className="detail-inline-actions">
+          <button type="button" className="secondary-cta" onClick={() => addCurrentToCart(false)} disabled={selectedStock <= 0}>
+            Add to cart
+          </button>
+          <button type="button" className="primary-cta" onClick={() => addCurrentToCart(true)} disabled={selectedStock <= 0}>
+            Buy now
+          </button>
+        </div>
 
         {product.description || product.details?.length ? (
           <section className="detail-section detail-section--copy">
@@ -208,15 +222,6 @@ export function ProductDetailPage({ product, related = [] }) {
           </section>
         ) : null}
       </section>
-
-      <div className="detail-buybar">
-        <button type="button" className="secondary-cta" onClick={() => addCurrentToCart(false)} disabled={selectedStock <= 0}>
-          Add to cart
-        </button>
-        <button type="button" className="primary-cta" onClick={() => addCurrentToCart(true)} disabled={selectedStock <= 0}>
-          Buy now
-        </button>
-      </div>
     </section>
   );
 }

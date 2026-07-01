@@ -4,26 +4,35 @@ import { useEffect, useMemo, useState } from "react";
 import { ProductDetailPage } from "@/components/product-detail-page";
 import { useStorefrontData } from "@/components/storefront-data-provider";
 
-export function StorefrontProductRoute({ id }) {
+export function StorefrontProductRoute({ id, initialData = null }) {
   const { bootstrap, ensureProduct, productsById } = useStorefrontData();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialData?.product);
+  const [localData, setLocalData] = useState(initialData);
 
   useEffect(() => {
+    if (initialData?.product?.id === id) {
+      setLocalData(initialData);
+      setLoading(false);
+      return undefined;
+    }
     let cancelled = false;
 
     async function loadProduct() {
       setLoading(true);
-      await ensureProduct(id);
-      if (!cancelled) setLoading(false);
+      const data = await ensureProduct(id);
+      if (!cancelled) {
+        setLocalData(data);
+        setLoading(false);
+      }
     }
 
     loadProduct();
     return () => {
       cancelled = true;
     };
-  }, [ensureProduct, id]);
+  }, [ensureProduct, id, initialData]);
 
-  const productData = productsById.get(id) || null;
+  const productData = productsById.get(id) || localData || null;
   const related = useMemo(() => {
     const product = productData?.product;
     if (!product || !bootstrap?.categories?.length) return [];

@@ -1,5 +1,6 @@
 import { StorefrontProductRoute } from "@/components/storefront-product-route";
-import { getProductIds } from "@/lib/storefront-data";
+import { StorefrontShell } from "@/components/storefront-shell";
+import { getProductDetail, getProductIds } from "@/lib/storefront-data";
 
 export const revalidate = 30;
 
@@ -10,6 +11,11 @@ export async function generateStaticParams() {
 
 export default async function ProductPage({ params }) {
   const { id } = await params;
+  const initialData = await getProductDetail(id);
 
-  return <StorefrontProductRoute id={id} />;
+  return (
+    <StorefrontShell hideHeader>
+      <StorefrontProductRoute id={id} initialData={initialData} />
+    </StorefrontShell>
+  );
 }

@@ -1,14 +1,11 @@
 import { PlaceholderPage } from "@/components/placeholder-page";
 import { StorefrontShell } from "@/components/storefront-shell";
-import { getStorefrontData } from "@/lib/storefront-data";
 
 export const revalidate = 30;
 
-export default async function WishlistPage() {
-  const data = await getStorefrontData();
-
+export default function WishlistPage() {
   return (
-    <StorefrontShell active="/wishlist" brand={data.brand} logo={data.logo}>
+    <StorefrontShell active="/wishlist">
       <PlaceholderPage
         title="Wishlist"
         copy="Saved products can be restyled here with the same soft card language as the new home feed."

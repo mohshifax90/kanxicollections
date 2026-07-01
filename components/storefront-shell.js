@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { href: "/checkout", label: "Bag", icon: "/assets/nav-bag.svg" },
 ];
 
-export function StorefrontShell({ active = "/", children, brand = "kanxi.collection", logo = "" }) {
+export function StorefrontShell({ active = "/", children, brand = "kanxi.collection", logo = "", hideHeader = false }) {
   const router = useRouter();
   const { count } = useCart();
   const { bootstrap } = useStorefrontData();
@@ -31,25 +31,27 @@ export function StorefrontShell({ active = "/", children, brand = "kanxi.collect
   return (
     <main className="app-frame">
       <div className="screen-shell">
-        <header className="topbar">
-          <div className="brand-lockup">
-            <Link href="/" className="brand-wordmark" aria-label={resolvedBrand}>
-              {resolvedLogo ? (
-                <img src={resolvedLogo} alt={resolvedBrand} className="brand-logo-image" />
-              ) : (
-                resolvedBrand
-              )}
-            </Link>
-          </div>
-          <div className="header-actions">
-            <button className="icon-button" aria-label="Search">
-              <Search />
-            </button>
-            <Link href="/account" className="icon-button" aria-label="Account">
-              <UserRound aria-hidden="true" />
-            </Link>
-          </div>
-        </header>
+        {!hideHeader ? (
+          <header className="topbar">
+            <div className="brand-lockup">
+              <Link href="/" className="brand-wordmark" aria-label={resolvedBrand}>
+                {resolvedLogo ? (
+                  <img src={resolvedLogo} alt={resolvedBrand} className="brand-logo-image" />
+                ) : (
+                  resolvedBrand
+                )}
+              </Link>
+            </div>
+            <div className="header-actions">
+              <button className="icon-button" aria-label="Search">
+                <Search />
+              </button>
+              <Link href="/account" className="icon-button" aria-label="Account">
+                <UserRound aria-hidden="true" />
+              </Link>
+            </div>
+          </header>
+        ) : null}
 
         <div className="page-content">{children}</div>
 
