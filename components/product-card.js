@@ -1,10 +1,19 @@
+import Image from "next/image";
 import Link from "next/link";
 
-export function ProductCard({ product, compact = false }) {
+export function ProductCard({ product, compact = false, priority = false }) {
   return (
     <Link href={`/product/${product.id}`} className={`product-card${compact ? " compact" : ""}`}>
       <div className="product-visual">
-        <img src={product.image} alt={product.name} width="320" height="320" loading="lazy" />
+        <Image
+          src={product.image}
+          alt={product.name}
+          fill
+          unoptimized
+          priority={priority}
+          loading={priority ? "eager" : undefined}
+          sizes="(max-width: 768px) 31vw, 184px"
+        />
       </div>
       <div className="product-copy">
         <p className="product-brand">{product.brand}</p>

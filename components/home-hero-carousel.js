@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 function toRgb(color) {
@@ -37,12 +38,27 @@ export function HomeHeroCarousel({ slides = [] }) {
     <div className="hero-carousel">
       {safeSlides.length > 1 ? (
         <article className="hero-card hero-card--tease" aria-hidden="true">
-          <img src={next.image} alt="" width="960" height="1120" className="hero-image" />
+          <Image
+            src={next.image}
+            alt=""
+            fill
+            unoptimized
+            sizes="(max-width: 768px) 90vw, 640px"
+            className="hero-image"
+          />
         </article>
       ) : null}
 
       <article className="hero-card hero-card--active" key={`${index}-${current.image}`}>
-        <img src={current.image} alt={current.title} width="960" height="1120" className="hero-image" />
+        <Image
+          src={current.image}
+          alt={current.title || "Kanxi Collection banner"}
+          fill
+          unoptimized
+          priority={index === 0}
+          sizes="(max-width: 768px) 90vw, 640px"
+          className="hero-image"
+        />
         <div
           className="hero-overlay"
           style={{

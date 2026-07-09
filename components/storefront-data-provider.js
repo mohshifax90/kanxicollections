@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 
 const StorefrontDataContext = createContext(null);
 
@@ -14,16 +15,14 @@ function buildInitialState(initialBootstrap = null) {
 
 export function StorefrontDataProvider({ children, initialBootstrap = null }) {
   const [state, setState] = useState(() => buildInitialState(initialBootstrap));
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (initialBootstrap) {
-      return undefined;
-    }
     let cancelled = false;
 
     async function loadBootstrap() {
       try {
-        const response = await fetch("/api/storefront?view=bootstrap", { cache: "force-cache" });
+        const response = await fetch("/api/storefront?view=bootstrap", { cache: "no-store" });
         const data = await response.json();
         if (!response.ok || cancelled) return;
         setState((current) => ({
@@ -39,10 +38,17 @@ export function StorefrontDataProvider({ children, initialBootstrap = null }) {
     }
 
     loadBootstrap();
+    function handleVisibleRefresh() {
+      if (!document.hidden) loadBootstrap();
+    }
+    window.addEventListener("focus", loadBootstrap);
+    document.addEventListener("visibilitychange", handleVisibleRefresh);
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", loadBootstrap);
+      document.removeEventListener("visibilitychange", handleVisibleRefresh);
     };
-  }, [initialBootstrap]);
+  }, [initialBootstrap, pathname]);
 
   const api = useMemo(() => {
     async function ensureProduct(id) {

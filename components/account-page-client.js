@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
+  CalendarDays,
   ChevronRight,
   CreditCard,
   LocateFixed,
@@ -540,12 +541,12 @@ export function AccountPageClient() {
                   <label className="checkout-field">
                     <span>Date of birth</span>
                     <div className="checkout-field-input">
-                      <Map />
+                      <CalendarDays />
                       <input type="date" value={profileDraft.dob} onChange={(e) => setProfileDraft((c) => ({ ...c, dob: e.target.value }))} />
                     </div>
                   </label>
                 </div>
-                <button type="button" className="secondary-cta full" onClick={saveProfileSummary}>Save profile</button>
+                <button type="button" className="primary-cta full" onClick={saveProfileSummary}>Save profile</button>
               </section>
 
               <section className="account-card">

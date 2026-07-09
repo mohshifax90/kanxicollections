@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function CategoryOverviewPage({ categories = [] }) {
@@ -12,7 +13,11 @@ export function CategoryOverviewPage({ categories = [] }) {
         {categories.map((category) => (
           <Link href={category.href} key={category.id} className="category-overview-card">
             <div className="category-overview-icon">
-              {category.image ? <img src={category.image} alt="" /> : category.icon || "✦"}
+              {category.image ? (
+                <Image src={category.image} alt="" fill unoptimized sizes="54px" />
+              ) : (
+                category.icon || "✦"
+              )}
             </div>
             <div>
               <h2>{category.name}</h2>

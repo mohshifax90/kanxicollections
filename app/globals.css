@@ -168,8 +168,8 @@ button {
 .hero-card {
   position: relative;
   overflow: hidden;
-  border-radius: 26px;
-  aspect-ratio: 1 / 1;
+  border-radius: 40px;
+  aspect-ratio: 187 / 196;
   background: #eef1f5;
   box-shadow: 0 18px 34px rgba(17, 15, 23, 0.09);
 }
@@ -181,7 +181,7 @@ button {
 
 .hero-card--tease {
   position: absolute;
-  inset: 12px 8px 0 8px;
+  inset: 10px 8px 0 8px;
   z-index: 1;
   opacity: 0.94;
   transform: rotate(-4deg) translateY(2px);
@@ -324,6 +324,7 @@ button {
 }
 
 .quick-link-icon {
+  position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
@@ -363,7 +364,7 @@ button {
 .brand-strip {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(122px, 122px);
+  grid-auto-columns: minmax(148px, 148px);
   gap: 14px;
   overflow-x: auto;
   padding: 4px 0 0;
@@ -380,13 +381,16 @@ button {
 }
 
 .brand-tile-logo {
-  height: 74px;
-  border-radius: 20px;
+  position: relative;
+  height: auto;
+  aspect-ratio: 128 / 49;
+  border-radius: 16px;
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px;
+  padding: 0;
+  overflow: hidden;
 }
 
 .brand-tile-logo span {
@@ -399,8 +403,15 @@ button {
 .brand-tile-image {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   display: block;
+}
+
+@media (min-width: 761px) {
+  .brand-strip {
+    grid-auto-columns: minmax(220px, 220px);
+  }
 }
 
 .section-block {
@@ -663,6 +674,7 @@ button {
 }
 
 .category-rail-thumb {
+  position: relative;
   width: 72px;
   height: 72px;
   border-radius: 12px;
@@ -1075,6 +1087,7 @@ button {
 }
 
 .category-overview-icon {
+  position: relative;
   width: 54px;
   height: 54px;
   border-radius: 18px;
@@ -1708,14 +1721,17 @@ button {
   min-height: 56px;
   border-radius: 12px;
   font-size: 0.98rem;
+  font-weight: 600;
 }
 
 .detail-inline-actions .primary-cta {
-  background: #ff2f71;
+  background: linear-gradient(90deg, #ff43bf 0%, #a855f7 100%);
+  color: #fff;
 }
 
 .detail-inline-actions .secondary-cta {
-  background: #edf2f0;
+  background: linear-gradient(90deg, #ff43bf 0%, #a855f7 100%);
+  color: #fff;
 }
 
 .primary-cta.full {
@@ -1993,6 +2009,82 @@ button {
 .choice-card.active .choice-dot {
   border-color: var(--pink);
   background: radial-gradient(circle at center, var(--pink) 0 5px, transparent 6px);
+}
+
+.transfer-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(236, 236, 241, 1);
+}
+
+.transfer-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.transfer-panel-row strong {
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.transfer-panel-row p {
+  margin: 3px 0 0;
+  color: #76727c;
+  font-size: 0.72rem;
+}
+
+.transfer-copy-button {
+  width: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.transfer-copy-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.transfer-slip-upload {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 108px;
+  border: 1px dashed rgba(214, 214, 219, 1);
+  border-radius: 12px;
+  background: #fafafd;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.transfer-slip-preview {
+  width: 100%;
+  height: 108px;
+  object-fit: cover;
+  display: block;
+}
+
+.transfer-slip-placeholder {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: #77747d;
+  font-size: 0.78rem;
+}
+
+.transfer-slip-placeholder svg {
+  width: 18px;
+  height: 18px;
 }
 
 .summary-line {
@@ -2711,7 +2803,7 @@ button {
 
   .hero-card,
   .hero-image {
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 187 / 196;
   }
 
   .hero-carousel {

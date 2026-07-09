@@ -7,7 +7,7 @@ export const revalidate = 30;
 export default async function CategoryPage() {
   const initialData = await getCategoryBrowser();
   return (
-    <StorefrontShell active="/category">
+    <StorefrontShell active="/category" brand={initialData.brand} logo={initialData.logo}>
       <StorefrontCategoryRoute initialData={initialData} />
     </StorefrontShell>
   );

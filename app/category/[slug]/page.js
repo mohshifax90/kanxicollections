@@ -16,7 +16,7 @@ export default async function CategorySlugPage({ params }) {
   const initialData = await getCategoryBrowser(slug);
 
   return (
-    <StorefrontShell active="/category">
+    <StorefrontShell active="/category" brand={initialData.brand} logo={initialData.logo}>
       <StorefrontCategoryRoute initialSlug={slug} initialData={initialData} />
     </StorefrontShell>
   );

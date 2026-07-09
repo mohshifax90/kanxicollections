@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { HomeHeroCarousel } from "@/components/home-hero-carousel";
 import { CountdownPill } from "@/components/countdown";
 import { ProductCard } from "@/components/product-card";
@@ -21,7 +22,7 @@ const CATEGORY_ICONS = {
 
 function CategoryVisual({ item }) {
   if (item.image) {
-    return <img src={item.image} alt="" className="quick-link-image" />;
+    return <Image src={item.image} alt="" fill unoptimized sizes="(max-width: 768px) 16vw, 72px" className="quick-link-image" />;
   }
   const Icon = CATEGORY_ICONS[item.iconKey] || Grid2x2;
   return <Icon className="quick-link-lucide" />;
@@ -57,7 +58,18 @@ export function HomePage({ data }) {
             {data.featuredBrands.map((brand) => (
               <div className="brand-tile" key={brand.id}>
                 <div className="brand-tile-logo">
-                  {brand.logo ? <img src={brand.logo} alt={brand.name} className="brand-tile-image" /> : <span>{brand.name}</span>}
+                  {brand.logo ? (
+                    <Image
+                      src={brand.logo}
+                      alt={brand.name}
+                      fill
+                      unoptimized
+                      sizes="(max-width: 768px) 40vw, 220px"
+                      className="brand-tile-image"
+                    />
+                  ) : (
+                    <span>{brand.name}</span>
+                  )}
                 </div>
               </div>
             ))}
@@ -84,8 +96,8 @@ export function HomePage({ data }) {
               </Link>
             </div>
             <div className="product-grid product-grid--home">
-              {section.products.map((product) => (
-                <ProductCard key={`${section.id}-${product.id}`} product={product} />
+              {section.products.map((product, index) => (
+                <ProductCard key={`${section.id}-${product.id}`} product={product} priority={index < 3} />
               ))}
             </div>
           </section>

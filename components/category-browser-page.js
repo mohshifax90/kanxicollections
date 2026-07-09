@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -194,7 +195,7 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
               >
                 <span className="category-rail-thumb">
                   {category.image ? (
-                    <img src={category.image} alt="" />
+                    <Image src={category.image} alt="" fill unoptimized sizes="72px" />
                   ) : (
                     <span className="category-rail-initial">{String(category.name || "A").charAt(0)}</span>
                   )}
@@ -283,8 +284,8 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
 
           <div className="category-browser-scroll">
             <div className="category-browser-grid">
-              {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} compact />
+              {filteredProducts.map((product, index) => (
+                <ProductCard key={product.id} product={product} compact priority={index < 4} />
               ))}
             </div>
 

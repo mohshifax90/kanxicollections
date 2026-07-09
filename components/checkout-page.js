@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  CalendarDays,
+  Check,
+  Copy,
   CreditCard,
+  ImagePlus,
   Landmark,
   LocateFixed,
   MapPinned,
@@ -165,6 +169,8 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
   const [otpBusy, setOtpBusy] = useState(false);
   const [loadingUser, setLoadingUser] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [transferSlip, setTransferSlip] = useState("");
+  const [copyState, setCopyState] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -210,6 +216,7 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
   const shippingRate = activeAddress ? Number(shippingMethod?.rate || 0) : 0;
   const total = subtotal + shippingRate;
   const isPickup = (activeAddress?.deliveryType || shippingMethod?.key) === "self_pickup";
+  const needsTransferSlip = selectedPayment === "transfer";
   const addressReady = Boolean(
     activeAddress &&
       ((addressMode === "guest" &&
@@ -218,6 +225,7 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
         (isPickup || guestDraft.line.trim())) ||
         (addressMode !== "guest" && (isPickup || activeAddress.line))),
   );
+  const canPlaceOrder = items.length > 0 && addressReady && (!needsTransferSlip || Boolean(transferSlip));
   const readyToPlace = items.length > 0 && addressReady;
 
   useEffect(() => {
@@ -478,6 +486,10 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
       return;
     }
     if (submitting || !items.length) return;
+    if (needsTransferSlip && !transferSlip) {
+      setError("Upload the bank transfer slip to continue.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -505,6 +517,7 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
         payMethod: selectedPayment,
         shipping: shippingRate,
         total,
+        transferSlip,
         address: isPickup ? "Self pickup" : joinAddressLines(address).join(", "),
         addressMeta: address,
         deliveryType: address?.deliveryType || shippingMethod?.key || "address",
@@ -560,6 +573,31 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
       return;
     }
     setOtpCode((current) => current.map((entry, entryIndex) => (entryIndex === index ? digits : entry)));
+  }
+
+  function onTransferSlipChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      setTransferSlip(String(loadEvent.target?.result || ""));
+      setError("");
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  }
+
+  async function copyAccountNumber() {
+    const accountNumber = checkoutConfig.bankTransfer?.accountNumber || "";
+    if (!accountNumber) return;
+    try {
+      await navigator.clipboard.writeText(accountNumber);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState(""), 1600);
+    } catch {
+      setCopyState("failed");
+      window.setTimeout(() => setCopyState(""), 1600);
+    }
   }
 
   function renderModeTabs() {
@@ -687,6 +725,36 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
                   );
                 })}
               </div>
+              {selectedPayment === "transfer" ? (
+                <div className="transfer-panel">
+                  <div className="transfer-panel-row">
+                    <div>
+                      <strong>{checkoutConfig.bankTransfer?.bankName || "Bank Transfer"}</strong>
+                      <p>{checkoutConfig.bankTransfer?.accountNumber || "No account number set"}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary-cta transfer-copy-button"
+                      onClick={copyAccountNumber}
+                      aria-label={copyState === "copied" ? "Copied" : "Copy account number"}
+                      title={copyState === "copied" ? "Copied" : "Copy account number"}
+                    >
+                      {copyState === "copied" ? <Check /> : <Copy />}
+                    </button>
+                  </div>
+                  <label className="transfer-slip-upload">
+                    <input type="file" accept="image/*" className="hidden" onChange={onTransferSlipChange} />
+                    {transferSlip ? (
+                      <img src={transferSlip} alt="Transfer slip" className="transfer-slip-preview" />
+                    ) : (
+                      <span className="transfer-slip-placeholder">
+                        <ImagePlus />
+                        <span>Upload slip</span>
+                      </span>
+                    )}
+                  </label>
+                </div>
+              ) : null}
             </section>
           </div>
 
@@ -718,10 +786,16 @@ export function CheckoutPage({ paymentMethods = [], deliveryMethods = [], bankTr
               <button
                 className="primary-cta full"
                 type="button"
-                disabled={!items.length || submitting}
+                disabled={!canPlaceOrder || submitting}
                 onClick={addressReady ? handlePlaceOrder : () => setSheetOpen(true)}
               >
-                {addressReady ? (submitting ? "Placing order..." : "Place Order") : "Select Address"}
+                {addressReady
+                  ? submitting
+                    ? "Placing order..."
+                    : needsTransferSlip && !transferSlip
+                      ? "Upload Slip"
+                      : "Place Order"
+                  : "Select Address"}
               </button>
             </div>
 
