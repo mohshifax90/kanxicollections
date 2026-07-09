@@ -532,6 +532,59 @@
       try{ cb(c.toDataURL('image/jpeg',q)); }catch(e){ cb(src); } };
     img.onerror=()=>cb(src); img.src=src;
   }
+  function supabaseCfg(){ return window.KANXI_SUPABASE || {}; }
+  function dataUrlMime(src){
+    const m=String(src||'').match(/^data:([^;,]+)[;,]/i);
+    return (m&&m[1]) || 'image/jpeg';
+  }
+  function extFromMime(mime){
+    const map={ 'image/jpeg':'jpg', 'image/png':'png', 'image/webp':'webp', 'image/svg+xml':'svg' };
+    return map[mime] || 'jpg';
+  }
+  function dataUrlToBlob(src){
+    const parts=String(src||'').split(',');
+    if(parts.length<2) return null;
+    const mime=dataUrlMime(src);
+    const bytes=atob(parts[1]);
+    const len=bytes.length;
+    const arr=new Uint8Array(len);
+    for(let i=0;i<len;i++) arr[i]=bytes.charCodeAt(i);
+    return new Blob([arr], { type:mime });
+  }
+  async function uploadAdjustedImage(src, folder, fileStem){
+    const cfg=supabaseCfg();
+    const bucket=(cfg.storageBucket||'').trim();
+    if(!cfg.url || !cfg.publishableKey || !bucket) return src;
+    if(!/^data:/i.test(String(src||''))) return src;
+    const blob=dataUrlToBlob(src);
+    if(!blob) return src;
+    const mime=blob.type || 'image/jpeg';
+    const ext=extFromMime(mime);
+    const safeFolder=String(folder||'misc').replace(/[^a-z0-9/_-]+/gi,'-');
+    const safeStem=String(fileStem||('img-'+Date.now())).replace(/[^a-z0-9_-]+/gi,'-').replace(/^-+|-+$/g,'') || ('img-'+Date.now());
+    const path=`${safeFolder}/${safeStem}-${Date.now()}.${ext}`;
+    try{
+      const res = await fetch(`${cfg.url}/storage/v1/object/${bucket}/${path}`, {
+        method:'POST',
+        headers:{
+          apikey:cfg.publishableKey,
+          Authorization:`Bearer ${cfg.publishableKey}`,
+          'Content-Type':mime,
+          'x-upsert':'false'
+        },
+        body:blob
+      });
+      if(!res.ok){
+        const text=await res.text();
+        console.warn('Storage upload failed:', text);
+        return src;
+      }
+      return `${cfg.url}/storage/v1/object/public/${bucket}/${path}`;
+    }catch(error){
+      console.warn('Storage upload failed:', error && error.message || error);
+      return src;
+    }
+  }
   var _imgAdjust=null;
   function openImageAdjust(opts){
     const img=new Image();
@@ -570,29 +623,37 @@
     const c=document.createElement('canvas');
     drawAdjustedTo(c,outW,outH);
     let data;
-    try{ data=c.toDataURL(_imgAdjust.mime||'image/jpeg',_imgAdjust.q||0.78); }catch(e){ data=_imgAdjust.src; }
+    const exportMime=_imgAdjust.mime||'image/jpeg';
+    try{ data=c.toDataURL(exportMime,_imgAdjust.q||0.78); }catch(e){ data=_imgAdjust.src; }
     const done=_imgAdjust.onApply;
     closeImageAdjust();
     if(done)done(data);
   }
   const CC_ASPECT = 4/3.8; // homepage collection-card aspect
-  const CC_EXPORT_WIDTH = 1440;
-  const CC_EXPORT_QUALITY = 0.88;
+  const CC_EXPORT_WIDTH = 960;
+  const CC_EXPORT_QUALITY = 0.76;
   const HEADER_LOGO_ASPECT = 4.5/1;
-  const HEADER_LOGO_WIDTH = 1200;
-  const HEADER_LOGO_QUALITY = 0.92;
+  const HEADER_LOGO_WIDTH = 900;
+  const HEADER_LOGO_QUALITY = 0.9;
   function homepageCardById(id){
     return ((_hp && _hp.collections && _hp.collections.cards) || []).find(card => card && card.id === id) || null;
   }
   function onCCImage(cardId,input){
     const f=input.files[0]; if(!f)return;
     const r=new FileReader();
-    r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust homepage image',aspect:CC_ASPECT,outW:CC_EXPORT_WIDTH,q:CC_EXPORT_QUALITY,onApply:d=>{
+    r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust homepage image',aspect:CC_ASPECT,outW:CC_EXPORT_WIDTH,q:CC_EXPORT_QUALITY,mime:'image/webp',onApply:async d=>{
       const card = homepageCardById(cardId);
       if(!card) return;
       markHPDirty();
       card.image=d;
       renderHP();
+      const uploaded = await uploadAdjustedImage(d,'home-cards',cardId);
+      if(uploaded !== d){
+        const nextCard = homepageCardById(cardId);
+        if(!nextCard) return;
+        nextCard.image = uploaded;
+        renderHP();
+      }
     }});
     r.readAsDataURL(f);
     input.value='';
@@ -601,24 +662,31 @@
     const card = homepageCardById(cardId);
     const src=card&&card.image;
     if(!src)return;
-    openImageAdjust({src,title:'Adjust homepage image',aspect:CC_ASPECT,outW:CC_EXPORT_WIDTH,q:CC_EXPORT_QUALITY,onApply:d=>{
+    openImageAdjust({src,title:'Adjust homepage image',aspect:CC_ASPECT,outW:CC_EXPORT_WIDTH,q:CC_EXPORT_QUALITY,mime:'image/webp',onApply:async d=>{
       const nextCard = homepageCardById(cardId);
       if(!nextCard) return;
       markHPDirty();
       nextCard.image=d;
       renderHP();
+      const uploaded = await uploadAdjustedImage(d,'home-cards',cardId);
+      if(uploaded !== d){
+        const latestCard = homepageCardById(cardId);
+        if(!latestCard) return;
+        latestCard.image = uploaded;
+        renderHP();
+      }
     }});
   }
   function onHeaderLogo(input){
     const f=input.files[0]; if(!f)return;
     const r=new FileReader();
-    r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust header logo',aspect:HEADER_LOGO_ASPECT,outW:HEADER_LOGO_WIDTH,q:HEADER_LOGO_QUALITY,mime:'image/png',transparent:true,onApply:d=>{ _hp.header = _hp.header || {}; _hp.header.logo=d; renderHP(); }});
+    r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust header logo',aspect:HEADER_LOGO_ASPECT,outW:HEADER_LOGO_WIDTH,q:HEADER_LOGO_QUALITY,mime:'image/webp',transparent:true,onApply:async d=>{ _hp.header = _hp.header || {}; _hp.header.logo=d; renderHP(); const uploaded = await uploadAdjustedImage(d,'branding','header-logo'); if(uploaded !== d){ _hp.header.logo=uploaded; renderHP(); } }});
     r.readAsDataURL(f);
     input.value='';
   }
   function adjustHeaderLogo(){
     const src=_hp.header && _hp.header.logo; if(!src)return;
-    openImageAdjust({src,title:'Adjust header logo',aspect:HEADER_LOGO_ASPECT,outW:HEADER_LOGO_WIDTH,q:HEADER_LOGO_QUALITY,mime:'image/png',transparent:true,onApply:d=>{ _hp.header = _hp.header || {}; _hp.header.logo=d; renderHP(); }});
+    openImageAdjust({src,title:'Adjust header logo',aspect:HEADER_LOGO_ASPECT,outW:HEADER_LOGO_WIDTH,q:HEADER_LOGO_QUALITY,mime:'image/webp',transparent:true,onApply:async d=>{ _hp.header = _hp.header || {}; _hp.header.logo=d; renderHP(); const uploaded = await uploadAdjustedImage(d,'branding','header-logo'); if(uploaded !== d){ _hp.header.logo=uploaded; renderHP(); } }});
   }
   function clearHeaderLogo(){ _hp.header = _hp.header || {}; _hp.header.logo=''; renderHP(); }
   async function saveHP(){ try{ await Store.saveHomepage(_hp); _hpDirty=false; toast('Homepage saved ✓'); }catch(e){ alert('Could not save — storage full. Use smaller images.'); } }
@@ -700,11 +768,13 @@
     renderBrands();
   }
   const CAT_ASPECT = 1;
+  const CAT_EXPORT_WIDTH = 320;
+  const CAT_EXPORT_QUALITY = 0.72;
   function renderCatImage(){ const box=$('#catImageBox'); if(!box)return;
     box.innerHTML = _catImage ? `<img src="${_catImage}" class="w-full h-full object-cover"/>` : `<div class="text-center">${ic('image-plus','w-6 h-6 mx-auto mb-1')}<div class="text-[0.62rem] font-semibold">Upload</div></div>`;
   }
-  function onCatImage(input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust category image',aspect:CAT_ASPECT,outW:520,q:0.84,onApply:d=>{ _catImage=d; renderCatImage(); }}); r.readAsDataURL(f); input.value=''; }
-  function adjustCatImage(){ if(!_catImage){ toast('Upload an image first'); return; } openImageAdjust({src:_catImage,title:'Adjust category image',aspect:CAT_ASPECT,outW:520,q:0.84,onApply:d=>{ _catImage=d; renderCatImage(); }}); }
+  function onCatImage(input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust category image',aspect:CAT_ASPECT,outW:CAT_EXPORT_WIDTH,q:CAT_EXPORT_QUALITY,mime:'image/webp',onApply:async d=>{ _catImage=d; renderCatImage(); const slug=(($('#c_slug')||{}).value||$('#c_name').value||'category').toLowerCase().replace(/[^a-z0-9]+/g,'-'); const uploaded = await uploadAdjustedImage(d,'categories',slug); if(uploaded !== d){ _catImage=uploaded; renderCatImage(); } }}); r.readAsDataURL(f); input.value=''; }
+  function adjustCatImage(){ if(!_catImage){ toast('Upload an image first'); return; } openImageAdjust({src:_catImage,title:'Adjust category image',aspect:CAT_ASPECT,outW:CAT_EXPORT_WIDTH,q:CAT_EXPORT_QUALITY,mime:'image/webp',onApply:async d=>{ _catImage=d; renderCatImage(); const slug=(($('#c_slug')||{}).value||$('#c_name').value||'category').toLowerCase().replace(/[^a-z0-9]+/g,'-'); const uploaded = await uploadAdjustedImage(d,'categories',slug); if(uploaded !== d){ _catImage=uploaded; renderCatImage(); } }}); }
   function clearCatImage(){ _catImage=''; renderCatImage(); }
   function pickCatIcon(n){ _catIcon=n; document.querySelectorAll('#catIconGrid .cat-ico-btn').forEach(b=>{ const on=b.dataset.icon===n;
     b.classList.toggle('border-kink',on); b.classList.toggle('bg-kink',on); b.classList.toggle('text-white',on);
@@ -744,11 +814,13 @@
     renderSubImage();
   }
   const SUB_ASPECT = 118/96;
+  const SUB_EXPORT_WIDTH = 360;
+  const SUB_EXPORT_QUALITY = 0.72;
   function renderSubImage(){ const box=$('#subImageBox'); if(!box)return;
     box.innerHTML = _subImage ? `<img src="${_subImage}" class="w-full h-full object-cover"/>` : `<div class="text-center">${ic('image-plus','w-6 h-6 mx-auto mb-1')}<div class="text-[0.62rem] font-semibold">Upload</div></div>`;
   }
-  function onSubImage(input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust sub-category image',aspect:SUB_ASPECT,outW:500,q:0.78,onApply:d=>{ _subImage=d; renderSubImage(); }}); r.readAsDataURL(f); input.value=''; }
-  function adjustSubImage(){ if(!_subImage){ toast('Upload an image first'); return; } openImageAdjust({src:_subImage,title:'Adjust sub-category image',aspect:SUB_ASPECT,outW:500,q:0.78,onApply:d=>{ _subImage=d; renderSubImage(); }}); }
+  function onSubImage(input){ const f=input.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust sub-category image',aspect:SUB_ASPECT,outW:SUB_EXPORT_WIDTH,q:SUB_EXPORT_QUALITY,mime:'image/webp',onApply:async d=>{ _subImage=d; renderSubImage(); const slug=(($('#s_name')||{}).value||'subcategory').toLowerCase().replace(/[^a-z0-9]+/g,'-'); const uploaded = await uploadAdjustedImage(d,'subcategories',slug); if(uploaded !== d){ _subImage=uploaded; renderSubImage(); } }}); r.readAsDataURL(f); input.value=''; }
+  function adjustSubImage(){ if(!_subImage){ toast('Upload an image first'); return; } openImageAdjust({src:_subImage,title:'Adjust sub-category image',aspect:SUB_ASPECT,outW:SUB_EXPORT_WIDTH,q:SUB_EXPORT_QUALITY,mime:'image/webp',onApply:async d=>{ _subImage=d; renderSubImage(); const slug=(($('#s_name')||{}).value||'subcategory').toLowerCase().replace(/[^a-z0-9]+/g,'-'); const uploaded = await uploadAdjustedImage(d,'subcategories',slug); if(uploaded !== d){ _subImage=uploaded; renderSubImage(); } }}); }
   function clearSubImage(){ _subImage=''; renderSubImage(); }
   function renderBrands(){
     const wrap=$('#brandList'); if(!wrap)return;
@@ -775,16 +847,23 @@
     return (_brands || []).find(brand => brand && brand.id === id) || null;
   }
   const BRAND_LOGO_ASPECT = 128/49;
-  const BRAND_LOGO_WIDTH = 768;
-  const BRAND_LOGO_QUALITY = 0.92;
+  const BRAND_LOGO_WIDTH = 608;
+  const BRAND_LOGO_QUALITY = 0.86;
   function onBrandLogo(brandId,input){
     const f=input.files[0]; if(!f)return;
     const r=new FileReader();
-    r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust brand image',aspect:BRAND_LOGO_ASPECT,outW:BRAND_LOGO_WIDTH,q:BRAND_LOGO_QUALITY,mime:'image/png',transparent:true,onApply:d=>{
+    r.onload=e=>openImageAdjust({src:e.target.result,title:'Adjust brand image',aspect:BRAND_LOGO_ASPECT,outW:BRAND_LOGO_WIDTH,q:BRAND_LOGO_QUALITY,mime:'image/webp',transparent:true,onApply:async d=>{
       const brand = brandById(brandId);
       if(!brand) return;
       brand.logo=d;
       renderBrands();
+      const uploaded = await uploadAdjustedImage(d,'brands',brandId);
+      if(uploaded !== d){
+        const nextBrand = brandById(brandId);
+        if(!nextBrand) return;
+        nextBrand.logo = uploaded;
+        renderBrands();
+      }
     }});
     r.readAsDataURL(f);
     input.value='';
@@ -793,11 +872,18 @@
     const brand = brandById(brandId);
     const src=brand&&brand.logo;
     if(!src){ toast('Upload a brand image first'); return; }
-    openImageAdjust({src,title:'Adjust brand image',aspect:BRAND_LOGO_ASPECT,outW:BRAND_LOGO_WIDTH,q:BRAND_LOGO_QUALITY,mime:'image/png',transparent:true,onApply:d=>{
+    openImageAdjust({src,title:'Adjust brand image',aspect:BRAND_LOGO_ASPECT,outW:BRAND_LOGO_WIDTH,q:BRAND_LOGO_QUALITY,mime:'image/webp',transparent:true,onApply:async d=>{
       const nextBrand = brandById(brandId);
       if(!nextBrand) return;
       nextBrand.logo=d;
       renderBrands();
+      const uploaded = await uploadAdjustedImage(d,'brands',brandId);
+      if(uploaded !== d){
+        const latestBrand = brandById(brandId);
+        if(!latestBrand) return;
+        latestBrand.logo = uploaded;
+        renderBrands();
+      }
     }});
   }
   async function saveSub(id){
