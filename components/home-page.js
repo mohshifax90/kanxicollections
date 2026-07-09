@@ -77,7 +77,7 @@ export function HomePage({ data }) {
         </section>
       ) : null}
 
-      {data.featuredSections.map((section) => {
+      {data.featuredSections.map((section, sectionIndex) => {
         const isFlashSale = section.sourceType === "offers" || /flash sale/i.test(section.title || "");
         return (
           <section className={`section-block${isFlashSale ? " section-block--highlight" : ""}`} key={section.id}>
@@ -97,7 +97,11 @@ export function HomePage({ data }) {
             </div>
             <div className="product-grid product-grid--home">
               {section.products.map((product, index) => (
-                <ProductCard key={`${section.id}-${product.id}`} product={product} priority={index < 3} />
+                <ProductCard
+                  key={`${section.id}-${product.id}`}
+                  product={product}
+                  priority={sectionIndex === 0 && index < 2}
+                />
               ))}
             </div>
           </section>
