@@ -20,9 +20,21 @@ const CATEGORY_ICONS = {
   "grid-2x2": Grid2x2,
 };
 
-function CategoryVisual({ item }) {
+function CategoryVisual({ item, priority = false }) {
   if (item.image) {
-    return <Image src={item.image} alt="" fill unoptimized sizes="(max-width: 768px) 16vw, 72px" className="quick-link-image" />;
+    return (
+      <Image
+        src={item.image}
+        alt=""
+        fill
+        unoptimized
+        priority={priority}
+        loading={priority ? "eager" : undefined}
+        fetchPriority={priority ? "high" : undefined}
+        sizes="(max-width: 768px) 16vw, 72px"
+        className="quick-link-image"
+      />
+    );
   }
   const Icon = CATEGORY_ICONS[item.iconKey] || Grid2x2;
   return <Icon className="quick-link-lucide" />;
@@ -39,7 +51,7 @@ export function HomePage({ data }) {
         {data.quickLinks.map((item) => (
           <Link href={item.href || "/category"} className="quick-link-card" key={item.label}>
             <span className="quick-link-icon" aria-hidden="true">
-              <CategoryVisual item={item} />
+              <CategoryVisual item={item} priority={data.quickLinks.indexOf(item) < 12} />
             </span>
             <span className="quick-link-label">{item.label}</span>
           </Link>
@@ -64,6 +76,9 @@ export function HomePage({ data }) {
                       alt={brand.name}
                       fill
                       unoptimized
+                      priority={data.featuredBrands.indexOf(brand) < 4}
+                      loading={data.featuredBrands.indexOf(brand) < 4 ? "eager" : undefined}
+                      fetchPriority={data.featuredBrands.indexOf(brand) < 4 ? "high" : undefined}
                       sizes="(max-width: 768px) 40vw, 220px"
                       className="brand-tile-image"
                     />
@@ -100,7 +115,7 @@ export function HomePage({ data }) {
                 <ProductCard
                   key={`${section.id}-${product.id}`}
                   product={product}
-                  priority={sectionIndex === 0 && index < 2}
+                  priority={sectionIndex === 0 && index < 6}
                 />
               ))}
             </div>

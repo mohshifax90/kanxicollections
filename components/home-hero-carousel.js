@@ -43,6 +43,9 @@ export function HomeHeroCarousel({ slides = [] }) {
             alt=""
             fill
             unoptimized
+            priority={index === 0}
+            loading={index === 0 ? "eager" : undefined}
+            fetchPriority={index === 0 ? "high" : undefined}
             sizes="(max-width: 768px) 90vw, 640px"
             className="hero-image"
           />
@@ -57,6 +60,7 @@ export function HomeHeroCarousel({ slides = [] }) {
           unoptimized
           priority={index === 0}
           sizes="(max-width: 768px) 90vw, 640px"
+          fetchPriority={index === 0 ? "high" : undefined}
           className="hero-image"
         />
         <div

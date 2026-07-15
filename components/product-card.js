@@ -12,6 +12,7 @@ export function ProductCard({ product, compact = false, priority = false }) {
           unoptimized
           priority={priority}
           loading={priority ? "eager" : undefined}
+          fetchPriority={priority ? "high" : undefined}
           sizes="(max-width: 768px) 31vw, 184px"
         />
       </div>

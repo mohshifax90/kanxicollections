@@ -2291,6 +2291,149 @@ button {
   padding: 12px 14px;
 }
 
+.account-action-link {
+  grid-template-columns: 42px minmax(0, 1fr) 16px;
+}
+
+.account-action-link > svg {
+  width: 16px;
+  height: 16px;
+  color: #9a97a0;
+}
+
+.policy-page {
+  display: grid;
+  gap: 14px;
+}
+
+.policy-hero {
+  display: grid;
+  gap: 10px;
+}
+
+.policy-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: #7d7983;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.policy-back-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.policy-hero-card,
+.policy-card {
+  border: 1px solid rgba(230, 229, 234, 0.88);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.policy-hero-card {
+  padding: 16px;
+}
+
+.policy-hero-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffe4f1 0%, #f3e8ff 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pink);
+  margin-bottom: 12px;
+}
+
+.policy-hero-icon svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.9;
+}
+
+.policy-eyebrow {
+  margin: 0 0 6px;
+  color: #7d7983;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.policy-hero-card h1 {
+  margin: 0;
+  font-size: 1.32rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.policy-intro {
+  margin: 10px 0 0;
+  color: #6f6b75;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.policy-card {
+  padding: 16px;
+}
+
+.policy-card h2 {
+  margin: 0 0 10px;
+  font-size: 0.96rem;
+  font-weight: 600;
+}
+
+.policy-card p {
+  margin: 0;
+  color: #5f5b65;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.policy-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #5f5b65;
+  display: grid;
+  gap: 8px;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.policy-list-numbered {
+  list-style: decimal;
+}
+
+.policy-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.policy-meta-grid > div {
+  border-radius: 12px;
+  background: #f8f8fa;
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.policy-meta-label {
+  color: #8a8790;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.policy-meta-grid strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
 .account-order-list {
   display: grid;
   gap: 10px;

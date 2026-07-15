@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   CalendarDays,
   ChevronRight,
   CreditCard,
+  FileText,
   LocateFixed,
   Map,
   MapPin,
@@ -618,6 +620,23 @@ export function AccountPageClient() {
                   <div className="account-action-copy"><strong>Payments</strong><p>Checkout methods</p></div>
                 </div>
               </div>
+              <section className="account-card">
+                <div className="account-card-head">
+                  <h2>Store policies</h2>
+                </div>
+                <div className="account-action-row">
+                  <Link href="/privacy" className="account-action-card account-action-link">
+                    <div className="account-action-icon"><ShieldCheck /></div>
+                    <div className="account-action-copy"><strong>Privacy policy</strong><p>How we use your data</p></div>
+                    <ChevronRight />
+                  </Link>
+                  <Link href="/returns" className="account-action-card account-action-link">
+                    <div className="account-action-icon"><FileText /></div>
+                    <div className="account-action-copy"><strong>Returns policy</strong><p>2 hours to 24 hours after delivery</p></div>
+                    <ChevronRight />
+                  </Link>
+                </div>
+              </section>
             </div>
           ) : (
             <div className="account-panel-stack">

@@ -22,13 +22,42 @@ function respondWithSource(source) {
   }
 
   if (/^https?:\/\//i.test(value)) {
-    return new Response(null, {
-      status: 307,
+    return fetch(value, {
+      cache: "force-cache",
       headers: {
-        Location: value,
-        "Cache-Control": MEDIA_CACHE_CONTROL,
+        Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
       },
-    });
+    })
+      .then(async (upstream) => {
+        if (!upstream.ok) {
+          return new Response(null, {
+            status: 307,
+            headers: {
+              Location: value,
+              "Cache-Control": MEDIA_CACHE_CONTROL,
+            },
+          });
+        }
+
+        const body = await upstream.arrayBuffer();
+        const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+        return new Response(body, {
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": MEDIA_CACHE_CONTROL,
+          },
+        });
+      })
+      .catch(
+        () =>
+          new Response(null, {
+            status: 307,
+            headers: {
+              Location: value,
+              "Cache-Control": MEDIA_CACHE_CONTROL,
+            },
+          }),
+      );
   }
 
   const dataUri = decodeDataUri(value);
