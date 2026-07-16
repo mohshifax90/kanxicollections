@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 
 export function ProductCard({ product, compact = false, priority = false }) {
+  const bypassOptimizer = shouldUnoptimizeImage(product.image);
   return (
     <Link href={`/product/${product.id}`} className={`product-card${compact ? " compact" : ""}`}>
       <div className="product-visual">
@@ -9,11 +11,12 @@ export function ProductCard({ product, compact = false, priority = false }) {
           src={product.image}
           alt={product.name}
           fill
-          unoptimized
+          unoptimized={bypassOptimizer}
           priority={priority}
           loading={priority ? "eager" : undefined}
           fetchPriority={priority ? "high" : undefined}
           sizes="(max-width: 768px) 31vw, 184px"
+          quality={80}
         />
       </div>
       <div className="product-copy">

@@ -4,6 +4,7 @@ import { CountdownPill } from "@/components/countdown";
 import { ProductCard } from "@/components/product-card";
 import { BadgePlus, Droplets, Footprints, Grid2x2, Palette, Scissors, ShoppingBag, Shirt, Sparkles, SprayCan, SunMedium } from "lucide-react";
 import Link from "next/link";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 
 const CATEGORY_ICONS = {
   shirt: Shirt,
@@ -22,16 +23,18 @@ const CATEGORY_ICONS = {
 
 function CategoryVisual({ item, priority = false }) {
   if (item.image) {
+    const bypassOptimizer = shouldUnoptimizeImage(item.image);
     return (
       <Image
         src={item.image}
         alt=""
         fill
-        unoptimized
+        unoptimized={bypassOptimizer}
         priority={priority}
         loading={priority ? "eager" : undefined}
         fetchPriority={priority ? "high" : undefined}
         sizes="(max-width: 768px) 16vw, 72px"
+        quality={76}
         className="quick-link-image"
       />
     );
@@ -71,17 +74,23 @@ export function HomePage({ data }) {
               <div className="brand-tile" key={brand.id}>
                 <div className="brand-tile-logo">
                   {brand.logo ? (
+                    (() => {
+                      const bypassOptimizer = shouldUnoptimizeImage(brand.logo);
+                      return (
                     <Image
                       src={brand.logo}
                       alt={brand.name}
                       fill
-                      unoptimized
+                      unoptimized={bypassOptimizer}
                       priority={data.featuredBrands.indexOf(brand) < 4}
                       loading={data.featuredBrands.indexOf(brand) < 4 ? "eager" : undefined}
                       fetchPriority={data.featuredBrands.indexOf(brand) < 4 ? "high" : undefined}
                       sizes="(max-width: 768px) 40vw, 220px"
+                      quality={82}
                       className="brand-tile-image"
                     />
+                      );
+                    })()
                   ) : (
                     <span>{brand.name}</span>
                   )}

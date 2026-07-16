@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -195,7 +196,7 @@ export function CategoryBrowserPage({ categories = [], initialSlug = "" }) {
               >
                 <span className="category-rail-thumb">
                   {category.image ? (
-                    <Image src={category.image} alt="" fill unoptimized sizes="72px" />
+                    <Image src={category.image} alt="" fill sizes="72px" quality={76} unoptimized={shouldUnoptimizeImage(category.image)} />
                   ) : (
                     <span className="category-rail-initial">{String(category.name || "A").charAt(0)}</span>
                   )}

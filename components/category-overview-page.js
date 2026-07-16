@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 
 export function CategoryOverviewPage({ categories = [] }) {
   return (
@@ -14,7 +15,7 @@ export function CategoryOverviewPage({ categories = [] }) {
           <Link href={category.href} key={category.id} className="category-overview-card">
             <div className="category-overview-icon">
               {category.image ? (
-                <Image src={category.image} alt="" fill unoptimized sizes="54px" />
+                <Image src={category.image} alt="" fill sizes="54px" quality={76} unoptimized={shouldUnoptimizeImage(category.image)} />
               ) : (
                 category.icon || "✦"
               )}

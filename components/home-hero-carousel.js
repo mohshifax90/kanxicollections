@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { shouldUnoptimizeImage } from "@/lib/image-utils";
 
 function toRgb(color) {
   const value = String(color || "").trim();
@@ -34,6 +35,8 @@ export function HomeHeroCarousel({ slides = [] }) {
   const next = safeSlides[(index + 1) % safeSlides.length] || current;
   const overlayRgb = toRgb(current.overlayColor);
   const currentCaption = String(current.caption || "").trim();
+  const nextNeedsBypass = shouldUnoptimizeImage(next.image);
+  const currentNeedsBypass = shouldUnoptimizeImage(current.image);
 
   return (
     <div className="hero-carousel">
@@ -43,11 +46,9 @@ export function HomeHeroCarousel({ slides = [] }) {
             src={next.image}
             alt=""
             fill
-            unoptimized
-            priority={index === 0}
-            loading={index === 0 ? "eager" : undefined}
-            fetchPriority={index === 0 ? "high" : undefined}
+            unoptimized={nextNeedsBypass}
             sizes="(max-width: 768px) 90vw, 640px"
+            quality={84}
             className="hero-image"
           />
         </article>
@@ -58,10 +59,12 @@ export function HomeHeroCarousel({ slides = [] }) {
           src={current.image}
           alt={currentCaption || "Kanxi Collection banner"}
           fill
-          unoptimized
+          unoptimized={currentNeedsBypass}
           priority={index === 0}
+          loading={index === 0 ? "eager" : undefined}
           sizes="(max-width: 768px) 90vw, 640px"
           fetchPriority={index === 0 ? "high" : undefined}
+          quality={86}
           className="hero-image"
         />
         <div
