@@ -33,6 +33,7 @@ export function HomeHeroCarousel({ slides = [] }) {
   const current = safeSlides[index];
   const next = safeSlides[(index + 1) % safeSlides.length] || current;
   const overlayRgb = toRgb(current.overlayColor);
+  const currentCaption = String(current.caption || "").trim();
 
   return (
     <div className="hero-carousel">
@@ -55,7 +56,7 @@ export function HomeHeroCarousel({ slides = [] }) {
       <article className="hero-card hero-card--active" key={`${index}-${current.image}`}>
         <Image
           src={current.image}
-          alt={current.title || "Kanxi Collection banner"}
+          alt={currentCaption || "Kanxi Collection banner"}
           fill
           unoptimized
           priority={index === 0}
@@ -69,9 +70,9 @@ export function HomeHeroCarousel({ slides = [] }) {
             background: `linear-gradient(180deg, rgba(${overlayRgb}, 0) 0%, rgba(${overlayRgb}, 0.08) 22%, rgba(${overlayRgb}, 0.28) 44%, rgba(${overlayRgb}, 0.62) 68%, rgba(${overlayRgb}, 1) 100%)`,
           }}
         />
-        {current.title ? (
+        {currentCaption ? (
           <div className="hero-copy">
-            <h1>{current.title}</h1>
+            <h1>{currentCaption}</h1>
           </div>
         ) : null}
       </article>
